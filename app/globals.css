@@ -15,6 +15,18 @@
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-critical: #d03b3b;
+
+  --chart-surface: #fcfcfb;
+  --chart-ink: #0b0b0b;
+  --chart-ink-2: #52514e;
+  --chart-muted: #898781;
+  --chart-grid: #e1e0d9;
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-other: #b6b2a4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +40,18 @@
     --muted: #767b86;
     --brand: #dd925f;
     --brand-strong: #efb083;
+
+    --chart-surface: #1a1a19;
+    --chart-ink: #ffffff;
+    --chart-ink-2: #c3c2b7;
+    --chart-muted: #898781;
+    --chart-grid: #2c2c2a;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-other: #5b5b56;
   }
 }
 

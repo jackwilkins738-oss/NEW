@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Operations Dashboard",
+  title: "Operations Dashboard · Scalar Digital",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
