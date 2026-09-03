@@ -168,14 +168,14 @@ export default async function DashboardPage() {
               title="Project value won · trailing 12 months"
               note="By month the project was created - an early proxy for revenue until invoicing is wired in"
               points={revenueTrend}
-              formatValue={(v) => formatGBP(Math.round(v * 100))}
+              format="gbp"
             />
           </div>
           <BarChart
             title="Revenue by project type"
             note="Trailing 12 months"
             rows={projectTypeBreakdown}
-            formatValue={(v) => formatGBP(Math.round(v * 100))}
+            format="gbp"
             colorMode="categorical"
           />
         </div>
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
             title="Lead source"
             note="Last 30 days"
             rows={leadSourceBreakdown}
-            formatValue={(v) => `${v}`}
+            format="count"
             colorMode="single"
           />
         </div>

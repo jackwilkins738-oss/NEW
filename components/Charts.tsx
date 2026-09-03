@@ -2,6 +2,24 @@
 
 import { useState } from "react";
 
+// formatValue used to be passed in as a function prop from the server
+// component - but Server Components can only pass serializable data to
+// Client Components, not plain functions, which threw a server-side
+// exception in production. A "gbp" | "count" string is serializable, so
+// the actual Intl formatting lives here instead.
+type Format = "gbp" | "count";
+
+function formatValue(format: Format, value: number) {
+  if (format === "gbp") {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+  return `${value}`;
+}
+
 // Shared horizontal bar chart used for both "revenue by project type" and
 // "lead source" - same mark spec (thin bars, rounded ends, direct labels,
 // hover tooltip) as the original design, just fed different data.
@@ -9,13 +27,13 @@ export function BarChart({
   title,
   note,
   rows,
-  formatValue,
+  format,
   colorMode,
 }: {
   title: string;
   note?: string;
   rows: { label: string; value: number; detail?: string }[];
-  formatValue: (v: number) => string;
+  format: Format;
   colorMode: "categorical" | "single";
 }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -44,7 +62,7 @@ export function BarChart({
             >
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="font-semibold text-ink-2">{r.label}</span>
-                <span className="font-mono text-xs font-semibold text-ink">{formatValue(r.value)}</span>
+                <span className="font-mono text-xs font-semibold text-ink">{formatValue(format, r.value)}</span>
               </div>
               <div className="h-[18px] w-full overflow-hidden rounded-[4px] bg-surface-2">
                 <div
@@ -70,12 +88,12 @@ export function RevenueTrend({
   title,
   note,
   points,
-  formatValue,
+  format,
 }: {
   title: string;
   note?: string;
   points: { label: string; value: number }[];
-  formatValue: (v: number) => string;
+  format: Format;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const W = 620;
@@ -107,7 +125,7 @@ export function RevenueTrend({
           <h2 className="text-sm font-bold text-ink">{title}</h2>
           {note && <p className="text-xs text-muted">{note}</p>}
         </div>
-        <p className="whitespace-nowrap text-sm font-bold text-ink">{formatValue(total)} total</p>
+        <p className="whitespace-nowrap text-sm font-bold text-ink">{formatValue(format, total)} total</p>
       </div>
 
       {points.length === 0 ? (
@@ -151,7 +169,7 @@ export function RevenueTrend({
                 top: `${(coords[hover].y / H) * 100 - 2}%`,
               }}
             >
-              {coords[hover].label}: {formatValue(coords[hover].value)}
+              {coords[hover].label}: {formatValue(format, coords[hover].value)}
             </div>
           )}
         </div>
