@@ -1,0 +1,3 @@
+git remote add origin https://github.com/jackwilkins738-oss/loft-dashboard.git
+git branch -M main
+git push -u origin main
