@@ -55,6 +55,44 @@ export async function markInvoicePaid(invoiceId: string) {
   revalidatePath("/dashboard");
 }
 
+function generateRef() {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `P-${stamp}-${suffix}`;
+}
+
+// Same trust model as addInvoice: RLS checks the signed-in user's own
+// membership against the tenant_id in the row, not against whatever the
+// client happened to send.
+export async function addProject(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const clientName = String(formData.get("clientName") ?? "").trim();
+  if (!tenantId || !clientName) return;
+
+  const valuePounds = formData.get("value");
+  const insert: Record<string, unknown> = {
+    tenant_id: tenantId,
+    ref: generateRef(),
+    client_name: clientName,
+    location: String(formData.get("location") ?? "").trim() || null,
+    project_type: String(formData.get("projectType") ?? "").trim() || null,
+    stage: "Enquiry",
+    target_date: String(formData.get("targetDate") ?? "") || null,
+    status: "on_track",
+  };
+
+  if (valuePounds !== null && String(valuePounds).trim() !== "") {
+    const pounds = Number(valuePounds);
+    if (Number.isFinite(pounds) && pounds >= 0) insert.value_pence = Math.round(pounds * 100);
+  }
+
+  const supabase = createClient();
+  await supabase.from("projects").insert(insert);
+
+  revalidatePath("/dashboard");
+}
+
 const VALID_PROJECT_STATUSES = ["on_track", "at_risk", "delayed", "awaiting_decision"];
 
 // RLS ("member can manage own projects") is the real security boundary here

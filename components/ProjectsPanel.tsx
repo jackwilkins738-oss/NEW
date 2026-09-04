@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateProject } from "@/app/dashboard/actions";
+import { updateProject, addProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 
 type Project = {
@@ -55,6 +55,39 @@ function localTimeInput(iso: string | null) {
 const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
+
+function NewProjectForm({ tenantId }: { tenantId: string }) {
+  return (
+    <form
+      action={addProject}
+      className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
+    >
+      <input type="hidden" name="tenantId" value={tenantId} />
+      <label className={label}>
+        Client
+        <input name="clientName" required className={field} placeholder="New client name" />
+      </label>
+      <label className={label}>
+        Location
+        <input name="location" className={field} />
+      </label>
+      <label className={label}>
+        Project type
+        <input name="projectType" className={field} placeholder="e.g. Loft conversion" />
+      </label>
+      <label className={label}>
+        Value (&pound;)
+        <input name="value" type="number" min="0" step="0.01" className={field} />
+      </label>
+      <button
+        type="submit"
+        className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+      >
+        Add project
+      </button>
+    </form>
+  );
+}
 
 function ProjectCard({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
@@ -197,17 +230,28 @@ function ProjectCard({ project }: { project: Project }) {
   );
 }
 
-export function ProjectsPanel({ projects }: { projects: Project[] }) {
+export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projects: Project[] }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Active projects</h2>
       <p className="text-xs text-muted">Tap a project to add details or update its status</p>
-      <div className="mt-2">
-        {projects.length === 0 && <p className="py-6 text-center text-sm text-muted">No projects yet.</p>}
-        {projects.map((p) => (
-          <ProjectCard key={p.id} project={p} />
-        ))}
+
+      <div className="mt-3">
+        <NewProjectForm tenantId={tenantId} />
       </div>
+
+      {projects.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
+          <p className="text-sm font-semibold text-ink">No projects yet</p>
+          <p className="mt-1 text-sm text-muted">Add your first one above to start tracking value, stages and deadlines.</p>
+        </div>
+      ) : (
+        <div>
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

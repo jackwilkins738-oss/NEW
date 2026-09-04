@@ -45,7 +45,11 @@ export function BarChart({
       <h2 className="text-sm font-bold text-ink">{title}</h2>
       {note && <p className="text-xs text-muted">{note}</p>}
       <div className="mt-4 flex flex-col gap-3">
-        {rows.length === 0 && <p className="text-sm text-muted">Nothing to show yet.</p>}
+        {rows.length === 0 && (
+          <div className="rounded-xl border border-dashed border-black/15 py-6 text-center">
+            <p className="text-sm text-muted">Nothing to show yet - this fills in as data comes through.</p>
+          </div>
+        )}
         {rows.map((r, i) => {
           const color =
             colorMode === "categorical"

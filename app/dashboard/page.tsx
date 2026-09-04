@@ -207,7 +207,7 @@ export default async function DashboardPage() {
 
         <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <ProjectsPanel projects={projects} />
+            <ProjectsPanel tenantId={tenant.id} projects={projects} />
           </div>
 
           <LeadsPanel leads={leads} />

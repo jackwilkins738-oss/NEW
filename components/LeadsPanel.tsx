@@ -93,10 +93,16 @@ export function LeadsPanel({ leads }: { leads: Lead[] }) {
         )}
       </div>
       <div className="mt-3 flex flex-col gap-3">
-        {leads.length === 0 && <p className="text-sm text-muted">No leads in the last 30 days.</p>}
-        {leads.map((l) => (
-          <LeadRow key={l.id} lead={l} />
-        ))}
+        {leads.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
+            <p className="text-sm font-semibold text-ink">No leads yet</p>
+            <p className="mt-1 px-2 text-sm text-muted">
+              As enquiries come in through your website, they&apos;ll show up here automatically.
+            </p>
+          </div>
+        ) : (
+          leads.map((l) => <LeadRow key={l.id} lead={l} />)
+        )}
       </div>
     </div>
   );

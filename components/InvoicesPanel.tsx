@@ -79,7 +79,12 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
       </form>
 
       <div className="mt-4 flex flex-col gap-3">
-        {sorted.length === 0 && <p className="text-sm text-muted">No invoices yet.</p>}
+        {sorted.length === 0 && (
+          <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
+            <p className="text-sm font-semibold text-ink">No invoices yet</p>
+            <p className="mt-1 text-sm text-muted">Add one above to start tracking what&apos;s owed and when it&apos;s due.</p>
+          </div>
+        )}
         {sorted.map((inv) => {
           const state = invoiceState(inv);
           return (
