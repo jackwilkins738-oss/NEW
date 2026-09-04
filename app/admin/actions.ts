@@ -141,3 +141,17 @@ export async function updateTenantBrandTheme(formData: FormData) {
   revalidatePath("/admin");
   return { tenant: data };
 }
+
+// Removes their access to this one business - not their account. Service
+// role, same reasoning as the page's listing query: there's no RLS delete
+// policy on memberships for platform admins (deliberately - only members
+// can be linked/unlinked, and only through this gated action), so this
+// bypasses RLS and requireAdmin() above is what's actually authorizing it.
+export async function removeMembership(membershipId: string) {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin.from("memberships").delete().eq("id", membershipId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { success: true };
+}

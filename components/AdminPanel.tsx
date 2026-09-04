@@ -2,8 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createTenant, inviteTeammate, updateTenantDomain, updateTenantBrandTheme } from "@/app/admin/actions";
+import {
+  createTenant,
+  inviteTeammate,
+  updateTenantDomain,
+  updateTenantBrandTheme,
+  removeMembership,
+} from "@/app/admin/actions";
 import { CopyButton } from "@/components/CopyButton";
+import { DeleteButton } from "@/components/DeleteButton";
 import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 
 type Tenant = {
@@ -15,6 +22,8 @@ type Tenant = {
   brand_theme: string;
   created_at: string;
 };
+
+type Member = { membershipId: string; email: string };
 
 function SwatchPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
   return (
@@ -285,7 +294,28 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
   );
 }
 
-function TenantList({ tenants }: { tenants: Tenant[] }) {
+function MembersEditor({ members }: { members: Member[] }) {
+  if (members.length === 0) {
+    return <p className="mt-1 text-xs text-muted">No logins yet - invite one above.</p>;
+  }
+  return (
+    <div className="mt-1 flex flex-col gap-1.5">
+      {members.map((m) => (
+        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-md bg-surface-2 px-2.5 py-1.5">
+          <span className="truncate text-xs text-ink-2">{m.email}</span>
+          <DeleteButton
+            action={removeMembership}
+            id={m.membershipId}
+            confirmText={`Remove ${m.email}'s access to this business? They'll no longer be able to sign in to it.`}
+            className="flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-[11px] font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersByTenant: Record<string, Member[]> }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -307,6 +337,9 @@ function TenantList({ tenants }: { tenants: Tenant[] }) {
 
             <p className="mt-3 text-xs font-semibold text-ink-2">Brand color</p>
             <BrandThemeEditor tenant={t} />
+
+            <p className="mt-3 text-xs font-semibold text-ink-2">Logins</p>
+            <MembersEditor members={membersByTenant[t.id] ?? []} />
 
             <button
               type="button"
@@ -348,12 +381,18 @@ function TenantList({ tenants }: { tenants: Tenant[] }) {
   );
 }
 
-export function AdminPanel({ tenants }: { tenants: Tenant[] }) {
+export function AdminPanel({
+  tenants,
+  membersByTenant,
+}: {
+  tenants: Tenant[];
+  membersByTenant: Record<string, Member[]>;
+}) {
   return (
     <div className="flex flex-col gap-5">
       <CreateTenantForm />
       <InviteForm tenants={tenants} />
-      <TenantList tenants={tenants} />
+      <TenantList tenants={tenants} membersByTenant={membersByTenant} />
     </div>
   );
 }

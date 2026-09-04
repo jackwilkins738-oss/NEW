@@ -10,7 +10,11 @@ export function DeleteButton({
   className,
   label = "Delete",
 }: {
-  action: (id: string) => void | Promise<void>;
+  // unknown, not void | Promise<void>: some actions (like removeMembership)
+  // return a result object rather than nothing, and TypeScript's void-return
+  // leniency doesn't reliably cover that - this already caused one build
+  // failure earlier by being too narrow. `unknown` accepts any return shape.
+  action: (id: string) => unknown;
   id: string;
   confirmText: string;
   className?: string;
