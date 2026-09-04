@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deriveBrandTheme } from "@/lib/theme";
 
@@ -94,7 +95,10 @@ export async function POST(request: Request) {
     name: body.name ? String(body.name) : null,
     email: body.email ? String(body.email) : null,
     source: body.source ? String(body.source) : null,
-  }).catch((err) => console.error("Lead notification failed:", err));
+  }).catch((err) => {
+    console.error("Lead notification failed:", err);
+    Sentry.captureException(err);
+  });
 
   return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
 }
