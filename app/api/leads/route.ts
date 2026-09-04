@@ -48,6 +48,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
   }
 
+  // Vercel sets x-forwarded-for on every request; take the first hop (the
+  // actual client, not any proxy in front of them).
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+
+  if (ip) {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { count } = await admin
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("ip", ip)
+      .gte("created_at", tenMinutesAgo);
+
+    if ((count ?? 0) >= 5) {
+      // Same vague 404 as an invalid site_key - no reason to tell a bot
+      // it's specifically been rate-limited rather than rejected outright.
+      return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
+    }
+  }
+
   const { data: lead, error } = await admin
     .from("leads")
     .insert({
@@ -58,6 +78,7 @@ export async function POST(request: Request) {
       phone: body.phone ? String(body.phone) : null,
       message: body.message ? String(body.message) : null,
       source: body.source ? String(body.source) : null,
+      ip,
     })
     .select("id")
     .single();

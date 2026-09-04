@@ -36,6 +36,7 @@ create table leads (
   source text,                        -- e.g. "google_ads", "referral", "organic"
   status text not null default 'new', -- new | contacted | quoted | won | lost
   status_updated_at timestamptz not null default now(),
+  ip text,                            -- submitter's IP, used only for /api/leads rate-limiting
   created_at timestamptz not null default now()
 );
 
@@ -96,6 +97,7 @@ create table platform_admins (
 );
 
 create index leads_tenant_idx on leads(tenant_id, created_at desc);
+create index leads_tenant_ip_idx on leads(tenant_id, ip, created_at desc);
 create index invoices_tenant_idx on invoices(tenant_id, due_date asc);
 create index pageviews_tenant_idx on pageviews(tenant_id, created_at desc);
 create index projects_tenant_idx on projects(tenant_id, created_at desc);

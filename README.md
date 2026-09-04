@@ -92,10 +92,13 @@ no SQL needed for any of this:
   `<script>` tag on the customer's own website, the same way a Stripe
   *publishable* key is public. It only grants the ability to insert leads/
   pageviews for that one tenant, never to read anything.
-- Not yet handled (worth adding before this is customer-facing at scale):
-  rate-limiting on the public insert endpoints, so the `/track.js` endpoint
-  can't be spammed with junk leads. Fine to skip while customer count is
-  small; add via Supabase Edge Functions or a WAF rule once it matters.
+- `/api/leads` rate-limits by IP: max 5 lead submissions per tenant per IP
+  every 10 minutes, checked against the `leads` table itself (no Redis/
+  external service needed). Over the limit gets the same vague 404 as an
+  invalid `site_key`, rather than a distinguishable "rate limited" response.
+  Pageviews aren't rate-limited (they still post straight to Supabase, not
+  through this app - see "How it fits together" above) - lower value as a
+  spam target and much higher volume, so not worth the added complexity yet.
 
 ## What's built vs. what's next
 
