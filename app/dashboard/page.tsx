@@ -238,7 +238,10 @@ export default async function DashboardPage() {
         </div>
 
         <footer className="mt-8 flex justify-end">
-          <p className="text-xs text-muted">Powered by Scalar Digital</p>
+          <p className="text-xs text-muted">
+            Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
+            <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
+          </p>
         </footer>
       </div>
     </main>

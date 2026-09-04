@@ -112,7 +112,10 @@ export default async function LoginPage({
             Go to Ridgeview dashboard login &rarr;
           </a>
         )}
-        <p className="mt-5 text-center text-xs text-muted">Powered by Scalar Digital</p>
+        <p className="mt-5 text-center text-xs text-muted">
+          Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
+          <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
+        </p>
       </div>
     </main>
   );
