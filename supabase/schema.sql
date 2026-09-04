@@ -84,6 +84,16 @@ create table invoices (
   created_at timestamptz not null default now()
 );
 
+-- Gates the /admin screen to specific people (you), not any signed-in
+-- member of any tenant. No app UI writes to this table on purpose - it's a
+-- one-time SQL bootstrap step (see the bottom of this file) to avoid a
+-- chicken-and-egg problem (you'd need to already be an admin to make
+-- yourself one through the app).
+create table platform_admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 create index leads_tenant_idx on leads(tenant_id, created_at desc);
 create index invoices_tenant_idx on invoices(tenant_id, due_date asc);
 create index pageviews_tenant_idx on pageviews(tenant_id, created_at desc);
@@ -96,6 +106,20 @@ alter table leads enable row level security;
 alter table pageviews enable row level security;
 alter table projects enable row level security;
 alter table invoices enable row level security;
+alter table platform_admins enable row level security;
+
+create policy "self can read own admin row" on platform_admins
+  for select using (user_id = auth.uid());
+
+create policy "platform admin can create tenants" on tenants
+  for insert with check (
+    exists (select 1 from platform_admins pa where pa.user_id = auth.uid())
+  );
+
+create policy "platform admin can create memberships" on memberships
+  for insert with check (
+    exists (select 1 from platform_admins pa where pa.user_id = auth.uid())
+  );
 
 -- Tenant identity (business name, slug, domain, site_key) is not secret - the
 -- login page needs to read it before anyone's signed in (to show "sign in to
@@ -152,3 +176,9 @@ create policy "public can insert pageviews with a valid site key" on pageviews
   for insert with check (
     exists (select 1 from tenants t where t.id = pageviews.tenant_id and t.site_key = pageviews.site_key)
   );
+
+-- Bootstrap step (there's no UI for this - it would be a chicken-and-egg
+-- problem): make your own existing login a platform admin, so /admin lets
+-- you in. Find your user id in Authentication -> Users, then:
+--
+-- insert into platform_admins (user_id) values ('<your auth user id>');

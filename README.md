@@ -19,14 +19,23 @@ data (enforced by database row-level security, not just app logic).
 1. **Create a Supabase project** at supabase.com (free tier is fine).
 2. In the Supabase SQL editor, run `supabase/schema.sql`, then (optional, for
    a demo tenant) `supabase/seed.sql`.
-3. In Supabase → Project Settings → API, copy the **Project URL** and
-   **anon public key**.
-4. Copy `.env.example` to `.env.local` and paste those two values in.
+3. In Supabase → Project Settings → API, copy the **Project URL**, the
+   **anon public key**, and the **service_role key** (the last one is
+   secret — it powers `/admin`, see below).
+4. Copy `.env.example` to `.env.local` and paste those three values in.
 5. **Deploy to Vercel**: push this folder to a GitHub repo, import it in
-   Vercel, and add the same two environment variables there.
+   Vercel, and add the same three environment variables there.
 6. In Vercel → your project → Settings → Domains, add a wildcard domain if
    you're using subdomains of your own brand (e.g. `*.yourbrand.com`), or
    you'll add each customer's own domain individually per the checklist below.
+7. **Bootstrap yourself as a platform admin** — in the Supabase SQL editor:
+   ```sql
+   insert into platform_admins (user_id) values ('<your auth user id>');
+   ```
+   Find your user id in Authentication → Users. This is a one-time,
+   SQL-only step (there's no UI for it — you'd need to already be an admin
+   to make yourself one through the app). Everything after this is done
+   from `/admin`, no SQL required.
 
 ### Local development
 
@@ -37,32 +46,27 @@ build it works without ever running it on your own machine.
 
 ## Onboarding a new customer (~10–15 min)
 
-1. **Create their tenant row** — in Supabase, either run SQL directly or (later)
-   build a small internal admin form for this:
-   ```sql
-   insert into tenants (business_name, slug, domain)
-   values ('Their Business Name', 'their-slug', 'dashboard.theirdomain.co.uk')
-   returning id, site_key;
-   ```
-   Keep the returned `site_key` — it goes in their `track.js` embed.
-2. **Create their login** — Supabase → Authentication → Users → Add user
-   (or send them an invite email). Then link that login to their tenant:
-   ```sql
-   insert into memberships (tenant_id, user_id)
-   values ('<tenant id from step 1>', '<their auth user id>');
-   ```
-3. **Point their domain at the dashboard** — add a DNS record at their
+All done from `/admin` (only your bootstrapped login can reach that page) —
+no SQL needed for any of this:
+
+1. **Go to `/admin` → "Add a new customer"** — business name, a slug, and
+   (once you know it) their domain. Creating it hands back a **site key** —
+   copy it, you'll need it for step 3.
+2. **Point their domain at the dashboard** — add a DNS record at their
    registrar (a `CNAME` to your Vercel deployment, e.g.
    `dashboard.theirdomain.co.uk → cname.vercel-dns.com`), then add that exact
    domain in Vercel → Domains. SSL is issued automatically once DNS resolves.
-4. **Embed the tracking snippet** in their site, once, near `</body>`:
+   If you didn't have the domain yet in step 1, come back and update the
+   tenant's `domain` once it's set (currently a Supabase table edit — a
+   "rename domain" admin action is an easy future addition).
+3. **Embed the tracking snippet** in their site, once, near `</body>`:
    ```html
    <script src="https://dashboard.yourbrand.com/track.js"
            data-tenant="<tenant id from step 1>"
-           data-site-key="<site_key from step 1>"
+           data-site-key="<site key from step 1>"
            defer></script>
    ```
-5. **Mark their lead form** so submissions get captured — add
+4. **Mark their lead form** so submissions get captured — add
    `data-lead-form` to the `<form>` tag, and make sure its fields are named
    `name`, `email`, `phone`, `message` (whichever apply):
    ```html
@@ -75,8 +79,10 @@ build it works without ever running it on your own machine.
    ```
    Page views are captured automatically just by the script being present —
    no extra markup needed for that part.
-
-They can now sign in at their dashboard URL with the login from step 2.
+5. **Go to `/admin` → "Invite a login"** — pick the business, enter their
+   email, and it hands back a one-time link. Copy it and send it to them
+   yourself (no email server needed) — clicking it lets them set their own
+   password and signs them straight in.
 
 ## Security notes
 
@@ -94,10 +100,12 @@ They can now sign in at their dashboard URL with the login from step 2.
 
 ## What's built vs. what's next
 
-This is a real, working v1: authentication, tenant isolation, live leads/
-pageviews/projects data, deployable today. It does **not** yet replicate
-every visual element of the original dashboard mockup (the charts, funnel,
-alerts panel, capacity meters) — those are straightforward to port into
-`app/dashboard/page.tsx` using the same design tokens (`app/globals.css`),
-but were left out of this pass to get a real, live, multi-tenant system in
-place first rather than a bigger pile of static UI.
+Real and working: authentication, tenant isolation, live leads/pageviews/
+projects/invoices data, per-project editing, a no-SQL `/admin` screen for
+onboarding customers and inviting logins — all deployable today.
+
+Still open: the **alerts panel** and **capacity meters** from the original
+mockup need data the app doesn't capture yet (flagged issues, subcontractor
+scheduling) — worth a separate pass once it's clear how you actually want to
+run that side of it. `/admin` also doesn't yet let you edit a tenant's
+domain after creation (a Supabase table edit for now) or remove a login.
