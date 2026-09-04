@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,7 +60,12 @@ export async function inviteTeammate(formData: FormData) {
   if (!tenantId || !email) return { error: "Pick a business and enter an email." };
 
   const { data: tenant } = await supabase.from("tenants").select("domain, slug").eq("id", tenantId).single();
-  const host = tenant?.domain || headers().get("host") || "";
+  // NOT headers().get("host") as a fallback - that's wherever /admin itself
+  // is being viewed from (always admin.scalardigital.co.uk), never the
+  // tenant's own address. Every tenant is reachable at slug.scalardigital.co.uk
+  // via the wildcard now, even before a real domain is set, so that's the
+  // correct fallback rather than this app's own admin domain.
+  const host = tenant?.domain || `${tenant?.slug}.scalardigital.co.uk`;
   const redirectTo = `https://${host}/dashboard`;
 
   let link: string | null = null;
