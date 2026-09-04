@@ -33,7 +33,7 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center overflow-hidden bg-page px-5 py-10 sm:px-6">
-      {tenant && <style>{brandThemeStyleTag(tenant.brand_theme)}</style>}
+      {tenant && <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />}
       <div className="relative w-full max-w-sm">
         {/* Abstract brand-tinted glow, not literal imagery - reads as premium
             for any customer's brand color without needing per-industry art. */}

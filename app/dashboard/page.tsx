@@ -163,7 +163,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-page px-6 py-8">
-      <style>{brandThemeStyleTag(tenant.brand_theme)}</style>
+      <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>

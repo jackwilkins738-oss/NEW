@@ -110,6 +110,15 @@ function withAlpha(hex: string, alpha: number) {
 // request. Safe to interpolate directly: every value here comes from our
 // own PALETTE map or the derivation formula above, never from a raw
 // user/DB-supplied string.
+//
+// Render this with `<style dangerouslySetInnerHTML={{ __html: ... }} />`,
+// never `<style>{...}</style>`. The latter looks fine but causes a real
+// hydration mismatch: React HTML-escapes plain text children (" becomes
+// &quot;), but <style> is an HTML "raw text" element, so the browser's
+// parser never decodes that escape back - the DOM ends up with literal
+// &quot; characters in the CSS, which won't match what React recomputes
+// on the client. dangerouslySetInnerHTML skips the escaping entirely,
+// which is what a raw text element like <style> actually needs.
 export function brandThemeStyleTag(themeKey: string) {
   const { light, dark } = deriveBrandTheme(themeKey);
   return `
