@@ -27,7 +27,7 @@ type Member = { membershipId: string; email: string };
 
 function SwatchPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2.5">
       {Object.entries(PALETTE).map(([key, { name, hex }]) => (
         <button
           key={key}
@@ -35,7 +35,9 @@ function SwatchPicker({ value, onChange }: { value: string; onChange: (key: stri
           title={name}
           aria-label={name}
           onClick={() => onChange(key)}
-          className="h-8 w-8 rounded-full transition-transform"
+          // 40px, not the original 32px: below the ~40-44px touch-target
+          // floor, swatches this close together get mis-tapped on a phone.
+          className="h-10 w-10 flex-none rounded-full transition-transform"
           style={{
             background: hex,
             outline: value === key ? "2px solid var(--ink)" : "2px solid transparent",
@@ -256,12 +258,14 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
           setSaved(false);
         }}
         placeholder="dashboard.theirdomain.co.uk"
-        className="w-full max-w-[260px] rounded-md border border-black/15 bg-page px-2 py-1.5 font-mono text-xs text-ink outline-none focus:border-brand"
+        // text-base (16px), not text-xs: below 16px, iOS Safari auto-zooms
+        // into the field on focus.
+        className="w-full max-w-[280px] rounded-md border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink outline-none focus:border-brand sm:text-xs"
       />
       <button
         type="submit"
         disabled={pending || !changed}
-        className="rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+        className="min-h-[38px] rounded-md border border-black/10 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save"}
       </button>
@@ -302,7 +306,7 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
           type="button"
           onClick={handleSave}
           disabled={pending}
-          className="rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
+          className="min-h-[38px] rounded-md border border-black/10 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -319,13 +323,13 @@ function MembersEditor({ members }: { members: Member[] }) {
   return (
     <div className="mt-1 flex flex-col gap-1.5">
       {members.map((m) => (
-        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-md bg-surface-2 px-2.5 py-1.5">
+        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-md bg-surface-2 px-2.5 py-2">
           <span className="truncate text-xs text-ink-2">{m.email}</span>
           <DeleteButton
             action={removeMembership}
             id={m.membershipId}
             confirmText={`Remove ${m.email}'s access to this business? They'll no longer be able to sign in to it.`}
-            className="flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-[11px] font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+            className="min-h-[32px] flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
           />
         </div>
       ))}
