@@ -12,6 +12,11 @@ import { CapacityPanel } from "@/components/CapacityPanel";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 
+// Leads/projects/invoices change from outside this app (a customer's own
+// website, another teammate) - never let Next.js serve a cached snapshot of
+// this page.
+export const dynamic = "force-dynamic";
+
 const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Buckets project value by the month the project was created. This is a

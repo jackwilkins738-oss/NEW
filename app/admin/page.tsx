@@ -5,6 +5,11 @@ import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { AdminPanel } from "@/components/AdminPanel";
 import { signOut } from "@/app/login/actions";
 
+// Customer/membership lists change from this same page's own actions
+// (create tenant, invite, remove) - never let Next.js serve a cached
+// snapshot after one of those.
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
