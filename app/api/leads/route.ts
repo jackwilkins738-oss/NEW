@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deriveBrandTheme } from "@/lib/theme";
 
 // Leads used to be written straight from the customer's browser to
 // Supabase's REST API - which meant there was no code of ours in that path
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: tenant } = await admin
     .from("tenants")
-    .select("id, business_name, site_key, domain, slug")
+    .select("id, business_name, site_key, domain, slug, brand_theme")
     .eq("id", tenantId)
     .maybeSingle();
 
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 
 async function notifyNewLead(
   admin: ReturnType<typeof createAdminClient>,
-  tenant: { id: string; business_name: string; domain: string | null; slug: string },
+  tenant: { id: string; business_name: string; domain: string | null; slug: string; brand_theme: string },
   lead: { name: string | null; email: string | null; source: string | null }
 ) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -118,6 +119,7 @@ async function notifyNewLead(
 
   const dashboardUrl = `https://${tenant.domain || `${tenant.slug}.scalardigital.co.uk`}/dashboard`;
   const who = lead.name || lead.email || "Someone";
+  const brandColor = deriveBrandTheme(tenant.brand_theme).light.brand;
 
   await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -133,7 +135,7 @@ async function notifyNewLead(
       }.</p>
           ${lead.email ? `<p>Email: ${lead.email}</p>` : ""}
           <p style="margin-top:20px;">
-            <a href="${dashboardUrl}" style="background:#8b4a2b;color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">View on your dashboard</a>
+            <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">View on your dashboard</a>
           </p>
         </div>
       `,
