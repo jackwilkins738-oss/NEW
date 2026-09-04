@@ -116,6 +116,13 @@ create policy "platform admin can create tenants" on tenants
     exists (select 1 from platform_admins pa where pa.user_id = auth.uid())
   );
 
+create policy "platform admin can update tenants" on tenants
+  for update using (
+    exists (select 1 from platform_admins pa where pa.user_id = auth.uid())
+  ) with check (
+    exists (select 1 from platform_admins pa where pa.user_id = auth.uid())
+  );
+
 create policy "platform admin can create memberships" on memberships
   for insert with check (
     exists (select 1 from platform_admins pa where pa.user_id = auth.uid())

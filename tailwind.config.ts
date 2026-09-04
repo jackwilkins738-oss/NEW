@@ -18,6 +18,7 @@ const config: Config = {
         muted: "var(--muted)",
         brand: "var(--brand)",
         "brand-strong": "var(--brand-strong)",
+        "brand-tint": "var(--brand-tint)",
         good: "var(--status-good)",
         warning: "var(--status-warning)",
         critical: "var(--status-critical)",

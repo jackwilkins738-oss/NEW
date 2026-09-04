@@ -96,3 +96,25 @@ export async function inviteTeammate(formData: FormData) {
   revalidatePath("/admin");
   return { link, email };
 }
+
+export async function updateTenantDomain(formData: FormData) {
+  const { supabase } = await requireAdmin();
+
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const domain = String(formData.get("domain") ?? "").trim() || null;
+  if (!tenantId) return { error: "Missing tenant." };
+
+  const { data, error } = await supabase
+    .from("tenants")
+    .update({ domain })
+    .eq("id", tenantId)
+    .select("id, business_name, slug, domain, site_key, created_at")
+    .single();
+
+  if (error) {
+    return { error: error.message.includes("duplicate") ? "That domain is already in use." : error.message };
+  }
+
+  revalidatePath("/admin");
+  return { tenant: data };
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { createTenant, inviteTeammate } from "@/app/admin/actions";
+import { useRouter } from "next/navigation";
+import { createTenant, inviteTeammate, updateTenantDomain } from "@/app/admin/actions";
 
 type Tenant = {
   id: string;
@@ -16,7 +17,8 @@ const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-function CreateTenantForm({ onCreated }: { onCreated: (t: Tenant) => void }) {
+function CreateTenantForm() {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<{ error?: string; tenant?: Tenant } | null>(null);
 
@@ -28,8 +30,8 @@ function CreateTenantForm({ onCreated }: { onCreated: (t: Tenant) => void }) {
     setResult(res);
     setPending(false);
     if (res.tenant) {
-      onCreated(res.tenant);
       e.currentTarget.reset();
+      router.refresh();
     }
   }
 
@@ -80,6 +82,7 @@ function CreateTenantForm({ onCreated }: { onCreated: (t: Tenant) => void }) {
 }
 
 function InviteForm({ tenants }: { tenants: Tenant[] }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<{ error?: string; link?: string; email?: string } | null>(null);
 
@@ -90,6 +93,7 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
     const res = await inviteTeammate(formData);
     setResult(res);
     setPending(false);
+    if (res.link) router.refresh();
   }
 
   return (
@@ -135,22 +139,74 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
   );
 }
 
+function DomainEditor({ tenant }: { tenant: Tenant }) {
+  const router = useRouter();
+  const [domain, setDomain] = useState(tenant.domain ?? "");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(null);
+    setSaved(false);
+    const formData = new FormData();
+    formData.set("tenantId", tenant.id);
+    formData.set("domain", domain);
+    const res = await updateTenantDomain(formData);
+    setPending(false);
+    if (res.error) {
+      setError(res.error);
+    } else {
+      setSaved(true);
+      router.refresh();
+    }
+  }
+
+  const changed = domain !== (tenant.domain ?? "");
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        value={domain}
+        onChange={(e) => {
+          setDomain(e.target.value);
+          setSaved(false);
+        }}
+        placeholder="dashboard.theirdomain.co.uk"
+        className="w-full max-w-[260px] rounded-md border border-black/15 bg-page px-2 py-1.5 font-mono text-xs text-ink outline-none focus:border-brand"
+      />
+      <button
+        type="submit"
+        disabled={pending || !changed}
+        className="rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+      {saved && !changed && <span className="text-xs font-semibold text-good">Saved</span>}
+      {error && <span className="text-xs font-semibold text-critical">{error}</span>}
+    </form>
+  );
+}
+
 function TenantList({ tenants }: { tenants: Tenant[] }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Customers ({tenants.length})</h2>
-      <div className="mt-3 flex flex-col gap-3">
+      <div className="mt-3 flex flex-col gap-4">
         {tenants.length === 0 && <p className="text-sm text-muted">No customers yet.</p>}
         {tenants.map((t) => (
-          <div key={t.id} className="border-b border-black/10 pb-3 text-sm last:border-none last:pb-0">
+          <div key={t.id} className="border-b border-black/10 pb-4 text-sm last:border-none last:pb-0">
             <p className="font-semibold text-ink">{t.business_name}</p>
             <p className="text-xs text-muted">
-              slug: <span className="font-mono">{t.slug}</span> &middot; domain:{" "}
-              <span className="font-mono">{t.domain ?? "not set yet"}</span>
+              slug: <span className="font-mono">{t.slug}</span>
             </p>
-            <p className="text-xs text-muted">
+            <p className="mt-0.5 text-xs text-muted">
               id: <span className="font-mono">{t.id}</span>
             </p>
+            <p className="mt-2 text-xs font-semibold text-ink-2">Domain</p>
+            <DomainEditor tenant={t} />
           </div>
         ))}
       </div>
@@ -158,12 +214,10 @@ function TenantList({ tenants }: { tenants: Tenant[] }) {
   );
 }
 
-export function AdminPanel({ tenants: initialTenants }: { tenants: Tenant[] }) {
-  const [tenants, setTenants] = useState(initialTenants);
-
+export function AdminPanel({ tenants }: { tenants: Tenant[] }) {
   return (
     <div className="flex flex-col gap-5">
-      <CreateTenantForm onCreated={(t) => setTenants((prev) => [t, ...prev])} />
+      <CreateTenantForm />
       <InviteForm tenants={tenants} />
       <TenantList tenants={tenants} />
     </div>
