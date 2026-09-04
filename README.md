@@ -50,35 +50,23 @@ All done from `/admin` (only your bootstrapped login can reach that page) —
 no SQL needed for any of this:
 
 1. **Go to `/admin` → "Add a new customer"** — business name, a slug, and
-   (once you know it) their domain. Creating it hands back a **site key** —
-   copy it, you'll need it for step 3.
+   (once you know it) their domain. Creating it hands back the exact
+   `<script>` tag to paste onto their site, with their id/site key already
+   filled in — click Copy, no manual assembly needed. Existing customers
+   have the same snippet (plus the contact-form markup) behind a "Get
+   website snippet" link on their card in the customer list.
 2. **Point their domain at the dashboard** — add a DNS record at their
    registrar (a `CNAME` to your Vercel deployment, e.g.
    `dashboard.theirdomain.co.uk → cname.vercel-dns.com`), then add that exact
    domain in Vercel → Domains. SSL is issued automatically once DNS resolves.
-   If you didn't have the domain yet in step 1, come back and update the
-   tenant's `domain` once it's set (currently a Supabase table edit — a
-   "rename domain" admin action is an easy future addition).
-3. **Embed the tracking snippet** in their site, once, near `</body>`:
-   ```html
-   <script src="https://dashboard.yourbrand.com/track.js"
-           data-tenant="<tenant id from step 1>"
-           data-site-key="<site key from step 1>"
-           defer></script>
-   ```
-4. **Mark their lead form** so submissions get captured — add
-   `data-lead-form` to the `<form>` tag, and make sure its fields are named
-   `name`, `email`, `phone`, `message` (whichever apply):
-   ```html
-   <form data-lead-form>
-     <input name="name" />
-     <input name="email" />
-     <textarea name="message"></textarea>
-     <button type="submit">Send</button>
-   </form>
-   ```
-   Page views are captured automatically just by the script being present —
-   no extra markup needed for that part.
+   If you didn't have the domain yet in step 1, edit it any time from that
+   same customer card on `/admin`.
+3. **Paste the tracking snippet** onto their site, once, near `</body>`.
+4. **Mark their lead form** so submissions get captured — the snippet
+   behind "Get website snippet" shows this too: add `data-lead-form` to the
+   `<form>` tag, with fields named `name`, `email`, `phone`, `message`
+   (whichever apply). Page views are captured automatically just by the
+   script being present — no extra markup needed for that part.
 5. **Go to `/admin` → "Invite a login"** — pick the business, enter their
    email, and it hands back a one-time link. Copy it and send it to them
    yourself (no email server needed) — clicking it lets them set their own
@@ -101,11 +89,13 @@ no SQL needed for any of this:
 ## What's built vs. what's next
 
 Real and working: authentication, tenant isolation, live leads/pageviews/
-projects/invoices data, per-project editing, a no-SQL `/admin` screen for
-onboarding customers and inviting logins — all deployable today.
+projects/invoices data, self-service project creation and deletion, a
+monthly progress view, password reset, a no-SQL `/admin` screen (create
+customers, edit their domain, generate invite links, copy their ready-made
+tracking snippet) — all deployable today.
 
 Still open: the **alerts panel** and **capacity meters** from the original
 mockup need data the app doesn't capture yet (flagged issues, subcontractor
 scheduling) — worth a separate pass once it's clear how you actually want to
-run that side of it. `/admin` also doesn't yet let you edit a tenant's
-domain after creation (a Supabase table edit for now) or remove a login.
+run that side of it. `/admin` doesn't yet let you remove a login from a
+business.

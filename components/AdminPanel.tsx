@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createTenant, inviteTeammate, updateTenantDomain } from "@/app/admin/actions";
+import { CopyButton } from "@/components/CopyButton";
 
 type Tenant = {
   id: string;
@@ -16,6 +17,24 @@ type Tenant = {
 const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
+
+// admin.scalardigital.co.uk is the stable, permanent home for this app -
+// track.js itself doesn't care which domain serves it (it reads its
+// data-tenant/data-site-key attributes, not the host), so any working
+// domain would do, but this one won't change under a customer's feet.
+const TRACK_SCRIPT_HOST = "https://admin.scalardigital.co.uk";
+
+function snippetFor(tenant: Tenant) {
+  return `<script src="${TRACK_SCRIPT_HOST}/track.js" data-tenant="${tenant.id}" data-site-key="${tenant.site_key}" defer></script>`;
+}
+
+const LEAD_FORM_SNIPPET = `<form data-lead-form>
+  <input name="name" />
+  <input name="email" />
+  <input name="phone" />
+  <textarea name="message"></textarea>
+  <button type="submit">Send</button>
+</form>`;
 
 function CreateTenantForm() {
   const router = useRouter();
@@ -65,15 +84,16 @@ function CreateTenantForm() {
       {result?.error && <p className="mt-3 text-sm font-semibold text-critical">{result.error}</p>}
       {result?.tenant && (
         <div className="mt-3 rounded-lg border border-[rgba(12,163,12,0.3)] bg-[rgba(12,163,12,0.08)] p-3 text-sm">
-          <p className="font-semibold text-good">
-            {result.tenant.business_name} created. Site key: <span className="font-mono">{result.tenant.site_key}</span>
-          </p>
+          <p className="font-semibold text-good">{result.tenant.business_name} created.</p>
+          <p className="mt-2 text-xs font-semibold text-ink-2">Paste this near &lt;/body&gt; on their site:</p>
+          <div className="mt-1 flex items-start gap-2">
+            <code className="flex-1 overflow-x-auto whitespace-pre rounded bg-surface-2 px-2 py-1.5 text-xs text-ink-2">
+              {snippetFor(result.tenant)}
+            </code>
+            <CopyButton text={snippetFor(result.tenant)} />
+          </div>
           <p className="mt-1 text-xs text-ink-2">
-            Next: point their DNS at this app, add the domain in Vercel, then embed{" "}
-            <code className="rounded bg-surface-2 px-1">/track.js</code> with{" "}
-            <code className="rounded bg-surface-2 px-1">data-tenant=&quot;{result.tenant.id}&quot;</code> and{" "}
-            <code className="rounded bg-surface-2 px-1">data-site-key=&quot;{result.tenant.site_key}&quot;</code> on their site,
-            then invite yourself or them below.
+            Then point their DNS at this app and add the domain in Vercel, and invite yourself or them below.
           </p>
         </div>
       )}
@@ -191,6 +211,8 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
 }
 
 function TenantList({ tenants }: { tenants: Tenant[] }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Customers ({tenants.length})</h2>
@@ -207,6 +229,40 @@ function TenantList({ tenants }: { tenants: Tenant[] }) {
             </p>
             <p className="mt-2 text-xs font-semibold text-ink-2">Domain</p>
             <DomainEditor tenant={t} />
+
+            <button
+              type="button"
+              onClick={() => setExpanded((cur) => (cur === t.id ? null : t.id))}
+              className="mt-3 text-xs font-semibold text-brand hover:underline"
+            >
+              {expanded === t.id ? "Hide website snippet" : "Get website snippet"}
+            </button>
+
+            {expanded === t.id && (
+              <div className="mt-2 rounded-lg bg-surface-2 p-3">
+                <p className="text-xs font-semibold text-ink-2">Paste this near &lt;/body&gt; on their site:</p>
+                <div className="mt-1 flex items-start gap-2">
+                  <code className="flex-1 overflow-x-auto whitespace-pre rounded bg-surface px-2 py-1.5 text-xs text-ink-2">
+                    {snippetFor(t)}
+                  </code>
+                  <CopyButton text={snippetFor(t)} />
+                </div>
+
+                <p className="mt-3 text-xs font-semibold text-ink-2">
+                  Mark their contact form so submissions get captured (fields can be a subset -
+                  only what&apos;s present gets sent):
+                </p>
+                <div className="mt-1 flex items-start gap-2">
+                  <code className="flex-1 overflow-x-auto whitespace-pre rounded bg-surface px-2 py-1.5 text-xs text-ink-2">
+                    {LEAD_FORM_SNIPPET}
+                  </code>
+                  <CopyButton text={LEAD_FORM_SNIPPET} />
+                </div>
+                <p className="mt-2 text-xs text-muted">
+                  Page views are captured automatically just by the script being present - no extra markup needed.
+                </p>
+              </div>
+            )}
           </div>
         ))}
       </div>
