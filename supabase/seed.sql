@@ -19,6 +19,22 @@ insert into projects (tenant_id, ref, client_name, location, project_type, stage
 select id, 'LC-2026-039', 'Okafor residence', 'Woking', 'Dormer loft', 'Planning decision', 6190000, 'Sam O.', '2026-12-19', 'at_risk'
 from tenants where slug = 'ridgeview';
 
+insert into invoices (tenant_id, client_name, reference, amount_pence, due_date, status)
+select id, 'Sinclair household', 'INV-3187', 1840000, current_date - interval '14 days', 'unpaid'
+from tenants where slug = 'ridgeview';
+
+insert into invoices (tenant_id, client_name, reference, amount_pence, due_date, status)
+select id, 'Carrow family', 'INV-3201', 925000, current_date + interval '4 days', 'unpaid'
+from tenants where slug = 'ridgeview';
+
+insert into invoices (tenant_id, client_name, reference, amount_pence, due_date, status)
+select id, 'Bevan household', 'INV-3199', 1200000, current_date + interval '21 days', 'unpaid'
+from tenants where slug = 'ridgeview';
+
+insert into invoices (tenant_id, client_name, reference, amount_pence, due_date, status)
+select id, 'Whitfield residence', 'INV-3150', 2600000, current_date - interval '40 days', 'paid'
+from tenants where slug = 'ridgeview';
+
 -- After creating a login for the owner in Authentication -> Users, link them to the tenant:
 -- insert into memberships (tenant_id, user_id)
 -- select id, '<paste the auth user id here>' from tenants where slug = 'ridgeview';

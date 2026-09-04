@@ -65,7 +65,23 @@ create table projects (
   updated_at timestamptz not null default now()
 );
 
+-- Invoices raised against a job. "Overdue" / "due soon" aren't stored -
+-- they're computed from due_date vs today wherever this is read, so there's
+-- nothing to keep in sync with a cron job.
+create table invoices (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  project_id uuid references projects(id) on delete set null,
+  client_name text not null,
+  reference text,
+  amount_pence bigint not null,
+  due_date date not null,
+  status text not null default 'unpaid', -- unpaid | paid
+  created_at timestamptz not null default now()
+);
+
 create index leads_tenant_idx on leads(tenant_id, created_at desc);
+create index invoices_tenant_idx on invoices(tenant_id, due_date asc);
 create index pageviews_tenant_idx on pageviews(tenant_id, created_at desc);
 create index projects_tenant_idx on projects(tenant_id, created_at desc);
 
@@ -75,6 +91,7 @@ alter table memberships enable row level security;
 alter table leads enable row level security;
 alter table pageviews enable row level security;
 alter table projects enable row level security;
+alter table invoices enable row level security;
 
 -- Tenant identity (business name, slug, domain, site_key) is not secret - the
 -- login page needs to read it before anyone's signed in (to show "sign in to
@@ -110,6 +127,13 @@ create policy "member can manage own projects" on projects
     exists (select 1 from memberships m where m.tenant_id = projects.tenant_id and m.user_id = auth.uid())
   ) with check (
     exists (select 1 from memberships m where m.tenant_id = projects.tenant_id and m.user_id = auth.uid())
+  );
+
+create policy "member can manage own invoices" on invoices
+  for all using (
+    exists (select 1 from memberships m where m.tenant_id = invoices.tenant_id and m.user_id = auth.uid())
+  ) with check (
+    exists (select 1 from memberships m where m.tenant_id = invoices.tenant_id and m.user_id = auth.uid())
   );
 
 -- Public inserts: anyone (an unauthenticated visitor on the customer's website) can log a lead or

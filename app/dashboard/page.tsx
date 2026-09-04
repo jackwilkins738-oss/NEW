@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
+import { InvoicesPanel } from "@/components/InvoicesPanel";
+import { formatGBP } from "@/lib/format";
 
 const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -50,14 +52,6 @@ function groupTopN<T>(
   return result;
 }
 
-function formatGBP(pence: number) {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 0,
-  }).format(pence / 100);
-}
-
 const STATUS_LABEL: Record<string, string> = {
   on_track: "On track",
   at_risk: "At risk",
@@ -94,7 +88,7 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, source, status, created_at")
@@ -111,14 +105,32 @@ export default async function DashboardPage() {
       .select("id, ref, client_name, location, project_type, stage, value_pence, pm, target_date, status, created_at")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select("id, client_name, reference, amount_pence, due_date, status")
+      .eq("tenant_id", tenant.id)
+      .order("due_date", { ascending: true }),
   ]);
 
   const leads = leadsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
   const projects = projectsRes.data ?? [];
+  const invoices = invoicesRes.data ?? [];
   const pipelineValue = projects
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const in7Days = new Date(today.getTime() + 7 * 86_400_000);
+  const unpaidInvoices = invoices.filter((i) => i.status !== "paid");
+  const overdueInvoices = unpaidInvoices.filter((i) => new Date(i.due_date + "T00:00:00") < today);
+  const dueSoonInvoices = unpaidInvoices.filter((i) => {
+    const due = new Date(i.due_date + "T00:00:00");
+    return due >= today && due <= in7Days;
+  });
+  const overdueTotal = overdueInvoices.reduce((sum, i) => sum + i.amount_pence, 0);
+  const dueSoonTotal = dueSoonInvoices.reduce((sum, i) => sum + i.amount_pence, 0);
 
   const revenueTrend = monthlyValueTrend(projects);
   const projectTypeBreakdown = groupTopN(
@@ -160,6 +172,23 @@ export default async function DashboardPage() {
           <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
             <p className="text-sm font-semibold text-ink-2">Live pipeline value</p>
             <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(pipelineValue)}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] p-5 shadow-sm">
+            <p className="text-sm font-semibold text-critical">Overdue invoices</p>
+            <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(overdueTotal)}</p>
+            <p className="mt-1 text-xs text-muted">
+              {overdueInvoices.length} invoice{overdueInvoices.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[rgba(250,178,25,0.4)] bg-[rgba(250,178,25,0.1)] p-5 shadow-sm">
+            <p className="text-sm font-semibold text-[#8a5a00]">Due in next 7 days</p>
+            <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(dueSoonTotal)}</p>
+            <p className="mt-1 text-xs text-muted">
+              {dueSoonInvoices.length} invoice{dueSoonInvoices.length === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
 
@@ -250,6 +279,10 @@ export default async function DashboardPage() {
           </div>
 
           <LeadsPanel leads={leads} />
+        </div>
+
+        <div className="mt-5">
+          <InvoicesPanel tenantId={tenant.id} invoices={invoices} />
         </div>
 
         <footer className="mt-8 flex justify-end">
