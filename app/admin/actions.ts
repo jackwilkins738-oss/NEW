@@ -82,11 +82,16 @@ export async function inviteTeammate(formData: FormData) {
 
   if (!link || !userId) return { error: "Link generated but no user id was returned - try again." };
 
-  const { error: membershipError } = await supabase
-    .from("memberships")
-    .upsert({ tenant_id: tenantId, user_id: userId }, { onConflict: "tenant_id,user_id" });
+  // Plain insert, not upsert: an upsert needs both an INSERT and an UPDATE
+  // RLS policy (Postgres evaluates the ON CONFLICT DO UPDATE branch even
+  // when there's no actual conflict), and there's deliberately no UPDATE
+  // policy on memberships. A duplicate here just means they're already
+  // linked to this business, which is fine - not a real error.
+  const { error: membershipError } = await supabase.from("memberships").insert({ tenant_id: tenantId, user_id: userId });
 
-  if (membershipError) return { error: membershipError.message };
+  if (membershipError && membershipError.code !== "23505") {
+    return { error: membershipError.message };
+  }
 
   revalidatePath("/admin");
   return { link, email };
