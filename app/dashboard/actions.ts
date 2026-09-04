@@ -55,6 +55,12 @@ export async function markInvoicePaid(invoiceId: string) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteInvoice(invoiceId: string) {
+  const supabase = createClient();
+  await supabase.from("invoices").delete().eq("id", invoiceId);
+  revalidatePath("/dashboard");
+}
+
 function generateRef() {
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -131,5 +137,11 @@ export async function updateProject(projectId: string, formData: FormData) {
   const supabase = createClient();
   await supabase.from("projects").update(update).eq("id", projectId);
 
+  revalidatePath("/dashboard");
+}
+
+export async function deleteProject(projectId: string) {
+  const supabase = createClient();
+  await supabase.from("projects").delete().eq("id", projectId);
   revalidatePath("/dashboard");
 }

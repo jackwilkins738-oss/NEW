@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateProject, addProject } from "@/app/dashboard/actions";
+import { updateProject, addProject, deleteProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 
 type Project = {
@@ -221,6 +221,17 @@ function ProjectCard({ project }: { project: Project }) {
                 className="flex-1 rounded-md border border-black/10 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
               >
                 Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Delete ${project.client_name}? This can't be undone.`)) {
+                    deleteProject(project.id);
+                  }
+                }}
+                className="ml-auto rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-4 py-2.5 text-sm font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+              >
+                Delete
               </button>
             </div>
           </form>

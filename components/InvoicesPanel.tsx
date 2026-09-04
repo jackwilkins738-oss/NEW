@@ -1,5 +1,6 @@
-import { addInvoice, markInvoicePaid } from "@/app/dashboard/actions";
+import { addInvoice, markInvoicePaid, deleteInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
+import { DeleteButton } from "@/components/DeleteButton";
 
 type Invoice = {
   id: string;
@@ -114,6 +115,12 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
                     </button>
                   </form>
                 )}
+                <DeleteButton
+                  action={deleteInvoice}
+                  id={inv.id}
+                  confirmText={`Delete the invoice for ${inv.client_name}? This can't be undone.`}
+                  className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                />
               </div>
             </div>
           );

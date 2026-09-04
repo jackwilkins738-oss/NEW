@@ -6,6 +6,7 @@ import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
+import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { formatGBP } from "@/lib/format";
 
 const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -211,6 +212,10 @@ export default async function DashboardPage() {
           </div>
 
           <LeadsPanel leads={leads} />
+        </div>
+
+        <div className="mt-5">
+          <MonthlyHistory projects={projects} />
         </div>
 
         <div className="mt-5">
