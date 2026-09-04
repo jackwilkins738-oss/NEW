@@ -83,6 +83,34 @@ no SQL needed for any of this:
    yourself (no email server needed) — clicking it lets them set their own
    password and signs them straight in.
 
+## Optional: Google Calendar sync
+
+Lets a customer connect their own Google Calendar from their dashboard -
+their existing day-to-day events show up alongside their jobs, and each
+job's next site visit gets pushed as a real event on their calendar
+(updated in place if the date changes, removed if the job is deleted).
+Skip this section entirely if you don't need it yet; the app works the
+same without it, the "Connect Google Calendar" button just won't appear
+functional.
+
+1. **console.cloud.google.com** → new project → **APIs & Services** →
+   enable the **Google Calendar API**.
+2. **OAuth consent screen** → External. It'll ask for a privacy policy and
+   terms URL - use the ones already live at `/privacy` and `/terms`.
+3. Add the `https://www.googleapis.com/auth/calendar.events` scope. This is
+   a "sensitive" scope, but the app can stay in **Testing** publishing
+   status (no Google review needed) as long as every real customer using it
+   is added as a test user by email in the console - up to 100. Only worth
+   going through Google's full verification once you're past that.
+4. **Credentials** → **Create OAuth client ID** → Web application. Add this
+   exact redirect URI (it's fixed - the flow always comes back here
+   regardless of which tenant's domain started it):
+   `https://admin.scalardigital.co.uk/api/calendar/google/callback`
+5. Copy the Client ID and secret into `GOOGLE_CLIENT_ID` /
+   `GOOGLE_CLIENT_SECRET` in Vercel's env vars.
+6. Run `supabase/migrations/011_calendar_connections.sql` in the Supabase
+   SQL editor (adds the token-storage table and one column on `projects`).
+
 ## Security notes
 
 - Row-level security (`supabase/schema.sql`) is what actually enforces
@@ -103,13 +131,16 @@ no SQL needed for any of this:
 ## What's built vs. what's next
 
 Real and working: authentication, tenant isolation, live leads/pageviews/
-projects/invoices data, self-service project creation and deletion, a
-monthly progress view, password reset, a no-SQL `/admin` screen (create
-customers, edit their domain, generate invite links, copy their ready-made
-tracking snippet) — all deployable today.
+projects/invoices data (with self-service create/edit/delete throughout,
+including leads), a monthly progress view, password reset, error monitoring
+(Sentry), privacy/terms pages, an alerts panel (unfollowed leads, overdue
+invoices, projects past their target date, upcoming site visits), trade
+capacity meters, optional Google Calendar sync, and a no-SQL `/admin` screen
+(create customers, edit their domain/brand colour, generate invite links,
+remove a login, copy their ready-made tracking snippet) — all deployable
+today.
 
-Still open: the **alerts panel** and **capacity meters** from the original
-mockup need data the app doesn't capture yet (flagged issues, subcontractor
-scheduling) — worth a separate pass once it's clear how you actually want to
-run that side of it. `/admin` doesn't yet let you remove a login from a
-business.
+Still open: nothing blocking — the natural next additions are things that
+need real customer usage to justify (Outlook calendar sync alongside
+Google, syncing `start_date`/`target_date` onto the calendar too, an
+in-app "Getting started" guide for handover).

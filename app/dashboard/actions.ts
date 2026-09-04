@@ -1,7 +1,67 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnection";
+import { upsertEvent, deleteEvent } from "@/lib/googleCalendar";
+
+// Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
+// a Google API hiccup should never stop a project save/delete from working,
+// it should just not sync that one time. `supabase` here is the caller's own
+// session-scoped client so the google_event_id write-back respects the same
+// RLS as everything else in this file.
+async function syncNextVisitToCalendar(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  clientName: string,
+  nextVisitAt: string | null
+) {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    const connection = await getCalendarConnection(userData.user.id);
+    if (!connection) return;
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("google_event_id")
+      .eq("id", projectId)
+      .maybeSingle();
+    const existingEventId = project?.google_event_id ?? null;
+    const accessToken = await getValidAccessToken(connection);
+
+    if (nextVisitAt) {
+      const googleEventId = await upsertEvent(accessToken, connection.google_calendar_id, existingEventId, {
+        summary: `Site visit - ${clientName}`,
+        startIso: nextVisitAt,
+      });
+      if (googleEventId !== existingEventId) {
+        await supabase.from("projects").update({ google_event_id: googleEventId }).eq("id", projectId);
+      }
+    } else if (existingEventId) {
+      await deleteEvent(accessToken, connection.google_calendar_id, existingEventId);
+      await supabase.from("projects").update({ google_event_id: null }).eq("id", projectId);
+    }
+  } catch (err) {
+    console.error("Calendar sync failed:", err);
+    Sentry.captureException(err);
+  }
+}
+
+export async function disconnectGoogleCalendar() {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  // calendar_connections has no RLS policies (see supabase/migrations/011) -
+  // has to go through the admin client even for the user's own row.
+  const admin = createAdminClient();
+  await admin.from("calendar_connections").delete().eq("user_id", userData.user.id);
+  revalidatePath("/dashboard");
+}
 
 const VALID_STATUSES = ["new", "contacted", "quoted", "won", "lost"];
 
@@ -138,16 +198,40 @@ export async function updateProject(projectId: string, formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) update.value_pence = Math.round(pounds * 100);
   }
 
-  update.next_visit_at = nextVisitDate ? new Date(`${nextVisitDate}T${nextVisitTime || "09:00"}`).toISOString() : null;
+  const nextVisitAt = nextVisitDate ? new Date(`${nextVisitDate}T${nextVisitTime || "09:00"}`).toISOString() : null;
+  update.next_visit_at = nextVisitAt;
 
   const supabase = createClient();
   await supabase.from("projects").update(update).eq("id", projectId);
+  await syncNextVisitToCalendar(supabase, projectId, clientName, nextVisitAt);
 
   revalidatePath("/dashboard");
 }
 
 export async function deleteProject(projectId: string) {
   const supabase = createClient();
+
+  // Clean up the synced calendar event, if any, before the project row
+  // (and its google_event_id with it) disappears.
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: project } = await supabase
+      .from("projects")
+      .select("google_event_id")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (userData.user && project?.google_event_id) {
+      const connection = await getCalendarConnection(userData.user.id);
+      if (connection) {
+        const accessToken = await getValidAccessToken(connection);
+        await deleteEvent(accessToken, connection.google_calendar_id, project.google_event_id);
+      }
+    }
+  } catch (err) {
+    console.error("Calendar cleanup failed:", err);
+    Sentry.captureException(err);
+  }
+
   await supabase.from("projects").delete().eq("id", projectId);
   revalidatePath("/dashboard");
 }

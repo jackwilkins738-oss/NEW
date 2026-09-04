@@ -67,8 +67,25 @@ create table projects (
   payment_type text,                  -- e.g. "Fixed price", "Staged payments", "Deposit + balance", "Day rate"
   notes text,                         -- free-form project details
   status text default 'on_track',     -- on_track | at_risk | delayed | awaiting_decision
+  google_event_id text,               -- the Google Calendar event synced for next_visit_at, if any
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+-- One Google Calendar connection per login (not per tenant - the calendar
+-- belongs to the person, not the business). RLS is enabled with no
+-- policies at all, on purpose: this table holds OAuth tokens, so it should
+-- never be reachable via the anon/authenticated client no matter what -
+-- every touch goes through the service-role admin client from server code
+-- (see lib/supabase/admin.ts), the same way platform_admins is protected.
+create table calendar_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  access_token text not null,
+  refresh_token text not null,
+  token_expires_at timestamptz not null,
+  google_calendar_id text not null default 'primary',
+  connected_at timestamptz not null default now()
 );
 
 -- Invoices raised against a job. "Overdue" / "due soon" aren't stored -
@@ -123,6 +140,7 @@ alter table projects enable row level security;
 alter table invoices enable row level security;
 alter table trade_capacity enable row level security;
 alter table platform_admins enable row level security;
+alter table calendar_connections enable row level security;
 
 create policy "self can read own admin row" on platform_admins
   for select using (user_id = auth.uid());
