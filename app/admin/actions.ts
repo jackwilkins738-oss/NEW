@@ -66,7 +66,12 @@ export async function inviteTeammate(formData: FormData) {
   // via the wildcard now, even before a real domain is set, so that's the
   // correct fallback rather than this app's own admin domain.
   const host = tenant?.domain || `${tenant?.slug}.scalardigital.co.uk`;
-  const redirectTo = `https://${host}/dashboard`;
+  // /reset-password, not /dashboard: neither invite nor magiclink links
+  // have any built-in "set a password" step from Supabase itself - that's
+  // /reset-password's whole job. Landing straight on /dashboard would sign
+  // them in with a password they never chose (or, for magiclink, no
+  // password-setting step at all).
+  const redirectTo = `https://${host}/reset-password`;
 
   let link: string | null = null;
   let userId: string | null = null;
