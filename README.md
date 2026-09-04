@@ -55,19 +55,30 @@ no SQL needed for any of this:
    filled in — click Copy, no manual assembly needed. Existing customers
    have the same snippet (plus the contact-form markup) behind a "Get
    website snippet" link on their card in the customer list.
-2. **Point their domain at the dashboard** — add a DNS record at their
-   registrar (a `CNAME` to your Vercel deployment, e.g.
-   `dashboard.theirdomain.co.uk → cname.vercel-dns.com`), then add that exact
-   domain in Vercel → Domains. SSL is issued automatically once DNS resolves.
-   If you didn't have the domain yet in step 1, edit it any time from that
-   same customer card on `/admin`.
-3. **Paste the tracking snippet** onto their site, once, near `</body>`.
-4. **Mark their lead form** so submissions get captured — the snippet
+2. **Domain** — two options:
+   - *Fast path*: leave the domain field blank. `*.scalardigital.co.uk` is
+     wildcarded, so `<slug>.scalardigital.co.uk` works immediately with no
+     DNS/Vercel step at all.
+   - *Their own domain*: add a DNS record at their registrar (a `CNAME` to
+     your Vercel deployment, e.g. `dashboard.theirdomain.co.uk →
+     cname.vercel-dns.com`), then add that exact domain in Vercel →
+     Domains. SSL is issued automatically once DNS resolves. Set it any
+     time from that customer's card on `/admin`, even after creation.
+3. **Add their redirect URL in Supabase** — Authentication → URL
+   Configuration → Redirect URLs → add `https://<their domain or
+   slug.scalardigital.co.uk>/**`. This is a genuine per-customer step, not
+   a one-time thing: the `*.scalardigital.co.uk` wildcard does **not**
+   cover Supabase's own redirect matching (confirmed the hard way) - their
+   invite and password-reset links won't work without this exact entry.
+   The success box after creating a customer (and the "Get website
+   snippet" toggle on existing ones) shows this URL ready to copy.
+4. **Paste the tracking snippet** onto their site, once, near `</body>`.
+5. **Mark their lead form** so submissions get captured — the snippet
    behind "Get website snippet" shows this too: add `data-lead-form` to the
    `<form>` tag, with fields named `name`, `email`, `phone`, `message`
    (whichever apply). Page views are captured automatically just by the
    script being present — no extra markup needed for that part.
-5. **Go to `/admin` → "Invite a login"** — pick the business, enter their
+6. **Go to `/admin` → "Invite a login"** — pick the business, enter their
    email, and it hands back a one-time link. Copy it and send it to them
    yourself (no email server needed) — clicking it lets them set their own
    password and signs them straight in.

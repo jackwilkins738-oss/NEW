@@ -62,6 +62,11 @@ function snippetFor(tenant: Tenant) {
   return `<script src="${TRACK_SCRIPT_HOST}/track.js" data-tenant="${tenant.id}" data-site-key="${tenant.site_key}" defer></script>`;
 }
 
+function redirectUrlFor(tenant: Tenant) {
+  const host = tenant.domain || `${tenant.slug}.scalardigital.co.uk`;
+  return `https://${host}/**`;
+}
+
 const LEAD_FORM_SNIPPET = `<form data-lead-form>
   <input name="name" />
   <input name="email" />
@@ -135,8 +140,21 @@ function CreateTenantForm() {
             </code>
             <CopyButton text={snippetFor(result.tenant)} />
           </div>
-          <p className="mt-1 text-xs text-ink-2">
-            Then point their DNS at this app and add the domain in Vercel, and invite yourself or them below.
+
+          <p className="mt-3 text-xs font-semibold text-ink-2">
+            Add this to Supabase &rarr; Authentication &rarr; URL Configuration &rarr; Redirect URLs (the
+            wildcard alone doesn&apos;t cover it - confirmed the hard way):
+          </p>
+          <div className="mt-1 flex items-start gap-2">
+            <code className="flex-1 overflow-x-auto whitespace-pre rounded bg-surface-2 px-2 py-1.5 text-xs text-ink-2">
+              {redirectUrlFor(result.tenant)}
+            </code>
+            <CopyButton text={redirectUrlFor(result.tenant)} />
+          </div>
+
+          <p className="mt-2 text-xs text-ink-2">
+            If they don&apos;t have their own domain yet, point their DNS at this app and add the domain in
+            Vercel too. Then invite yourself or them below.
           </p>
         </div>
       )}
@@ -372,6 +390,17 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
                 <p className="mt-2 text-xs text-muted">
                   Page views are captured automatically just by the script being present - no extra markup needed.
                 </p>
+
+                <p className="mt-3 text-xs font-semibold text-ink-2">
+                  Redirect URL for Supabase &rarr; Authentication &rarr; URL Configuration (needed for their
+                  invite/reset links to work - the wildcard alone doesn&apos;t cover this):
+                </p>
+                <div className="mt-1 flex items-start gap-2">
+                  <code className="flex-1 overflow-x-auto whitespace-pre rounded bg-surface px-2 py-1.5 text-xs text-ink-2">
+                    {redirectUrlFor(t)}
+                  </code>
+                  <CopyButton text={redirectUrlFor(t)} />
+                </div>
               </div>
             )}
           </div>
