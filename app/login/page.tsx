@@ -3,6 +3,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { initialsFor } from "@/lib/initials";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
+import { brandThemeStyleTag } from "@/lib/theme";
 import { signIn, adminSignIn } from "./actions";
 
 export default async function LoginPage({
@@ -32,6 +33,7 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center overflow-hidden bg-page px-5 py-10 sm:px-6">
+      {tenant && <style>{brandThemeStyleTag(tenant.brand_theme)}</style>}
       <div className="relative w-full max-w-sm">
         {/* Abstract brand-tinted glow, not literal imagery - reads as premium
             for any customer's brand color without needing per-industry art. */}
@@ -43,11 +45,11 @@ export default async function LoginPage({
 
         <form
           action={isAdminDomain ? adminSignIn : signIn}
-          className="login-card-enter rounded-[28px] border border-black/10 bg-surface p-7 shadow-[0_1px_2px_rgba(23,20,15,0.06),0_28px_56px_-16px_rgba(139,74,43,0.28)] sm:p-9"
+          className="login-card-enter rounded-[28px] border border-black/10 bg-surface p-7 shadow-[0_1px_2px_rgba(23,20,15,0.06),0_28px_56px_-16px_rgba(23,20,15,0.28)] sm:p-9"
         >
           <div className="flex flex-col items-center text-center">
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl font-display text-lg font-bold tracking-wide text-white shadow-[0_10px_22px_-8px_rgba(139,74,43,0.55),inset_0_1px_0_rgba(255,255,255,0.25)]"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl font-display text-lg font-bold tracking-wide text-white shadow-[0_10px_22px_-8px_rgba(23,20,15,0.55),inset_0_1px_0_rgba(255,255,255,0.25)]"
               style={{ background: "linear-gradient(155deg, var(--brand), var(--brand-strong))" }}
             >
               {initialsFor(tenant ? tenant.business_name : "Scalar Digital")}
@@ -97,7 +99,7 @@ export default async function LoginPage({
 
           <button
             type="submit"
-            className="login-button mt-7 w-full rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white shadow-[0_12px_24px_-10px_rgba(139,74,43,0.6)] hover:bg-brand-strong"
+            className="login-button mt-7 w-full rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white shadow-[0_12px_24px_-10px_rgba(23,20,15,0.6)] hover:bg-brand-strong"
           >
             Sign in
           </button>

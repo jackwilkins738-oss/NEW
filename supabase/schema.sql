@@ -10,6 +10,7 @@ create table tenants (
   slug text not null unique,          -- used for local/dev access, e.g. ridgeview.localhost:3000
   domain text unique,                 -- the live subdomain once DNS is attached, e.g. dashboard.ridgeviewlofts.co.uk
   site_key uuid not null default gen_random_uuid(), -- public token embedded in that tenant's website snippet
+  brand_theme text not null default 'rust',          -- key into the curated PALETTE in lib/theme.ts
   created_at timestamptz not null default now()
 );
 

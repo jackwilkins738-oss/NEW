@@ -2,8 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createTenant, inviteTeammate, updateTenantDomain } from "@/app/admin/actions";
+import { createTenant, inviteTeammate, updateTenantDomain, updateTenantBrandTheme } from "@/app/admin/actions";
 import { CopyButton } from "@/components/CopyButton";
+import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 
 type Tenant = {
   id: string;
@@ -11,8 +12,32 @@ type Tenant = {
   slug: string;
   domain: string | null;
   site_key: string;
+  brand_theme: string;
   created_at: string;
 };
+
+function SwatchPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {Object.entries(PALETTE).map(([key, { name, hex }]) => (
+        <button
+          key={key}
+          type="button"
+          title={name}
+          aria-label={name}
+          onClick={() => onChange(key)}
+          className="h-8 w-8 rounded-full transition-transform"
+          style={{
+            background: hex,
+            outline: value === key ? "2px solid var(--ink)" : "2px solid transparent",
+            outlineOffset: "2px",
+            transform: value === key ? "scale(1.08)" : "scale(1)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
@@ -40,6 +65,7 @@ function CreateTenantForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<{ error?: string; tenant?: Tenant } | null>(null);
+  const [brandTheme, setBrandTheme] = useState(DEFAULT_BRAND_THEME);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,6 +76,7 @@ function CreateTenantForm() {
     setPending(false);
     if (res.tenant) {
       e.currentTarget.reset();
+      setBrandTheme(DEFAULT_BRAND_THEME);
       router.refresh();
     }
   }
@@ -70,6 +97,13 @@ function CreateTenantForm() {
           Domain (once DNS is set up)
           <input name="domain" className={field} placeholder="dashboard.elmswoodlofts.co.uk" />
         </label>
+        <div className="sm:col-span-3">
+          <p className={label}>Brand color</p>
+          <input type="hidden" name="brandTheme" value={brandTheme} />
+          <div className="mt-1.5">
+            <SwatchPicker value={brandTheme} onChange={setBrandTheme} />
+          </div>
+        </div>
         <div className="sm:col-span-3">
           <button
             type="submit"
@@ -210,6 +244,47 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
   );
 }
 
+function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
+  const router = useRouter();
+  const [brandTheme, setBrandTheme] = useState(tenant.brand_theme);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const changed = brandTheme !== tenant.brand_theme;
+
+  async function handleSave() {
+    setPending(true);
+    setError(null);
+    const formData = new FormData();
+    formData.set("tenantId", tenant.id);
+    formData.set("brandTheme", brandTheme);
+    const res = await updateTenantBrandTheme(formData);
+    setPending(false);
+    if (res.error) {
+      setError(res.error);
+    } else {
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-3">
+      <SwatchPicker value={brandTheme} onChange={setBrandTheme} />
+      {changed && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={pending}
+          className="rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
+        >
+          {pending ? "Saving…" : "Save"}
+        </button>
+      )}
+      {error && <span className="text-xs font-semibold text-critical">{error}</span>}
+    </div>
+  );
+}
+
 function TenantList({ tenants }: { tenants: Tenant[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -229,6 +304,9 @@ function TenantList({ tenants }: { tenants: Tenant[] }) {
             </p>
             <p className="mt-2 text-xs font-semibold text-ink-2">Domain</p>
             <DomainEditor tenant={t} />
+
+            <p className="mt-3 text-xs font-semibold text-ink-2">Brand color</p>
+            <BrandThemeEditor tenant={t} />
 
             <button
               type="button"

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
+import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 
 async function requireAdmin() {
   const supabase = createClient();
@@ -24,6 +25,8 @@ export async function createTenant(formData: FormData) {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-");
   const domain = String(formData.get("domain") ?? "").trim() || null;
+  const brandThemeInput = String(formData.get("brandTheme") ?? "");
+  const brandTheme = PALETTE[brandThemeInput] ? brandThemeInput : DEFAULT_BRAND_THEME;
 
   if (!businessName || !slug) {
     return { error: "Business name and slug are required." };
@@ -31,8 +34,8 @@ export async function createTenant(formData: FormData) {
 
   const { data, error } = await supabase
     .from("tenants")
-    .insert({ business_name: businessName, slug, domain })
-    .select("id, business_name, slug, domain, site_key, created_at")
+    .insert({ business_name: businessName, slug, domain, brand_theme: brandTheme })
+    .select("id, business_name, slug, domain, site_key, brand_theme, created_at")
     .single();
 
   if (error) {
@@ -108,12 +111,32 @@ export async function updateTenantDomain(formData: FormData) {
     .from("tenants")
     .update({ domain })
     .eq("id", tenantId)
-    .select("id, business_name, slug, domain, site_key, created_at")
+    .select("id, business_name, slug, domain, site_key, brand_theme, created_at")
     .single();
 
   if (error) {
     return { error: error.message.includes("duplicate") ? "That domain is already in use." : error.message };
   }
+
+  revalidatePath("/admin");
+  return { tenant: data };
+}
+
+export async function updateTenantBrandTheme(formData: FormData) {
+  const { supabase } = await requireAdmin();
+
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const brandThemeInput = String(formData.get("brandTheme") ?? "");
+  if (!tenantId || !PALETTE[brandThemeInput]) return { error: "Invalid selection." };
+
+  const { data, error } = await supabase
+    .from("tenants")
+    .update({ brand_theme: brandThemeInput })
+    .eq("id", tenantId)
+    .select("id, business_name, slug, domain, site_key, brand_theme, created_at")
+    .single();
+
+  if (error) return { error: error.message };
 
   revalidatePath("/admin");
   return { tenant: data };

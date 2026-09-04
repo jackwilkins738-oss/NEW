@@ -11,7 +11,7 @@ export default async function AdminPage() {
 
   const { data: tenants } = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain, site_key, created_at")
+    .select("id, business_name, slug, domain, site_key, brand_theme, created_at")
     .order("created_at", { ascending: false });
 
   return (

@@ -6,6 +6,7 @@ export type Tenant = {
   business_name: string;
   slug: string;
   domain: string | null;
+  brand_theme: string;
 };
 
 // Figures out which customer this request is for, purely from the hostname
@@ -18,7 +19,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
 
   const byDomain = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain")
+    .select("id, business_name, slug, domain, brand_theme")
     .eq("domain", host)
     .maybeSingle();
 
@@ -27,7 +28,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
   const subdomain = host.split(".")[0];
   const bySlug = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain")
+    .select("id, business_name, slug, domain, brand_theme")
     .eq("slug", subdomain)
     .maybeSingle();
 
