@@ -104,6 +104,14 @@ export default async function LoginPage({
             Sign in
           </button>
         </form>
+        {isAdminDomain && (
+          <a
+            href="https://ridgeview.scalardigital.co.uk/login"
+            className="mt-4 block text-center text-xs font-semibold text-brand hover:underline"
+          >
+            Go to Ridgeview dashboard login &rarr;
+          </a>
+        )}
         <p className="mt-5 text-center text-xs text-muted">Powered by Scalar Digital</p>
       </div>
     </main>
