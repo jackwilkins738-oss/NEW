@@ -21,40 +21,52 @@ export async function GET() {
   var siteKey = s.getAttribute('data-site-key');
   var SUPABASE_URL = ${JSON.stringify(url)};
   var ANON_KEY = ${JSON.stringify(anonKey)};
+  // Derived from the script's own src, not hardcoded, so this keeps working
+  // if this app's own domain ever changes.
+  var API_HOST = (function () {
+    try { return new URL(s.src, location.href).origin; } catch (e) { return ''; }
+  })();
   if (!tenantId || !siteKey) {
     console.warn('[dashboard] track.js is missing data-tenant or data-site-key');
     return;
   }
 
-  function post(table, payload) {
-    fetch(SUPABASE_URL + '/rest/v1/' + table, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: ANON_KEY,
-        Authorization: 'Bearer ' + ANON_KEY,
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify(Object.assign({ tenant_id: tenantId, site_key: siteKey }, payload)),
-      keepalive: true
-    }).catch(function () {});
-  }
+  // Pageviews go straight to Supabase - high volume, nothing needs to react
+  // to one, no reason to add a hop.
+  fetch(SUPABASE_URL + '/rest/v1/pageviews', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: ANON_KEY,
+      Authorization: 'Bearer ' + ANON_KEY,
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify({ tenant_id: tenantId, site_key: siteKey, path: location.pathname, referrer: document.referrer || null }),
+    keepalive: true
+  }).catch(function () {});
 
-  post('pageviews', { path: location.pathname, referrer: document.referrer || null });
-
+  // Leads go through this app's own API instead of straight to Supabase,
+  // so a notification email can fire the moment one comes in.
   document.addEventListener(
     'submit',
     function (e) {
       var form = e.target;
       if (!form || typeof form.matches !== 'function' || !form.matches('[data-lead-form]')) return;
       var data = new FormData(form);
-      post('leads', {
-        name: data.get('name') || null,
-        email: data.get('email') || null,
-        phone: data.get('phone') || null,
-        message: data.get('message') || null,
-        source: data.get('source') || null
-      });
+      fetch(API_HOST + '/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          site_key: siteKey,
+          name: data.get('name') || null,
+          email: data.get('email') || null,
+          phone: data.get('phone') || null,
+          message: data.get('message') || null,
+          source: data.get('source') || null
+        }),
+        keepalive: true
+      }).catch(function () {});
     },
     true
   );
