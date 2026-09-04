@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { initialsFor } from "@/lib/initials";
-import { signIn } from "./actions";
+import { isPlatformAdmin } from "@/lib/platformAdmin";
+import { signIn, adminSignIn } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -12,21 +13,22 @@ export default async function LoginPage({
   const tenant = await getCurrentTenant();
   const supabase = createClient();
   const { data } = await supabase.auth.getUser();
-  if (data.user) redirect("/dashboard");
-
-  if (!tenant) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-page px-6">
-        <div className="max-w-sm text-center">
-          <p className="font-display text-2xl font-extrabold text-ink">Unrecognised address</p>
-          <p className="mt-2 text-sm text-ink-2">
-            This domain isn&apos;t linked to a dashboard yet. Check the address, or
-            contact whoever set this up.
-          </p>
-        </div>
-      </main>
-    );
+  if (data.user) {
+    if (tenant) {
+      redirect("/dashboard");
+    } else if (await isPlatformAdmin(data.user.id)) {
+      redirect("/admin");
+    }
+    // Signed in, but neither a member of a tenant on this domain nor a
+    // platform admin - fall through to the sign-in form rather than
+    // redirect anywhere, which would just bounce right back here (a loop).
   }
+
+  // No tenant matches this domain - by design, that's what the admin domain
+  // looks like (it doesn't belong to any customer). Rather than a dead end,
+  // show a generic sign-in that checks platform_admins instead of a
+  // tenant membership, so there's still a way back in if a session expires.
+  const isAdminDomain = !tenant;
 
   return (
     <main className="flex min-h-screen items-center justify-center overflow-hidden bg-page px-5 py-10 sm:px-6">
@@ -40,7 +42,7 @@ export default async function LoginPage({
         />
 
         <form
-          action={signIn}
+          action={isAdminDomain ? adminSignIn : signIn}
           className="login-card-enter rounded-[28px] border border-black/10 bg-surface p-7 shadow-[0_1px_2px_rgba(23,20,15,0.06),0_28px_56px_-16px_rgba(139,74,43,0.28)] sm:p-9"
         >
           <div className="flex flex-col items-center text-center">
@@ -48,13 +50,13 @@ export default async function LoginPage({
               className="flex h-14 w-14 items-center justify-center rounded-2xl font-display text-lg font-bold tracking-wide text-white shadow-[0_10px_22px_-8px_rgba(139,74,43,0.55),inset_0_1px_0_rgba(255,255,255,0.25)]"
               style={{ background: "linear-gradient(155deg, var(--brand), var(--brand-strong))" }}
             >
-              {initialsFor(tenant.business_name)}
+              {initialsFor(tenant ? tenant.business_name : "Scalar Digital")}
             </div>
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
-              Operations &amp; Sales Dashboard
+              {tenant ? "Operations & Sales Dashboard" : "Scalar Digital"}
             </p>
             <h1 className="font-display mt-1 text-2xl font-extrabold leading-tight text-ink">
-              {tenant.business_name}
+              {tenant ? tenant.business_name : "Admin sign in"}
             </h1>
           </div>
 
@@ -80,12 +82,14 @@ export default async function LoginPage({
                 className="login-input mt-1.5 w-full rounded-xl border border-black/15 bg-page px-3.5 py-2.5 text-base text-ink shadow-[inset_0_1px_2px_rgba(23,20,15,0.04)] outline-none sm:text-sm"
               />
             </label>
-            <a href="/forgot-password" className="-mt-2 self-end text-xs font-semibold text-brand hover:underline">
-              Forgot password?
-            </a>
+            {!isAdminDomain && (
+              <a href="/forgot-password" className="-mt-2 self-end text-xs font-semibold text-brand hover:underline">
+                Forgot password?
+              </a>
+            )}
           </div>
 
-          <input type="hidden" name="tenantId" value={tenant.id} />
+          {tenant && <input type="hidden" name="tenantId" value={tenant.id} />}
 
           {searchParams.error && (
             <p className="mt-4 text-sm font-medium text-critical">{searchParams.error}</p>
