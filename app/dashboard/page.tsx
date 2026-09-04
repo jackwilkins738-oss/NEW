@@ -3,6 +3,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
+import { LeadsPanel } from "@/components/LeadsPanel";
 
 const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -96,7 +97,7 @@ export default async function DashboardPage() {
   const [leadsRes, pageviewsRes, projectsRes] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, source, created_at")
+      .select("id, name, email, source, status, created_at")
       .eq("tenant_id", tenant.id)
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false }),
@@ -131,17 +132,17 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-page px-6 py-8">
       <div className="mx-auto max-w-6xl">
-        <header className="flex items-center justify-between rounded-2xl border border-black/10 bg-surface px-6 py-4 shadow-sm">
+        <header className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
               Operations &amp; Sales Dashboard
             </p>
-            <h1 className="font-display text-2xl font-extrabold text-ink">
+            <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
               {tenant.business_name}
             </h1>
           </div>
           <form action={signOut}>
-            <button className="rounded-lg border border-black/10 bg-surface-2 px-3 py-2 text-sm font-semibold text-ink">
+            <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
               Sign out
             </button>
           </form>
@@ -248,21 +249,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-            <h2 className="text-sm font-bold text-ink">Recent leads</h2>
-            <div className="mt-3 flex flex-col gap-3">
-              {leads.length === 0 && <p className="text-sm text-muted">No leads in the last 30 days.</p>}
-              {leads.map((l) => (
-                <div key={l.id} className="border-b border-black/10 pb-3 last:border-none last:pb-0">
-                  <p className="text-sm font-semibold text-ink">{l.name ?? l.email ?? "Unnamed lead"}</p>
-                  <p className="text-xs text-muted">
-                    {l.source ?? "unknown source"} &middot;{" "}
-                    {new Date(l.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <LeadsPanel leads={leads} />
         </div>
 
         <footer className="mt-8 flex justify-end">

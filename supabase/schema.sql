@@ -33,6 +33,8 @@ create table leads (
   phone text,
   message text,
   source text,                        -- e.g. "google_ads", "referral", "organic"
+  status text not null default 'new', -- new | contacted | quoted | won | lost
+  status_updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 
@@ -94,6 +96,13 @@ create policy "member can read own leads" on leads
 create policy "member can read own pageviews" on pageviews
   for select using (
     exists (select 1 from memberships m where m.tenant_id = pageviews.tenant_id and m.user_id = auth.uid())
+  );
+
+create policy "member can update own leads" on leads
+  for update using (
+    exists (select 1 from memberships m where m.tenant_id = leads.tenant_id and m.user_id = auth.uid())
+  ) with check (
+    exists (select 1 from memberships m where m.tenant_id = leads.tenant_id and m.user_id = auth.uid())
   );
 
 create policy "member can manage own projects" on projects
