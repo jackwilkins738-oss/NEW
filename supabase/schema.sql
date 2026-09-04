@@ -59,7 +59,11 @@ create table projects (
   stage text,
   value_pence bigint,
   pm text,
+  start_date date,
   target_date date,
+  next_visit_at timestamptz,          -- next scheduled site visit/appointment, date + time
+  payment_type text,                  -- e.g. "Fixed price", "Staged payments", "Deposit + balance", "Day rate"
+  notes text,                         -- free-form project details
   status text default 'on_track',     -- on_track | at_risk | delayed | awaiting_decision
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

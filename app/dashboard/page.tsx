@@ -5,6 +5,7 @@ import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
+import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { formatGBP } from "@/lib/format";
 
 const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -52,24 +53,6 @@ function groupTopN<T>(
   return result;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  on_track: "On track",
-  at_risk: "At risk",
-  delayed: "Delayed",
-  awaiting_decision: "Awaiting decision",
-};
-
-// Explicit rgba() rather than Tailwind's bg-x/15 opacity modifier: that
-// modifier isn't reliable against colors sourced from CSS custom properties,
-// and there's no way to build-check this project on the current machine
-// (no Node.js installed here yet), so this avoids depending on it.
-const STATUS_CLASS: Record<string, string> = {
-  on_track: "bg-[rgba(12,163,12,0.15)] text-good",
-  at_risk: "bg-[rgba(250,178,25,0.25)] text-[#8a5a00]",
-  delayed: "bg-[rgba(208,59,59,0.15)] text-critical",
-  awaiting_decision: "bg-surface-2 text-ink-2",
-};
-
 export default async function DashboardPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
@@ -102,7 +85,9 @@ export default async function DashboardPage() {
       .gte("created_at", thirtyDaysAgo),
     supabase
       .from("projects")
-      .select("id, ref, client_name, location, project_type, stage, value_pence, pm, target_date, status, created_at")
+      .select(
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, created_at"
+      )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -221,61 +206,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-sm font-bold text-ink">Active projects</h2>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-bold uppercase tracking-wide text-muted">
-                    <th className="pb-2">Project</th>
-                    <th className="pb-2">Stage</th>
-                    <th className="pb-2">Value</th>
-                    <th className="pb-2">Target</th>
-                    <th className="pb-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-muted">
-                        No projects yet.
-                      </td>
-                    </tr>
-                  )}
-                  {projects.map((p) => (
-                    <tr key={p.id} className="border-t border-black/10">
-                      <td className="py-2.5">
-                        <div className="font-mono text-xs text-muted">{p.ref}</div>
-                        <div className="font-semibold text-ink">{p.client_name}</div>
-                        <div className="text-xs text-muted">{p.location}</div>
-                      </td>
-                      <td className="py-2.5 text-ink-2">{p.stage}</td>
-                      <td className="py-2.5 font-mono font-semibold text-ink">
-                        {p.value_pence != null ? formatGBP(p.value_pence) : "—"}
-                      </td>
-                      <td className="py-2.5 text-ink-2">
-                        {p.target_date
-                          ? new Date(p.target_date).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "TBC"}
-                      </td>
-                      <td className="py-2.5">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                            STATUS_CLASS[p.status ?? ""] ?? "bg-surface-2 text-ink-2"
-                          }`}
-                        >
-                          {STATUS_LABEL[p.status ?? ""] ?? p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="lg:col-span-2">
+            <ProjectsPanel projects={projects} />
           </div>
 
           <LeadsPanel leads={leads} />
