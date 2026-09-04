@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { AdminPanel } from "@/components/AdminPanel";
+import { signOut } from "@/app/login/actions";
 
 export default async function AdminPage() {
   const supabase = createClient();
@@ -33,9 +34,16 @@ export default async function AdminPage() {
   return (
     <main className="min-h-screen bg-page px-6 py-8">
       <div className="mx-auto max-w-4xl">
-        <header className="mb-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Scalar Digital</p>
-          <h1 className="font-display text-2xl font-extrabold text-ink">Customer admin</h1>
+        <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Scalar Digital</p>
+            <h1 className="font-display text-2xl font-extrabold text-ink">Customer admin</h1>
+          </div>
+          <form action={signOut}>
+            <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
+              Sign out
+            </button>
+          </form>
         </header>
         <AdminPanel tenants={tenants ?? []} membersByTenant={membersByTenant} />
       </div>
