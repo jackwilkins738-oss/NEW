@@ -32,7 +32,7 @@ export async function createTenant(formData: FormData) {
   const { data, error } = await supabase
     .from("tenants")
     .insert({ business_name: businessName, slug, domain })
-    .select("id, business_name, slug, domain, site_key")
+    .select("id, business_name, slug, domain, site_key, created_at")
     .single();
 
   if (error) {
@@ -80,7 +80,7 @@ export async function inviteTeammate(formData: FormData) {
     userId = magic.data.user?.id ?? null;
   }
 
-  if (!userId) return { error: "Link generated but no user id was returned - try again." };
+  if (!link || !userId) return { error: "Link generated but no user id was returned - try again." };
 
   const { error: membershipError } = await supabase
     .from("memberships")
