@@ -36,6 +36,11 @@ const STATE_CLASS: Record<string, string> = {
 
 const SORT_RANK: Record<string, number> = { overdue: 0, due_soon: 1, upcoming: 2, paid: 3 };
 
+// text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
+// 16px on focus, which is a real usability problem on a form meant for a phone.
+const field =
+  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+
 export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoices: Invoice[] }) {
   const sorted = [...invoices].sort((a, b) => {
     const rankDiff = SORT_RANK[invoiceState(a)] - SORT_RANK[invoiceState(b)];
@@ -49,48 +54,26 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
 
       <form
         action={addInvoice}
-        className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
+        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
       >
         <input type="hidden" name="tenantId" value={tenantId} />
-        <label className="col-span-2 text-xs font-semibold text-ink-2 sm:col-span-1">
+        <label className="text-xs font-semibold text-ink-2">
           Client
-          <input
-            name="clientName"
-            required
-            className="mt-1 w-full rounded-md border border-black/15 bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-brand"
-          />
+          <input name="clientName" required className={field} />
         </label>
         <label className="text-xs font-semibold text-ink-2">
           Reference
-          <input
-            name="reference"
-            className="mt-1 w-full rounded-md border border-black/15 bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-brand"
-          />
+          <input name="reference" className={field} />
         </label>
         <label className="text-xs font-semibold text-ink-2">
           Amount (&pound;)
-          <input
-            name="amount"
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            className="mt-1 w-full rounded-md border border-black/15 bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-brand"
-          />
+          <input name="amount" type="number" min="0" step="0.01" required className={field} />
         </label>
         <label className="text-xs font-semibold text-ink-2">
           Due date
-          <input
-            name="dueDate"
-            type="date"
-            required
-            className="mt-1 w-full rounded-md border border-black/15 bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-brand"
-          />
+          <input name="dueDate" type="date" required className={field} />
         </label>
-        <button
-          type="submit"
-          className="col-span-2 rounded-md bg-brand px-3 py-1.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-1"
-        >
+        <button type="submit" className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5">
           Add
         </button>
       </form>
@@ -120,7 +103,7 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
                   <form action={markInvoicePaid.bind(null, inv.id)}>
                     <button
                       type="submit"
-                      className="rounded-md border border-black/10 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                      className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
                     >
                       Mark paid
                     </button>

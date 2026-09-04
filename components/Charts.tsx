@@ -97,11 +97,11 @@ export function RevenueTrend({
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const W = 620;
-  const H = 190;
+  const H = 180;
   const padL = 4;
   const padR = 4;
   const top = 14;
-  const bottom = 168;
+  const bottom = 176;
 
   const values = points.map((p) => p.value);
   const max = Math.max(1, ...values);
@@ -151,16 +151,17 @@ export function RevenueTrend({
                 />
               </g>
             ))}
-            <g fontFamily="IBM Plex Mono, monospace" fontSize={10.5} fill="var(--chart-muted)" textAnchor="middle">
-              {coords
-                .filter((_, i) => i % 2 === 0)
-                .map((c) => (
-                  <text key={c.label} x={c.x} y={186}>
-                    {c.label}
-                  </text>
-                ))}
-            </g>
           </svg>
+          {/* Real HTML text, not SVG - SVG text scales down with the viewBox on a
+              narrow phone screen and becomes unreadably small; this stays a fixed,
+              legible size at any container width. */}
+          <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
+            {coords
+              .filter((_, i) => i % 2 === 0)
+              .map((c) => (
+                <span key={c.label}>{c.label}</span>
+              ))}
+          </div>
           {hover !== null && coords[hover] && (
             <div
               className="pointer-events-none absolute -translate-x-1/2 -translate-y-full rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-surface shadow-lg"

@@ -49,144 +49,151 @@ function localTimeInput(iso: string | null) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-const field = "mt-1 w-full rounded-md border border-black/15 bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-brand";
+// text-base (not text-sm) on the inputs: 16px is the threshold below which
+// iOS Safari auto-zooms into the field on focus - a 14px input on a phone
+// form is a real usability problem there, not just a style nit.
+const field =
+  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectCard({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <>
-      <tr
-        className="cursor-pointer border-t border-black/10 hover:bg-surface-2"
+    <div className="border-t border-black/10 first:border-none">
+      <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
+        className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md px-1 py-3 text-left hover:bg-surface-2"
       >
-        <td className="py-2.5">
+        <div className="min-w-0">
           <div className="font-mono text-xs text-muted">{project.ref}</div>
           <div className="font-semibold text-ink">{project.client_name}</div>
-          <div className="text-xs text-muted">{project.location}</div>
-        </td>
-        <td className="py-2.5 text-ink-2">{project.stage}</td>
-        <td className="py-2.5 font-mono font-semibold text-ink">
-          {project.value_pence != null ? formatGBP(project.value_pence) : "—"}
-        </td>
-        <td className="py-2.5 text-ink-2">
-          {project.target_date
-            ? new Date(project.target_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-            : "TBC"}
-        </td>
-        <td className="py-2.5">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASS[project.status ?? ""] ?? "bg-surface-2 text-ink-2"}`}>
+          <div className="text-xs text-muted">
+            {project.location}
+            {project.stage ? ` · ${project.stage}` : ""}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-sm font-semibold text-ink">
+            {project.value_pence != null ? formatGBP(project.value_pence) : "—"}
+          </span>
+          <span
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${
+              STATUS_CLASS[project.status ?? ""] ?? "bg-surface-2 text-ink-2"
+            }`}
+          >
             {STATUS_LABEL[project.status ?? ""] ?? project.status}
           </span>
-        </td>
-        <td className="py-2.5 pr-1 text-right text-xs text-muted">{open ? "▾" : "▸"}</td>
-      </tr>
+          <span className="text-xs text-muted">{open ? "▾" : "▸"}</span>
+        </div>
+      </button>
 
       {open && (
-        <tr className="border-t border-black/10 bg-surface-2/60">
-          <td colSpan={6} className="p-4">
-            <form
-              action={async (formData) => {
-                await updateProject(project.id, formData);
-                setOpen(false);
-              }}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-            >
-              <label className={label}>
-                Client
-                <input name="clientName" defaultValue={project.client_name} required className={field} />
-              </label>
-              <label className={label}>
-                Location
-                <input name="location" defaultValue={project.location ?? ""} className={field} />
-              </label>
-              <label className={label}>
-                Project type
-                <input name="projectType" defaultValue={project.project_type ?? ""} className={field} />
-              </label>
+        <div className="rounded-xl bg-surface-2/60 p-4">
+          <form
+            action={async (formData) => {
+              await updateProject(project.id, formData);
+              setOpen(false);
+            }}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+          >
+            <label className={label}>
+              Client
+              <input name="clientName" defaultValue={project.client_name} required className={field} />
+            </label>
+            <label className={label}>
+              Location
+              <input name="location" defaultValue={project.location ?? ""} className={field} />
+            </label>
+            <label className={label}>
+              Project type
+              <input name="projectType" defaultValue={project.project_type ?? ""} className={field} />
+            </label>
 
-              <label className={label}>
-                Stage
-                <input name="stage" defaultValue={project.stage ?? ""} className={field} placeholder="e.g. On site - first fix" />
-              </label>
-              <label className={label}>
-                Value (&pound;)
-                <input
-                  name="value"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={project.value_pence != null ? project.value_pence / 100 : ""}
-                  className={field}
-                />
-              </label>
-              <label className={label}>
-                Project manager
-                <input name="pm" defaultValue={project.pm ?? ""} className={field} />
-              </label>
+            <label className={label}>
+              Stage
+              <input name="stage" defaultValue={project.stage ?? ""} className={field} placeholder="e.g. On site - first fix" />
+            </label>
+            <label className={label}>
+              Value (&pound;)
+              <input
+                name="value"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.value_pence != null ? project.value_pence / 100 : ""}
+                className={field}
+              />
+            </label>
+            <label className={label}>
+              Project manager
+              <input name="pm" defaultValue={project.pm ?? ""} className={field} />
+            </label>
 
-              <label className={label}>
-                Start date
-                <input name="startDate" type="date" defaultValue={localDateInput(project.start_date)} className={field} />
-              </label>
-              <label className={label}>
-                Target completion
-                <input name="targetDate" type="date" defaultValue={localDateInput(project.target_date)} className={field} />
-              </label>
-              <label className={label}>
-                Status
-                <select name="status" defaultValue={project.status ?? "on_track"} className={field}>
-                  {Object.entries(STATUS_LABEL).map(([value, text]) => (
-                    <option key={value} value={value}>
-                      {text}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <label className={label}>
+              Start date
+              <input name="startDate" type="date" defaultValue={localDateInput(project.start_date)} className={field} />
+            </label>
+            <label className={label}>
+              Target completion
+              <input name="targetDate" type="date" defaultValue={localDateInput(project.target_date)} className={field} />
+            </label>
+            <label className={label}>
+              Status
+              <select name="status" defaultValue={project.status ?? "on_track"} className={field}>
+                {Object.entries(STATUS_LABEL).map(([value, text]) => (
+                  <option key={value} value={value}>
+                    {text}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <label className={label}>
-                Next visit &mdash; date
-                <input name="nextVisitDate" type="date" defaultValue={localDateInput(project.next_visit_at)} className={field} />
-              </label>
-              <label className={label}>
-                Next visit &mdash; time
-                <input name="nextVisitTime" type="time" defaultValue={localTimeInput(project.next_visit_at)} className={field} />
-              </label>
-              <label className={label}>
-                Payment type
-                <select name="paymentType" defaultValue={project.payment_type ?? ""} className={field}>
-                  <option value="">Not set</option>
-                  {PAYMENT_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <label className={label}>
+              Next visit &mdash; date
+              <input name="nextVisitDate" type="date" defaultValue={localDateInput(project.next_visit_at)} className={field} />
+            </label>
+            <label className={label}>
+              Next visit &mdash; time
+              <input name="nextVisitTime" type="time" defaultValue={localTimeInput(project.next_visit_at)} className={field} />
+            </label>
+            <label className={label}>
+              Payment type
+              <select name="paymentType" defaultValue={project.payment_type ?? ""} className={field}>
+                <option value="">Not set</option>
+                {PAYMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <label className={`${label} sm:col-span-3`}>
-                Project details / notes
-                <textarea name="notes" defaultValue={project.notes ?? ""} rows={3} className={field} />
-              </label>
+            <label className={`${label} sm:col-span-3`}>
+              Project details / notes
+              <textarea name="notes" defaultValue={project.notes ?? ""} rows={3} className={field} />
+            </label>
 
-              <div className="flex gap-2 sm:col-span-3">
-                <button type="submit" className="rounded-md bg-brand px-4 py-1.5 text-sm font-bold text-white hover:bg-brand-strong">
-                  Save changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-md border border-black/10 bg-surface px-4 py-1.5 text-sm font-semibold text-ink-2"
-                >
-                  Close
-                </button>
-              </div>
-            </form>
-          </td>
-        </tr>
+            <div className="flex gap-2 sm:col-span-3">
+              <button
+                type="submit"
+                className="flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:flex-none"
+              >
+                Save changes
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex-1 rounded-md border border-black/10 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
+              >
+                Close
+              </button>
+            </div>
+          </form>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -194,32 +201,12 @@ export function ProjectsPanel({ projects }: { projects: Project[] }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Active projects</h2>
-      <p className="text-xs text-muted">Click a project to add details or update its status</p>
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="text-left text-xs font-bold uppercase tracking-wide text-muted">
-              <th className="pb-2">Project</th>
-              <th className="pb-2">Stage</th>
-              <th className="pb-2">Value</th>
-              <th className="pb-2">Target</th>
-              <th className="pb-2">Status</th>
-              <th className="pb-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-6 text-center text-muted">
-                  No projects yet.
-                </td>
-              </tr>
-            )}
-            {projects.map((p) => (
-              <ProjectRow key={p.id} project={p} />
-            ))}
-          </tbody>
-        </table>
+      <p className="text-xs text-muted">Tap a project to add details or update its status</p>
+      <div className="mt-2">
+        {projects.length === 0 && <p className="py-6 text-center text-sm text-muted">No projects yet.</p>}
+        {projects.map((p) => (
+          <ProjectCard key={p.id} project={p} />
+        ))}
       </div>
     </div>
   );

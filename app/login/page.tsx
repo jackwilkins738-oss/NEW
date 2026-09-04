@@ -31,7 +31,7 @@ export default async function LoginPage({
     <main className="min-h-screen flex items-center justify-center bg-page px-6">
       <form
         action={signIn}
-        className="w-full max-w-sm rounded-2xl border border-black/10 bg-surface p-8 shadow-lg"
+        className="w-full max-w-sm rounded-2xl border border-black/10 bg-surface p-6 shadow-lg sm:p-8"
       >
         <p className="text-xs font-semibold uppercase tracking-wider text-muted">
           Operations &amp; Sales Dashboard
@@ -47,7 +47,7 @@ export default async function LoginPage({
             name="email"
             required
             autoComplete="email"
-            className="mt-1 w-full rounded-lg border border-black/15 bg-page px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="mt-1 w-full rounded-lg border border-black/15 bg-page px-3 py-2.5 text-base text-ink outline-none focus:border-brand sm:text-sm"
           />
         </label>
 
@@ -58,7 +58,7 @@ export default async function LoginPage({
             name="password"
             required
             autoComplete="current-password"
-            className="mt-1 w-full rounded-lg border border-black/15 bg-page px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="mt-1 w-full rounded-lg border border-black/15 bg-page px-3 py-2.5 text-base text-ink outline-none focus:border-brand sm:text-sm"
           />
         </label>
 
