@@ -10,8 +10,10 @@
   --ink: #17140f;
   --ink-2: #56534a;
   --muted: #8b8779;
+  --hairline: #e2ddce;
   --brand: #8b4a2b;
   --brand-strong: #6e3a20;
+  --brand-tint: #f3e2d3;
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-critical: #d03b3b;
@@ -38,8 +40,10 @@
     --ink: #f3f0e8;
     --ink-2: #b8bcc4;
     --muted: #767b86;
+    --hairline: #29303c;
     --brand: #dd925f;
     --brand-strong: #efb083;
+    --brand-tint: rgba(221,146,95,0.14);
 
     --chart-surface: #1a1a19;
     --chart-ink: #ffffff;
@@ -58,4 +62,8 @@
 body {
   background: var(--page-bg);
   color: var(--ink);
+  background-image:
+    linear-gradient(var(--hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+  background-size: 34px 34px;
 }
