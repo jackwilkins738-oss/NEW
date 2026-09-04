@@ -7,6 +7,8 @@ import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
+import { AlertsPanel } from "@/components/AlertsPanel";
+import { CapacityPanel } from "@/components/CapacityPanel";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 
@@ -73,7 +75,7 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, source, status, created_at")
@@ -97,12 +99,18 @@ export default async function DashboardPage() {
       .select("id, client_name, reference, amount_pence, due_date, status")
       .eq("tenant_id", tenant.id)
       .order("due_date", { ascending: true }),
+    supabase
+      .from("trade_capacity")
+      .select("id, trade_name, percent_booked")
+      .eq("tenant_id", tenant.id)
+      .order("trade_name", { ascending: true }),
   ]);
 
   const leads = leadsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
   const projects = projectsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
+  const trades = tradesRes.data ?? [];
   const pipelineValue = projects
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
@@ -161,6 +169,11 @@ export default async function DashboardPage() {
             <p className="text-sm font-semibold text-ink-2">Live pipeline value</p>
             <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(pipelineValue)}</p>
           </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <AlertsPanel leads={leads} invoices={invoices} projects={projects} />
+          <CapacityPanel tenantId={tenant.id} trades={trades} />
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

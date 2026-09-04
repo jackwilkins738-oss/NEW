@@ -145,3 +145,30 @@ export async function deleteProject(projectId: string) {
   await supabase.from("projects").delete().eq("id", projectId);
   revalidatePath("/dashboard");
 }
+
+// Upsert on (tenant_id, trade_name): adding a trade that already exists
+// just updates its percentage instead of erroring, so the form doubles as
+// both "add" and "update" without needing separate code paths.
+export async function setTradeCapacity(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const tradeName = String(formData.get("tradeName") ?? "").trim();
+  const percentBooked = Number(formData.get("percentBooked"));
+  if (!tenantId || !tradeName || !Number.isFinite(percentBooked)) return;
+
+  const clamped = Math.max(0, Math.min(100, Math.round(percentBooked)));
+  const supabase = createClient();
+  await supabase
+    .from("trade_capacity")
+    .upsert(
+      { tenant_id: tenantId, trade_name: tradeName, percent_booked: clamped, updated_at: new Date().toISOString() },
+      { onConflict: "tenant_id,trade_name" }
+    );
+
+  revalidatePath("/dashboard");
+}
+
+export async function deleteTradeCapacity(id: string) {
+  const supabase = createClient();
+  await supabase.from("trade_capacity").delete().eq("id", id);
+  revalidatePath("/dashboard");
+}

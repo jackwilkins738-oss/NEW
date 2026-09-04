@@ -86,6 +86,18 @@ create table invoices (
   created_at timestamptz not null default now()
 );
 
+-- Self-reported weekly capacity per trade - manually kept up to date by the
+-- business owner (there's no scheduling system feeding this automatically).
+create table trade_capacity (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  trade_name text not null,
+  percent_booked int not null default 0 check (percent_booked >= 0 and percent_booked <= 100),
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (tenant_id, trade_name)
+);
+
 -- Gates the /admin screen to specific people (you), not any signed-in
 -- member of any tenant. No app UI writes to this table on purpose - it's a
 -- one-time SQL bootstrap step (see the bottom of this file) to avoid a
@@ -109,6 +121,7 @@ alter table leads enable row level security;
 alter table pageviews enable row level security;
 alter table projects enable row level security;
 alter table invoices enable row level security;
+alter table trade_capacity enable row level security;
 alter table platform_admins enable row level security;
 
 create policy "self can read own admin row" on platform_admins
@@ -172,6 +185,13 @@ create policy "member can manage own invoices" on invoices
     exists (select 1 from memberships m where m.tenant_id = invoices.tenant_id and m.user_id = auth.uid())
   ) with check (
     exists (select 1 from memberships m where m.tenant_id = invoices.tenant_id and m.user_id = auth.uid())
+  );
+
+create policy "member can manage own trade capacity" on trade_capacity
+  for all using (
+    exists (select 1 from memberships m where m.tenant_id = trade_capacity.tenant_id and m.user_id = auth.uid())
+  ) with check (
+    exists (select 1 from memberships m where m.tenant_id = trade_capacity.tenant_id and m.user_id = auth.uid())
   );
 
 -- Public inserts: anyone (an unauthenticated visitor on the customer's website) can log a lead or
