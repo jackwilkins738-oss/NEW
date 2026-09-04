@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateLeadStatus } from "@/app/dashboard/actions";
+import { updateLeadStatus, deleteLead } from "@/app/dashboard/actions";
+import { DeleteButton } from "@/components/DeleteButton";
 
 type Lead = {
   id: string;
@@ -55,26 +56,34 @@ function LeadRow({ lead }: { lead: Lead }) {
           </span>
         )}
       </div>
-      <select
-        value={status}
-        disabled={isPending}
-        onChange={(e) => {
-          const next = e.target.value;
-          setStatus(next);
-          startTransition(() => {
-            updateLeadStatus(lead.id, next);
-          });
-        }}
-        className={`mt-2 min-h-[32px] rounded-md border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status] ?? "bg-surface-2 text-ink-2"} ${
-          isPending ? "opacity-60" : ""
-        }`}
-      >
-        {STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div className="mt-2 flex items-center gap-2">
+        <select
+          value={status}
+          disabled={isPending}
+          onChange={(e) => {
+            const next = e.target.value;
+            setStatus(next);
+            startTransition(() => {
+              updateLeadStatus(lead.id, next);
+            });
+          }}
+          className={`min-h-[32px] rounded-md border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status] ?? "bg-surface-2 text-ink-2"} ${
+            isPending ? "opacity-60" : ""
+          }`}
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <DeleteButton
+          action={deleteLead}
+          id={lead.id}
+          confirmText={`Delete this lead (${lead.name ?? lead.email ?? "unnamed"})? This can't be undone.`}
+          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+        />
+      </div>
     </div>
   );
 }

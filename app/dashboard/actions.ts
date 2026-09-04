@@ -20,6 +20,12 @@ export async function updateLeadStatus(leadId: string, status: string) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteLead(leadId: string) {
+  const supabase = createClient();
+  await supabase.from("leads").delete().eq("id", leadId);
+  revalidatePath("/dashboard");
+}
+
 // Accepting tenantId from the client form isn't a trust issue: the RLS
 // policy on invoices (supabase/schema.sql) only allows the insert through
 // if the signed-in user actually has a membership row for that tenant_id -
