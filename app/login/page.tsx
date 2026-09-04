@@ -1,15 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
+import { initialsFor } from "@/lib/initials";
 import { signIn } from "./actions";
-
-const SKIP_WORDS = new Set(["and", "the", "of", "&"]);
-
-function initialsFor(name: string) {
-  const words = name.split(/\s+/).filter((w) => w && !SKIP_WORDS.has(w.toLowerCase()) && /[a-z0-9]/i.test(w));
-  const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
-  return letters.join("") || name.trim()[0]?.toUpperCase() || "?";
-}
 
 export default async function LoginPage({
   searchParams,
@@ -87,6 +80,9 @@ export default async function LoginPage({
                 className="login-input mt-1.5 w-full rounded-xl border border-black/15 bg-page px-3.5 py-2.5 text-base text-ink shadow-[inset_0_1px_2px_rgba(23,20,15,0.04)] outline-none sm:text-sm"
               />
             </label>
+            <a href="/forgot-password" className="-mt-2 self-end text-xs font-semibold text-brand hover:underline">
+              Forgot password?
+            </a>
           </div>
 
           <input type="hidden" name="tenantId" value={tenant.id} />
