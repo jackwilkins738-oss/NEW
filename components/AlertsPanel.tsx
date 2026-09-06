@@ -30,7 +30,10 @@ export function AlertsPanel({ leads, invoices, projects }: { leads: Lead[]; invo
   const alerts = buildAlerts(leads, invoices, projects);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    // Spans the full grid row once there's something real to show - a
+    // genuine problem list shouldn't have to compete for space with
+    // Capacity/Calendar the way it does when it's empty.
+    <div className={`rounded-2xl border border-black/10 bg-surface p-5 shadow-sm ${alerts.length > 0 ? "lg:col-span-3" : ""}`}>
       <h2 className="text-sm font-bold text-ink">Needs attention</h2>
       <p className="text-xs text-muted">Pulled automatically from your leads, invoices and projects</p>
       <div className="mt-3 flex flex-col gap-2">

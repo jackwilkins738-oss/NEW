@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createTenant,
@@ -280,6 +280,18 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
   const [brandTheme, setBrandTheme] = useState(tenant.brand_theme);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // useState's initial value only runs once, on mount - it doesn't re-sync
+  // if tenant.brand_theme changes from under it (e.g. a router.refresh()
+  // triggered by editing a *different* tenant elsewhere on this same
+  // /admin page re-renders every card with fresh props, but this
+  // component's own local state would otherwise silently keep whatever it
+  // was last set to, drifting from what's actually saved). This keeps the
+  // displayed selection - and what "changed" is computed against - always
+  // anchored to the real saved value.
+  useEffect(() => {
+    setBrandTheme(tenant.brand_theme);
+  }, [tenant.brand_theme]);
 
   const changed = brandTheme !== tenant.brand_theme;
 

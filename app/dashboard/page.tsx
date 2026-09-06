@@ -206,18 +206,21 @@ export default async function DashboardPage() {
           </form>
         </header>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-5">
+          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-1">
             <p className="text-sm font-semibold text-ink-2">Leads &middot; last 30 days</p>
             <p className="mt-2 text-3xl font-bold text-ink">{leads.length}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-1">
             <p className="text-sm font-semibold text-ink-2">Page views &middot; last 30 days</p>
             <p className="mt-2 text-3xl font-bold text-ink">{pageviewCount}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-            <p className="text-sm font-semibold text-ink-2">Live pipeline value</p>
-            <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(pipelineValue)}</p>
+          {/* The one number worth seeing before any other - brand-tinted and
+              larger than its neighbours, not just another identical tile. */}
+          <div className="rounded-2xl border border-black/10 bg-brand-tint p-5 shadow-sm sm:col-span-3">
+            <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
+            <p className="mt-2 font-display text-4xl font-extrabold text-ink sm:text-5xl">{formatGBP(pipelineValue)}</p>
+            <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
           </div>
         </div>
 

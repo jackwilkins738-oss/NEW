@@ -16,7 +16,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     short_name: name.length > 14 ? `${name.slice(0, 13)}…` : name,
     start_url: tenant ? "/dashboard" : "/admin",
     display: "standalone",
-    background_color: "#efeae1",
+    background_color: "#e6dcc8",
     theme_color: brand,
     icons: [{ src: "/icon", sizes: "512x512", type: "image/png" }],
   };

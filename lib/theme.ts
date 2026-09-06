@@ -10,7 +10,7 @@
 // and looked at) rather than the derived formula, so the existing default
 // look doesn't shift under the one customer already using it.
 export const PALETTE: Record<string, { name: string; hex: string }> = {
-  rust: { name: "Rust", hex: "#8b4a2b" },
+  rust: { name: "Rust", hex: "#a8481f" },
   forest: { name: "Forest", hex: "#2f6b4f" },
   navy: { name: "Navy", hex: "#2c4a72" },
   teal: { name: "Teal", hex: "#2f6b6b" },
@@ -77,8 +77,8 @@ export type BrandColors = {
 export function deriveBrandTheme(themeKey: string): { light: BrandColors; dark: BrandColors } {
   if (themeKey === "rust") {
     return {
-      light: { brand: "#8b4a2b", brandStrong: "#6e3a20", brandTint: "#f3e2d3" },
-      dark: { brand: "#dd925f", brandStrong: "#efb083", brandTint: "rgba(221,146,95,0.14)" },
+      light: { brand: "#a8481f", brandStrong: "#7a3115", brandTint: "#f0dcc4" },
+      dark: { brand: "#e8935e", brandStrong: "#f5b488", brandTint: "rgba(232,147,94,0.16)" },
     };
   }
 
