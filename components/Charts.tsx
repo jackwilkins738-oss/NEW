@@ -7,7 +7,7 @@ import { useState } from "react";
 // Client Components, not plain functions, which threw a server-side
 // exception in production. A "gbp" | "count" string is serializable, so
 // the actual Intl formatting lives here instead.
-type Format = "gbp" | "count";
+type Format = "gbp" | "count" | "percent";
 
 function formatValue(format: Format, value: number) {
   if (format === "gbp") {
@@ -17,6 +17,7 @@ function formatValue(format: Format, value: number) {
       maximumFractionDigits: 0,
     }).format(value);
   }
+  if (format === "percent") return `${Math.round(value)}%`;
   return `${value}`;
 }
 

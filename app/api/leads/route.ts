@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deriveBrandTheme } from "@/lib/theme";
+import { sendEmail } from "@/lib/email";
 
 // Leads used to be written straight from the customer's browser to
 // Supabase's REST API - which meant there was no code of ours in that path
@@ -108,9 +109,6 @@ async function notifyNewLead(
   tenant: { id: string; business_name: string; domain: string | null; slug: string; brand_theme: string },
   lead: { name: string | null; email: string | null; source: string | null }
 ) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
-
   const { data: memberships } = await admin.from("memberships").select("user_id").eq("tenant_id", tenant.id);
   if (!memberships || memberships.length === 0) return;
 
@@ -125,24 +123,19 @@ async function notifyNewLead(
   const who = lead.name || lead.email || "Someone";
   const brandColor = deriveBrandTheme(tenant.brand_theme).light.brand;
 
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "Scalar Digital <notify@scalardigital.help>",
-      to: emails,
-      subject: `New lead: ${who}`,
-      html: `
-        <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
-          <p style="font-size:16px;"><strong>${who}</strong> just enquired via ${tenant.business_name}'s website${
-        lead.source ? ` (${lead.source})` : ""
-      }.</p>
-          ${lead.email ? `<p>Email: ${lead.email}</p>` : ""}
-          <p style="margin-top:20px;">
-            <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">View on your dashboard</a>
-          </p>
-        </div>
-      `,
-    }),
+  await sendEmail({
+    to: emails,
+    subject: `New lead: ${who}`,
+    html: `
+      <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
+        <p style="font-size:16px;"><strong>${who}</strong> just enquired via ${tenant.business_name}'s website${
+      lead.source ? ` (${lead.source})` : ""
+    }.</p>
+        ${lead.email ? `<p>Email: ${lead.email}</p>` : ""}
+        <p style="margin-top:20px;">
+          <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">View on your dashboard</a>
+        </p>
+      </div>
+    `,
   });
 }

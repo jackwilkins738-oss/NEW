@@ -51,7 +51,15 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-ink">Invoices</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-ink">Invoices</h2>
+        <a
+          href={`/api/export/invoices?tenantId=${tenantId}`}
+          className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
+        >
+          Export CSV
+        </a>
+      </div>
 
       <form
         action={addInvoice}

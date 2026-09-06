@@ -8,6 +8,7 @@ type Lead = {
   id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
   source: string | null;
   status: string;
   created_at: string;
@@ -49,6 +50,16 @@ function LeadRow({ lead }: { lead: Lead }) {
             {lead.source ?? "unknown source"} &middot;{" "}
             {new Date(lead.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
           </p>
+          {lead.phone && (
+            <div className="mt-1.5 flex items-center gap-3">
+              <a href={`tel:${lead.phone}`} className="text-xs font-semibold text-brand hover:underline">
+                Call {lead.phone}
+              </a>
+              <a href={`sms:${lead.phone}`} className="text-xs font-semibold text-brand hover:underline">
+                Text
+              </a>
+            </div>
+          )}
         </div>
         {flagged && (
           <span className="whitespace-nowrap rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-critical">
@@ -88,18 +99,26 @@ function LeadRow({ lead }: { lead: Lead }) {
   );
 }
 
-export function LeadsPanel({ leads }: { leads: Lead[] }) {
+export function LeadsPanel({ leads, tenantId }: { leads: Lead[]; tenantId: string }) {
   const followUpCount = leads.filter(needsFollowUp).length;
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-ink">Recent leads</h2>
-        {followUpCount > 0 && (
-          <span className="rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-xs font-bold text-critical">
-            {followUpCount} need{followUpCount === 1 ? "s" : ""} follow-up
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {followUpCount > 0 && (
+            <span className="rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-xs font-bold text-critical">
+              {followUpCount} need{followUpCount === 1 ? "s" : ""} follow-up
+            </span>
+          )}
+          <a
+            href={`/api/export/leads?tenantId=${tenantId}`}
+            className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
+          >
+            Export CSV
+          </a>
+        </div>
       </div>
       <div className="mt-3 flex flex-col gap-3">
         {leads.length === 0 ? (

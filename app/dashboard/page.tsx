@@ -46,6 +46,30 @@ function monthlyValueTrend(projects: { created_at: string; value_pence: number |
 // Groups arbitrary rows by a label, sums (or counts) a value, sorts
 // descending, and folds anything past the 4th slot into "Other" - keeps
 // every bar chart on this page to the same 4-colour-plus-other rule.
+// Won / (won + lost) per source - leads still open (new/contacted/quoted)
+// don't count against a source yet, so this reads as "quality of decided
+// leads" rather than penalizing a source for recent volume that hasn't
+// been worked yet.
+function winRateBySource(leads: { source: string | null; status: string }[]) {
+  const totals = new Map<string, { won: number; lost: number }>();
+  for (const l of leads) {
+    if (l.status !== "won" && l.status !== "lost") continue;
+    const key = l.source || "Unknown";
+    const entry = totals.get(key) ?? { won: 0, lost: 0 };
+    if (l.status === "won") entry.won++;
+    else entry.lost++;
+    totals.set(key, entry);
+  }
+  return [...totals.entries()]
+    .map(([label, { won, lost }]) => ({
+      label,
+      value: (won / (won + lost)) * 100,
+      detail: `${won} won of ${won + lost} decided`,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
+}
+
 function groupTopN<T>(
   rows: T[],
   keyFn: (row: T) => string,
@@ -87,7 +111,7 @@ export default async function DashboardPage() {
   const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, source, status, created_at")
+      .select("id, name, email, phone, source, status, created_at")
       .eq("tenant_id", tenant.id)
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false }),
@@ -160,6 +184,7 @@ export default async function DashboardPage() {
     "Unspecified"
   );
   const leadSourceBreakdown = groupTopN(leads, (l) => l.source ?? "", () => 1, "Unknown");
+  const leadSourceWinRate = winRateBySource(leads);
 
   return (
     <main className="min-h-screen bg-page px-6 py-8">
@@ -237,13 +262,20 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="mt-5 max-w-md">
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <BarChart
             title="Lead source"
-            note="Last 30 days"
+            note="Last 30 days &middot; by volume"
             rows={leadSourceBreakdown}
             format="count"
             colorMode="single"
+          />
+          <BarChart
+            title="Win rate by source"
+            note="Won vs. lost - leads still in progress aren't counted yet"
+            rows={leadSourceWinRate}
+            format="percent"
+            colorMode="categorical"
           />
         </div>
 
@@ -252,7 +284,7 @@ export default async function DashboardPage() {
             <ProjectsPanel tenantId={tenant.id} projects={projects} />
           </div>
 
-          <LeadsPanel leads={leads} />
+          <LeadsPanel leads={leads} tenantId={tenant.id} />
         </div>
 
         <div className="mt-5">

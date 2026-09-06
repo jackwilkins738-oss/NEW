@@ -111,6 +111,24 @@ functional.
 6. Run `supabase/migrations/011_calendar_connections.sql` in the Supabase
    SQL editor (adds the token-storage table and one column on `projects`).
 
+## Weekly digest email
+
+Every Monday at 08:00 UTC (see `vercel.json`), each tenant with something
+worth flagging - an overdue invoice, an unfollowed lead, a slipped target
+date, an upcoming site visit - gets one email listing it, using the exact
+same logic as the dashboard's own "Needs attention" panel
+(`lib/alerts.ts`). Tenants with nothing to report get nothing - no weekly
+noise. Requires `CRON_SECRET` (see `.env.example`) to be set in Vercel;
+without it the route still exists but rejects every request, so nothing
+breaks, it just never sends.
+
+## Add to Home Screen
+
+Each tenant's dashboard is installable as a home-screen icon on
+phones/desktop, showing their own business name and brand color -
+generated per request (`app/icon.tsx`, `app/manifest.ts`), no per-customer
+setup needed.
+
 ## Security notes
 
 - Row-level security (`supabase/schema.sql`) is what actually enforces
