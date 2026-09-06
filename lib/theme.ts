@@ -72,13 +72,33 @@ export type BrandColors = {
   brand: string;
   brandStrong: string;
   brandTint: string;
+  // The page backdrop and secondary card surface, tinted toward the brand's
+  // hue at low saturation - this is what makes a tenant's dashboard feel
+  // like *their* colour throughout, not just their buttons. Kept low-
+  // saturation on purpose: --surface (the card background itself) and all
+  // text tokens stay untouched and universal, so legibility never depends
+  // on which of the 8 hues a business picked.
+  pageBg: string;
+  surface2: string;
 };
 
 export function deriveBrandTheme(themeKey: string): { light: BrandColors; dark: BrandColors } {
   if (themeKey === "rust") {
     return {
-      light: { brand: "#a8481f", brandStrong: "#7a3115", brandTint: "#f0dcc4" },
-      dark: { brand: "#e8935e", brandStrong: "#f5b488", brandTint: "rgba(232,147,94,0.16)" },
+      light: {
+        brand: "#a8481f",
+        brandStrong: "#7a3115",
+        brandTint: "#f0dcc4",
+        pageBg: "#e6dcc8",
+        surface2: "#ddd0b4",
+      },
+      dark: {
+        brand: "#e8935e",
+        brandStrong: "#f5b488",
+        brandTint: "rgba(232,147,94,0.16)",
+        pageBg: "#0d1015",
+        surface2: "#232a37",
+      },
     };
   }
 
@@ -89,12 +109,16 @@ export function deriveBrandTheme(themeKey: string): { light: BrandColors; dark: 
     brand: hex,
     brandStrong: hslToHex(h, Math.min(s + 4, 100), Math.max(l - 13, 10)),
     brandTint: hslToHex(h, Math.max(s - 40, 15), Math.min(l + 48, 92)),
+    pageBg: hslToHex(h, 26, 84),
+    surface2: hslToHex(h, 22, 75),
   };
   const darkBrand = hslToHex(h, Math.max(s - 10, 25), Math.min(l + 30, 75));
   const dark: BrandColors = {
     brand: darkBrand,
     brandStrong: hslToHex(h, Math.max(s - 8, 25), Math.min(l + 42, 85)),
     brandTint: "rgba(0,0,0,0)", // overridden by callers using darkBrandTintAlpha below
+    pageBg: hslToHex(h, 22, 8),
+    surface2: hslToHex(h, 20, 16),
   };
   return { light, dark: { ...dark, brandTint: withAlpha(darkBrand, 0.16) } };
 }
@@ -122,10 +146,10 @@ function withAlpha(hex: string, alpha: number) {
 export function brandThemeStyleTag(themeKey: string) {
   const { light, dark } = deriveBrandTheme(themeKey);
   return `
-    :root { --brand: ${light.brand}; --brand-strong: ${light.brandStrong}; --brand-tint: ${light.brandTint}; }
+    :root { --brand: ${light.brand}; --brand-strong: ${light.brandStrong}; --brand-tint: ${light.brandTint}; --page-bg: ${light.pageBg}; --surface-2: ${light.surface2}; }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) { --brand: ${dark.brand}; --brand-strong: ${dark.brandStrong}; --brand-tint: ${dark.brandTint}; }
+      :root:not([data-theme="light"]) { --brand: ${dark.brand}; --brand-strong: ${dark.brandStrong}; --brand-tint: ${dark.brandTint}; --page-bg: ${dark.pageBg}; --surface-2: ${dark.surface2}; }
     }
-    :root[data-theme="dark"] { --brand: ${dark.brand}; --brand-strong: ${dark.brandStrong}; --brand-tint: ${dark.brandTint}; }
+    :root[data-theme="dark"] { --brand: ${dark.brand}; --brand-strong: ${dark.brandStrong}; --brand-tint: ${dark.brandTint}; --page-bg: ${dark.pageBg}; --surface-2: ${dark.surface2}; }
   `;
 }
