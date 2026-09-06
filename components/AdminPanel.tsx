@@ -8,6 +8,7 @@ import {
   updateTenantDomain,
   updateTenantBrandTheme,
   removeMembership,
+  deleteTenant,
 } from "@/app/admin/actions";
 import { CopyButton } from "@/components/CopyButton";
 import { DeleteButton } from "@/components/DeleteButton";
@@ -419,6 +420,16 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
                 </div>
               </div>
             )}
+
+            <div className="mt-3 border-t border-black/10 pt-3">
+              <DeleteButton
+                action={deleteTenant}
+                id={t.id}
+                confirmText={`Permanently delete ${t.business_name}? This removes every lead, job, invoice and login for this business - there is no undo.`}
+                label="Delete customer"
+                className="text-xs font-semibold text-muted hover:text-critical"
+              />
+            </div>
           </div>
         ))}
       </div>

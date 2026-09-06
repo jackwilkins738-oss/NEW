@@ -164,3 +164,20 @@ export async function removeMembership(membershipId: string) {
   revalidatePath("/admin");
   return { success: true };
 }
+
+// Permanently deletes a customer and everything tied to their tenant_id -
+// leads, projects, invoices, trade capacity, memberships, pageviews - via
+// the "on delete cascade" foreign keys already on every one of those
+// tables (see supabase/schema.sql), not application code doing the
+// cleanup itself. Same service-role reasoning as removeMembership above:
+// no RLS delete policy exists for tenants, so requireAdmin() is the real
+// gate here. There is no undo - the confirmation text in AdminPanel.tsx
+// is the only safety net.
+export async function deleteTenant(tenantId: string) {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin.from("tenants").delete().eq("id", tenantId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { success: true };
+}
