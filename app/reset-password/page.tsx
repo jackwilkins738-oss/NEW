@@ -16,14 +16,39 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient();
+    let settled = false;
 
     // The recovery link's tokens land in the URL hash; the browser client
-    // (detectSessionInUrl, on by default) picks them up and establishes a
-    // session automatically on load - if that session exists, the link was
-    // valid. No session means it was already used, expired, or malformed.
-    supabase.auth.getSession().then(({ data }) => {
-      setStatus(data.session ? "ready" : "invalid");
+    // (detectSessionInUrl, on by default) reads them and establishes a
+    // session - but that happens asynchronously in the background, so a
+    // single getSession() call right on mount can race it and see "no
+    // session yet" even for a perfectly valid link (confirmed against
+    // Supabase's own auth logs: the server-side login succeeded while this
+    // page still showed "invalid"). Listening for the actual auth event
+    // instead of racing one snapshot fixes that - "ready" fires the moment
+    // the session actually appears, whenever that is.
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && !settled) {
+        settled = true;
+        setStatus("ready");
+      }
     });
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session && !settled) {
+        settled = true;
+        setStatus("ready");
+      }
+    });
+
+    // Only a genuinely invalid/expired/already-used link should reach this -
+    // a valid one resolves via the listener above well before 4s.
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setStatus("invalid");
+      }
+    }, 4000);
 
     const host = window.location.hostname;
     supabase
@@ -34,6 +59,11 @@ export default function ResetPasswordPage() {
       .then(({ data }) => {
         if (data?.business_name) setBusinessName(data.business_name);
       });
+
+    return () => {
+      listener.subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
