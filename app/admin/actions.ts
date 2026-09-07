@@ -80,7 +80,7 @@ export async function inviteTeammate(formData: FormData) {
   // rather than using generateLink()'s own action_link - see the comment on
   // that route for why (action_link's hash-fragment tokens are unreliable
   // with this app's Supabase client).
-  function confirmLink(props: { hashed_token?: string; verification_type?: string } | undefined) {
+  function confirmLink(props: { hashed_token?: string; verification_type?: string } | null | undefined) {
     if (!props?.hashed_token) return null;
     return `https://${host}/auth/confirm?token_hash=${props.hashed_token}&type=${props.verification_type}&next=${encodeURIComponent("/reset-password")}`;
   }
