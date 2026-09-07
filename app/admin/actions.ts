@@ -71,25 +71,34 @@ export async function inviteTeammate(formData: FormData) {
   // /reset-password's whole job. Landing straight on /dashboard would sign
   // them in with a password they never chose (or, for magiclink, no
   // password-setting step at all).
-  const redirectTo = `https://${host}/reset-password`;
+  const redirectTo = `https://${host}/auth/confirm`;
 
   let link: string | null = null;
   let userId: string | null = null;
 
+  // Built from hashed_token + type, pointed at our own /auth/confirm route,
+  // rather than using generateLink()'s own action_link - see the comment on
+  // that route for why (action_link's hash-fragment tokens are unreliable
+  // with this app's Supabase client).
+  function confirmLink(props: { hashed_token?: string; verification_type?: string } | undefined) {
+    if (!props?.hashed_token) return null;
+    return `https://${host}/auth/confirm?token_hash=${props.hashed_token}&type=${props.verification_type}&next=${encodeURIComponent("/reset-password")}`;
+  }
+
   const invite = await adminClient.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } });
-  if (invite.data?.properties?.action_link) {
-    link = invite.data.properties.action_link;
-    userId = invite.data.user?.id ?? null;
+  link = confirmLink(invite.data?.properties);
+  if (link) {
+    userId = invite.data?.user?.id ?? null;
   } else {
     // Most likely cause: this email already has an account (e.g. inviting
     // the same person into a second business) - a magic link works for an
     // existing user the same way an invite link does for a new one.
     const magic = await adminClient.auth.admin.generateLink({ type: "magiclink", email, options: { redirectTo } });
-    if (!magic.data?.properties?.action_link) {
+    link = confirmLink(magic.data?.properties);
+    if (!link) {
       return { error: magic.error?.message ?? invite.error?.message ?? "Could not generate a sign-in link." };
     }
-    link = magic.data.properties.action_link;
-    userId = magic.data.user?.id ?? null;
+    userId = magic.data?.user?.id ?? null;
   }
 
   if (!link || !userId) return { error: "Link generated but no user id was returned - try again." };
