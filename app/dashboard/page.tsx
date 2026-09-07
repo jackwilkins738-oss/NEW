@@ -7,6 +7,7 @@ import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
+import { ProjectPhotosPanel } from "@/components/ProjectPhotosPanel";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
@@ -108,7 +109,7 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, phone, source, status, created_at")
@@ -137,6 +138,11 @@ export default async function DashboardPage() {
       .select("id, trade_name, percent_booked")
       .eq("tenant_id", tenant.id)
       .order("trade_name", { ascending: true }),
+    supabase
+      .from("project_photos")
+      .select("id, storage_path, caption, project_id, created_at")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -144,6 +150,7 @@ export default async function DashboardPage() {
   const projects = projectsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
   const trades = tradesRes.data ?? [];
+  const projectPhotos = photosRes.data ?? [];
 
   // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
   // take the whole dashboard down - fall back to "connected, nothing to show"
@@ -288,6 +295,14 @@ export default async function DashboardPage() {
           </div>
 
           <LeadsPanel leads={leads} tenantId={tenant.id} />
+        </div>
+
+        <div className="mt-5">
+          <ProjectPhotosPanel
+            tenantId={tenant.id}
+            photos={projectPhotos}
+            projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
+          />
         </div>
 
         <div className="mt-5">

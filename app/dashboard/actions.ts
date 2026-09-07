@@ -262,3 +262,47 @@ export async function deleteTradeCapacity(id: string) {
   await supabase.from("trade_capacity").delete().eq("id", id);
   revalidatePath("/dashboard");
 }
+
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+
+// Storage RLS ("member can upload own tenant photos", supabase/migrations/012)
+// is the real security boundary - it only allows a write under a path whose
+// first segment matches a tenant_id the signed-in user has a membership for,
+// so the tenantId field in the form isn't trusted on its own.
+export async function uploadProjectPhoto(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const caption = String(formData.get("caption") ?? "").trim();
+  const file = formData.get("photo");
+
+  if (!tenantId || !(file instanceof File) || file.size === 0) return;
+  if (file.size > MAX_PHOTO_BYTES) return;
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) return;
+
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/heic" ? "heic" : "jpg";
+  const path = `${tenantId}/${crypto.randomUUID()}.${ext}`;
+
+  const supabase = createClient();
+  const { error: uploadError } = await supabase.storage.from("project-photos").upload(path, file, {
+    contentType: file.type,
+    cacheControl: "31536000",
+  });
+  if (uploadError) return;
+
+  await supabase.from("project_photos").insert({
+    tenant_id: tenantId,
+    project_id: projectId || null,
+    storage_path: path,
+    caption: caption || null,
+  });
+
+  revalidatePath("/dashboard");
+}
+
+export async function deleteProjectPhoto(photoId: string, storagePath: string) {
+  const supabase = createClient();
+  await supabase.storage.from("project-photos").remove([storagePath]);
+  await supabase.from("project_photos").delete().eq("id", photoId);
+  revalidatePath("/dashboard");
+}
