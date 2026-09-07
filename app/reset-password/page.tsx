@@ -34,12 +34,26 @@ export default function ResetPasswordPage() {
       }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
       if (data.session && !settled) {
         settled = true;
         setStatus("ready");
+        return;
       }
-    });
+      // Newer Supabase links use PKCE and land as ?code=... instead of a
+      // hash fragment - detectSessionInUrl doesn't exchange that
+      // automatically, so without this every single one of those links
+      // would sit here doing nothing until the timeout below wrongly
+      // calls a perfectly valid link "expired".
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (!code) return;
+      const { data: exchanged } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchanged.session && !settled) {
+        settled = true;
+        setStatus("ready");
+      }
+    })();
 
     // Only a genuinely invalid/expired/already-used link should reach this -
     // a valid one resolves via the listener above well before 4s.
