@@ -1090,6 +1090,7 @@ export async function requestReview(formData: FormData) {
     .insert({ tenant_id: tenantId, project_id: projectId, customer_name: customerName, status: "requested" });
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/reviews");
 }
 
 // Records what the customer actually said, once they've said it -
@@ -1111,16 +1112,19 @@ export async function recordReview(projectId: string, reviewId: string, formData
     .eq("id", reviewId);
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/reviews");
 }
 
 export async function togglePublishReview(projectId: string, reviewId: string, published: boolean) {
   const supabase = createClient();
   await supabase.from("reviews").update({ published }).eq("id", reviewId);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/reviews");
 }
 
 export async function deleteReview(projectId: string, reviewId: string) {
   const supabase = createClient();
   await supabase.from("reviews").delete().eq("id", reviewId);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/reviews");
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { requestReview, recordReview, togglePublishReview, deleteReview } from "@/app/dashboard/actions";
+import { useState } from "react";
+import { requestReview, recordReview, deleteReview } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
 
 type Review = {
   id: string;
@@ -17,14 +18,13 @@ const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-function Stars({ rating }: { rating: number | null }) {
+export function Stars({ rating }: { rating: number | null }) {
   if (rating == null) return null;
   return <span className="text-[#e0a400]">{"★".repeat(rating)}{"☆".repeat(5 - rating)}</span>;
 }
 
 function ReviewRow({ review, projectId }: { review: Review; projectId: string }) {
   const [recording, setRecording] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   return (
     <div className="border-b border-black/10 py-3 last:border-none">
@@ -42,16 +42,7 @@ function ReviewRow({ review, projectId }: { review: Review; projectId: string })
         </div>
         <div className="flex flex-none items-center gap-2">
           {review.status === "received" && (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => startTransition(() => togglePublishReview(projectId, review.id, !review.published))}
-              className={`min-h-[28px] rounded-md px-2 py-1 text-xs font-semibold ${
-                review.published ? "bg-[rgba(12,163,12,0.15)] text-good" : "border border-black/10 bg-surface-2 text-ink-2"
-              }`}
-            >
-              {review.published ? "Published" : "Publish"}
-            </button>
+            <ReviewPublishToggle projectId={projectId} reviewId={review.id} published={review.published} />
           )}
           <DeleteButton
             action={deleteReview.bind(null, projectId)}
