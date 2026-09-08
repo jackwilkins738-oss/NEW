@@ -34,7 +34,7 @@ function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
+    <div className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-semibold text-ink">{snag.description}</p>
         <p className="text-xs text-muted">
@@ -108,7 +108,7 @@ export function SnagsPanel({ tenantId, projectId, snags }: { tenantId: string; p
         </label>
         <button
           type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Add snag
         </button>

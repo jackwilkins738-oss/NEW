@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
+import { IconBanknote } from "@/components/DashboardIcons";
 
 type Invoice = {
   id: string;
@@ -183,7 +184,7 @@ function NewInvoiceForm({
       </label>
       <button
         type="submit"
-        className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+        className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
       >
         Add
       </button>
@@ -211,7 +212,10 @@ export function InvoicesPanel({
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-ink">Invoices</h2>
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+          <IconBanknote className="h-4 w-4 text-brand" />
+          Invoices
+        </h2>
         <a
           href={`/api/export/invoices?tenantId=${tenantId}`}
           className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
@@ -235,7 +239,7 @@ export function InvoicesPanel({
           return (
             <div
               key={inv.id}
-              className="flex flex-col gap-2 border-b border-black/10 pb-3 last:border-none last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              className="row-hover flex flex-col gap-2 border-b border-black/10 pb-3 last:border-none last:pb-0 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="text-sm font-semibold text-ink">

@@ -29,6 +29,10 @@
   --series-3: #1baf7a;
   --series-4: #eda100;
   --series-other: #b6b2a4;
+
+  --card-shadow-tight: rgba(23, 20, 15, 0.03);
+  --card-shadow-ambient: rgba(23, 20, 15, 0.16);
+  --card-highlight: rgba(255, 255, 255, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -56,6 +60,10 @@
     --series-3: #199e70;
     --series-4: #c98500;
     --series-other: #5b5b56;
+
+    --card-shadow-tight: rgba(0, 0, 0, 0.35);
+    --card-shadow-ambient: rgba(0, 0, 0, 0.55);
+    --card-highlight: rgba(255, 255, 255, 0.05);
   }
 }
 
@@ -147,6 +155,59 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .kpi-tile,
   .kpi-tile:hover {
+    transform: none;
+  }
+}
+
+/* Primary action button - a gradient instead of a flat fill, plus the same
+   lift-and-glow-on-hover the login page's own button already had (this
+   just extends that existing standard to the rest of the app instead of
+   leaving it unique to one page). Comes after @tailwind utilities in the
+   cascade, so it wins over the bg-brand/hover:bg-brand-strong utility
+   classes still left on these buttons for layout/sizing. */
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--brand) 65%, transparent);
+  filter: brightness(1.04);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Row-level hover for list rows (a lead, an invoice, a project) - a soft
+   tint plus a brand-colored left edge, the same "something responded to
+   me" feedback a big card-level lift gives, without the whole panel
+   lifting while someone's just filling in a form above the list. */
+.row-hover {
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+.row-hover:hover {
+  background-color: color-mix(in srgb, var(--brand) 5%, transparent);
+}
+.row-hover::before {
+  content: "";
+  position: absolute;
+  left: -1.25rem;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand);
+  border-radius: 0 2px 2px 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.row-hover:hover::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-primary:hover {
     transform: none;
   }
 }

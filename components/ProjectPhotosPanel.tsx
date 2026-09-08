@@ -77,7 +77,7 @@ export function ProjectPhotosPanel({
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:col-span-4 sm:py-1.5"
+          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:col-span-4 sm:py-1.5"
         >
           {isPending ? "Uploading…" : "Add photo"}
         </button>

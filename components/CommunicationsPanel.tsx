@@ -2,6 +2,7 @@
 
 import { addCommunication, deleteCommunication } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { IconChatBubble } from "@/components/DashboardIcons";
 
 type Communication = { id: string; type: string; summary: string; created_at: string };
 
@@ -29,7 +30,10 @@ export function CommunicationsPanel({
 }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-ink">Communication</h2>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+        <IconChatBubble className="h-4 w-4 text-brand" />
+        Communication
+      </h2>
       <p className="text-xs text-muted">A record, not automated follow-up yet.</p>
 
       <form action={addCommunication} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
@@ -51,7 +55,7 @@ export function CommunicationsPanel({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Log
         </button>

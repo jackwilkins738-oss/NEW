@@ -39,7 +39,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
   const totalCost = variation.materials_cost_pence + variation.labour_cost_pence + variation.other_cost_pence;
 
   return (
-    <div className="border-b border-black/10 py-3 last:border-none">
+    <div className="row-hover border-b border-black/10 py-3 last:border-none">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">
@@ -148,7 +148,7 @@ export function VariationsPanel({
         </label>
         <button
           type="submit"
-          className="self-end rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+          className="btn-primary self-end rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
         >
           Log variation
         </button>

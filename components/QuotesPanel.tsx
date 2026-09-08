@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, convertQuoteToProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
+import { IconDocument } from "@/components/DashboardIcons";
 
 type LineItem = { category: string; description: string; unit_price_pence: number };
 
@@ -254,7 +255,7 @@ function NewQuoteForm({
           </span>
           <button
             type="submit"
-            className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+            className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
           >
             Save quote
           </button>
@@ -270,7 +271,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
   const expired = quote.expires_at ? new Date(quote.expires_at + "T00:00:00") < new Date() : false;
 
   return (
-    <div className="border-b border-black/10 pb-3 last:border-none last:pb-0">
+    <div className="row-hover border-b border-black/10 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{quote.client_name}</p>
@@ -388,7 +389,10 @@ export function QuotesPanel({
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-ink">Quotes</h2>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+        <IconDocument className="h-4 w-4 text-brand" />
+        Quotes
+      </h2>
       <NewQuoteForm
         tenantId={tenantId}
         defaultVatRate={defaultVatRate}

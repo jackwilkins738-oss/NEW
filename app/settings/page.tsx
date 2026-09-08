@@ -4,6 +4,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { updateTenantSettings } from "@/app/dashboard/actions";
+import { IconSettings } from "@/components/DashboardIcons";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,10 @@ export default async function SettingsPage() {
         </Link>
 
         <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
-          <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">Settings</h1>
+          <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
+            <IconSettings className="h-5 w-5 text-brand" />
+            Settings
+          </h1>
           <p className="mt-1 text-sm text-muted">Defaults for {tenant.business_name} - override any of these per-quote.</p>
         </header>
 
@@ -82,7 +86,7 @@ export default async function SettingsPage() {
           </label>
           <button
             type="submit"
-            className="self-start rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
+            className="btn-primary self-start rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
           >
             Save settings
           </button>

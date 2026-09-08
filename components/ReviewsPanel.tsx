@@ -5,6 +5,7 @@ import { requestReview, recordReview, deleteReview } from "@/app/dashboard/actio
 import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
 import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
+import { IconStar } from "@/components/DashboardIcons";
 
 type Review = {
   id: string;
@@ -28,7 +29,7 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
   const [recording, setRecording] = useState(false);
 
   return (
-    <div className="border-b border-black/10 py-3 last:border-none">
+    <div className="row-hover border-b border-black/10 py-3 last:border-none">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{review.customer_name}</p>
@@ -78,7 +79,7 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
                 Review text
                 <textarea name="reviewText" rows={2} className={field} />
               </label>
-              <button type="submit" className="self-start rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
+              <button type="submit" className="btn-primary self-start rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
                 Save review
               </button>
             </form>
@@ -111,7 +112,10 @@ export function ReviewsPanel({
 }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-ink">Reviews</h2>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+        <IconStar className="h-4 w-4 text-brand" />
+        Reviews
+      </h2>
       <p className="text-xs text-muted">Published reviews show on the customer's website via testimonials.js.</p>
 
       <form action={requestReview} className="mt-3 flex items-end gap-2 rounded-xl border border-black/10 bg-surface-2 p-3">
@@ -121,7 +125,7 @@ export function ReviewsPanel({
           Customer name
           <input name="customerName" required className={field} />
         </label>
-        <button type="submit" className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+        <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
           Request review
         </button>
       </form>

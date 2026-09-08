@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateLeadStatus, updateLeadValue, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { IconUsers } from "@/components/DashboardIcons";
 
 type Lead = {
   id: string;
@@ -90,7 +91,7 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
   const flagged = needsFollowUp({ ...lead, status });
 
   return (
-    <div className="border-b border-black/10 pb-3 last:border-none last:pb-0">
+    <div className="row-hover border-b border-black/10 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{lead.name ?? lead.email ?? "Unnamed lead"}</p>
@@ -164,7 +165,10 @@ export function LeadsPanel({
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-ink">Recent leads</h2>
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+          <IconUsers className="h-4 w-4 text-brand" />
+          Recent leads
+        </h2>
         <div className="flex items-center gap-2">
           {followUpCount > 0 && (
             <span className="rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-xs font-bold text-critical">

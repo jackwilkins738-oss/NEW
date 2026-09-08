@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { updateProject, addProject, deleteProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
+import { IconFolder } from "@/components/DashboardIcons";
 
 type Project = {
   id: string;
@@ -82,7 +83,7 @@ function NewProjectForm({ tenantId }: { tenantId: string }) {
       </label>
       <button
         type="submit"
-        className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+        className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
       >
         Add project
       </button>
@@ -218,7 +219,7 @@ function ProjectCard({ project }: { project: Project }) {
             <div className="flex gap-2 sm:col-span-3">
               <button
                 type="submit"
-                className="flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:flex-none"
+                className="btn-primary flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:flex-none"
               >
                 Save changes
               </button>
@@ -251,7 +252,10 @@ function ProjectCard({ project }: { project: Project }) {
 export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projects: Project[] }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-ink">Active projects</h2>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+        <IconFolder className="h-4 w-4 text-brand" />
+        Active projects
+      </h2>
       <p className="text-xs text-muted">Tap a project to add details or update its status</p>
 
       <div className="mt-3">

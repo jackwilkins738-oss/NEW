@@ -95,7 +95,7 @@ export function DocumentsPanel({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Upload
         </button>

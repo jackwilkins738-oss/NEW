@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { IconTruck } from "@/components/DashboardIcons";
 import { addSupplier, deleteSupplier } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 
@@ -35,7 +36,10 @@ export default async function SuppliersPage() {
         </Link>
 
         <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
-          <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">Suppliers</h1>
+          <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
+            <IconTruck className="h-5 w-5 text-brand" />
+            Suppliers
+          </h1>
           <p className="mt-1 text-sm text-muted">A simple directory - not linked to cost items yet, just somewhere to keep them.</p>
         </header>
 
@@ -70,7 +74,7 @@ export default async function SuppliersPage() {
           </label>
           <button
             type="submit"
-            className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
+            className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
           >
             Add supplier
           </button>
@@ -85,7 +89,7 @@ export default async function SuppliersPage() {
           ) : (
             <div className="flex flex-col">
               {(suppliers ?? []).map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none">
+                <div key={s.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none">
                   <div>
                     <p className="text-sm font-semibold text-ink">{s.name}</p>
                     <p className="text-xs text-muted">

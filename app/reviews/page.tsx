@@ -9,6 +9,7 @@ import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
 import { Stars } from "@/components/ReviewsPanel";
 import { ReviewsSortSelect } from "@/components/ReviewsSortSelect";
 import { deleteReview } from "@/app/dashboard/actions";
+import { IconStar } from "@/components/DashboardIcons";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,10 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
 
         <header className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
           <div>
-            <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">Reviews</h1>
+            <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
+              <IconStar className="h-5 w-5 text-brand" />
+              Reviews
+            </h1>
             <p className="mt-1 text-sm text-muted">Every review across every project - request and record from a project's own page.</p>
           </div>
           <ReviewsSortSelect current={sort} />
@@ -76,7 +80,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
               {reviews.map((r) => {
                 const project = r.project_id ? projectById.get(r.project_id) : null;
                 return (
-                  <div key={r.id} className="flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-start sm:justify-between">
+                  <div key={r.id} className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-ink">
                         {r.customer_name}

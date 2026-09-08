@@ -264,7 +264,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               {invoices.map((inv) => {
                 const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
                 return (
-                  <div key={inv.id} className="flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+                  <div key={inv.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
                     <p className="text-sm text-ink-2">
                       {inv.milestone ?? inv.reference ?? "Invoice"}
                       <span className="ml-2 text-xs text-muted">

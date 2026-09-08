@@ -121,7 +121,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}
-                  className="flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none hover:bg-surface-2"
+                  className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none hover:bg-surface-2"
                 >
                   <div>
                     <p className="font-mono text-xs text-muted">{p.ref}</p>
@@ -149,7 +149,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           ) : (
             <div className="mt-2 flex flex-col">
               {invoices.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+                <div key={inv.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
                   <p className="text-sm text-ink-2">{inv.reference ?? "no reference"}</p>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold text-ink">{formatGBP(inv.amount_pence)}</span>

@@ -34,7 +34,7 @@ function CostItemRow({ item, projectId }: { item: CostItem; projectId: string })
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
+    <div className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-semibold text-ink">
           {item.description || CATEGORY_LABEL[item.category] || "Cost"}
@@ -126,7 +126,7 @@ export function ProjectCostLedger({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Log cost
         </button>

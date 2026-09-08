@@ -4,6 +4,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { IconUsers } from "@/components/DashboardIcons";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,10 @@ export default async function CustomersPage() {
         </Link>
 
         <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
-          <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">Customers</h1>
+          <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
+            <IconUsers className="h-5 w-5 text-brand" />
+            Customers
+          </h1>
           <p className="mt-1 text-sm text-muted">
             Created automatically when a lead or quote converts to a project - one record per customer across
             every job they've had.
@@ -68,7 +72,7 @@ export default async function CustomersPage() {
                   <Link
                     key={c.id}
                     href={`/customers/${c.id}`}
-                    className="flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none hover:bg-surface-2"
+                    className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none hover:bg-surface-2"
                   >
                     <div>
                       <p className="text-sm font-semibold text-ink">{c.name}</p>

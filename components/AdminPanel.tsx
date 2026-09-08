@@ -125,7 +125,7 @@ function CreateTenantForm() {
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+            className="btn-primary rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
           >
             {pending ? "Creating…" : "Create customer"}
           </button>
@@ -204,7 +204,7 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
           <button
             type="submit"
             disabled={pending || tenants.length === 0}
-            className="rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+            className="btn-primary rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
           >
             {pending ? "Generating…" : "Generate invite link"}
           </button>
@@ -359,7 +359,7 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
       <div className="mt-3 flex flex-col gap-4">
         {tenants.length === 0 && <p className="text-sm text-muted">No customers yet.</p>}
         {tenants.map((t) => (
-          <div key={t.id} className="border-b border-black/10 pb-4 text-sm last:border-none last:pb-0">
+          <div key={t.id} className="row-hover border-b border-black/10 pb-4 text-sm last:border-none last:pb-0">
             <p className="font-semibold text-ink">{t.business_name}</p>
             <p className="text-xs text-muted">
               slug: <span className="font-mono">{t.slug}</span>
