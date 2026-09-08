@@ -86,6 +86,20 @@ export async function deleteLead(leadId: string) {
   revalidatePath("/dashboard");
 }
 
+// Lead value is owner-entered (the website form has no reason to ask a
+// visitor to price their own job) - null clears it rather than storing 0,
+// so an unpriced lead reads as "not estimated yet" instead of "worth £0"
+// in the pipeline-value total.
+export async function updateLeadValue(leadId: string, valuePounds: number | null) {
+  const supabase = createClient();
+  const value_pence =
+    valuePounds !== null && Number.isFinite(valuePounds) && valuePounds >= 0
+      ? Math.round(valuePounds * 100)
+      : null;
+  await supabase.from("leads").update({ value_pence }).eq("id", leadId);
+  revalidatePath("/dashboard");
+}
+
 // Accepting tenantId from the client form isn't a trust issue: the RLS
 // policy on invoices (supabase/schema.sql) only allows the insert through
 // if the signed-in user actually has a membership row for that tenant_id -
@@ -161,6 +175,64 @@ export async function addProject(formData: FormData) {
 
   const supabase = createClient();
   await supabase.from("projects").insert(insert);
+
+  revalidatePath("/dashboard");
+}
+
+// Converts a won lead into a project (and a matching customer record),
+// carrying over name/value/source instead of re-typing them by hand. RLS on
+// customers/projects/leads (not the tenantId argument) is what actually
+// stops this creating or reading rows in a tenant the signed-in user isn't
+// a member of - the lead.tenant_id check below just guards against a
+// mismatched id being passed in from a stale client.
+export async function convertLeadToProject(leadId: string, tenantId: string) {
+  const supabase = createClient();
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, name, email, phone, value_pence, tenant_id")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (!lead || lead.tenant_id !== tenantId) return;
+
+  const clientName = lead.name?.trim() || lead.email?.trim() || "Unnamed lead";
+
+  // Match an existing customer by email first - the closest thing to a
+  // stable identity a lead form gives us - otherwise create one.
+  let customerId: string | null = null;
+  if (lead.email) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("email", lead.email)
+      .maybeSingle();
+    customerId = existing?.id ?? null;
+  }
+  if (!customerId) {
+    const { data: created } = await supabase
+      .from("customers")
+      .insert({ tenant_id: tenantId, name: clientName, email: lead.email, phone: lead.phone })
+      .select("id")
+      .single();
+    customerId = created?.id ?? null;
+  }
+
+  await supabase.from("projects").insert({
+    tenant_id: tenantId,
+    ref: generateRef(),
+    client_name: clientName,
+    lead_id: lead.id,
+    customer_id: customerId,
+    value_pence: lead.value_pence,
+    stage: "Enquiry",
+    status: "on_track",
+  });
+
+  await supabase
+    .from("leads")
+    .update({ status: "won", status_updated_at: new Date().toISOString() })
+    .eq("id", leadId);
 
   revalidatePath("/dashboard");
 }

@@ -112,7 +112,7 @@ export default async function DashboardPage() {
   const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, phone, source, status, created_at")
+      .select("id, name, email, phone, source, status, value_pence, created_at")
       .eq("tenant_id", tenant.id)
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false }),
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
     supabase
       .from("projects")
       .select(
-        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, created_at"
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, created_at"
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
@@ -294,7 +294,11 @@ export default async function DashboardPage() {
             <ProjectsPanel tenantId={tenant.id} projects={projects} />
           </div>
 
-          <LeadsPanel leads={leads} tenantId={tenant.id} />
+          <LeadsPanel
+            leads={leads}
+            tenantId={tenant.id}
+            convertedLeadIds={projects.map((p) => p.lead_id).filter((id): id is string => !!id)}
+          />
         </div>
 
         <div className="mt-5">

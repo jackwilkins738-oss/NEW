@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateLeadStatus, deleteLead } from "@/app/dashboard/actions";
+import { updateLeadStatus, updateLeadValue, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 
 type Lead = {
@@ -11,6 +11,7 @@ type Lead = {
   phone: string | null;
   source: string | null;
   status: string;
+  value_pence: number | null;
   created_at: string;
 };
 
@@ -36,7 +37,54 @@ function needsFollowUp(lead: Lead) {
   return ageHours >= 24;
 }
 
-function LeadRow({ lead }: { lead: Lead }) {
+function LeadValueInput({ leadId, valuePence }: { leadId: string; valuePence: number | null }) {
+  const [value, setValue] = useState(valuePence != null ? String(valuePence / 100) : "");
+  const [isPending, startTransition] = useTransition();
+
+  const commit = () => {
+    const trimmed = value.trim();
+    const pounds = trimmed === "" ? null : Number(trimmed);
+    startTransition(() => {
+      updateLeadValue(leadId, pounds !== null && Number.isFinite(pounds) ? pounds : null);
+    });
+  };
+
+  return (
+    <input
+      type="number"
+      min="0"
+      step="1"
+      inputMode="decimal"
+      value={value}
+      disabled={isPending}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      placeholder="Value £"
+      aria-label="Lead value in pounds"
+      className={`min-h-[32px] w-[84px] rounded-md border border-black/10 bg-surface px-2 py-1.5 text-xs font-semibold text-ink ${
+        isPending ? "opacity-60" : ""
+      }`}
+    />
+  );
+}
+
+function ConvertButton({ leadId, tenantId }: { leadId: string; tenantId: string }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={isPending}
+      onClick={() => startTransition(() => convertLeadToProject(leadId, tenantId))}
+      className={`min-h-[32px] whitespace-nowrap rounded-md border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80 ${
+        isPending ? "opacity-60" : ""
+      }`}
+    >
+      {isPending ? "Converting…" : "Convert to project"}
+    </button>
+  );
+}
+
+function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; converted: boolean }) {
   const [status, setStatus] = useState(lead.status);
   const [isPending, startTransition] = useTransition();
   const flagged = needsFollowUp({ ...lead, status });
@@ -67,7 +115,7 @@ function LeadRow({ lead }: { lead: Lead }) {
           </span>
         )}
       </div>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={status}
           disabled={isPending}
@@ -88,6 +136,8 @@ function LeadRow({ lead }: { lead: Lead }) {
             </option>
           ))}
         </select>
+        <LeadValueInput leadId={lead.id} valuePence={lead.value_pence} />
+        {status === "won" && !converted && <ConvertButton leadId={lead.id} tenantId={tenantId} />}
         <DeleteButton
           action={deleteLead}
           id={lead.id}
@@ -99,8 +149,17 @@ function LeadRow({ lead }: { lead: Lead }) {
   );
 }
 
-export function LeadsPanel({ leads, tenantId }: { leads: Lead[]; tenantId: string }) {
+export function LeadsPanel({
+  leads,
+  tenantId,
+  convertedLeadIds,
+}: {
+  leads: Lead[];
+  tenantId: string;
+  convertedLeadIds: string[];
+}) {
   const followUpCount = leads.filter(needsFollowUp).length;
+  const converted = new Set(convertedLeadIds);
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
@@ -129,7 +188,9 @@ export function LeadsPanel({ leads, tenantId }: { leads: Lead[]; tenantId: strin
             </p>
           </div>
         ) : (
-          leads.map((l) => <LeadRow key={l.id} lead={l} />)
+          leads.map((l) => (
+            <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />
+          ))
         )}
       </div>
     </div>
