@@ -487,22 +487,6 @@ export async function updateProject(projectId: string, formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) update.value_pence = Math.round(pounds * 100);
   }
 
-  // Costs default to 0 rather than being left unset - an empty field means
-  // "nothing spent yet" here, not "unknown", so profitability can be
-  // computed as soon as a value is on the job even before every category
-  // has a real number in it.
-  const costFields: [string, string][] = [
-    ["materialsCost", "materials_cost_pence"],
-    ["labourCost", "labour_cost_pence"],
-    ["subcontractorCost", "subcontractor_cost_pence"],
-    ["plantCost", "plant_cost_pence"],
-    ["otherCost", "other_cost_pence"],
-  ];
-  for (const [field, column] of costFields) {
-    const pounds = Number(formData.get(field) ?? 0);
-    update[column] = Number.isFinite(pounds) && pounds >= 0 ? Math.round(pounds * 100) : 0;
-  }
-
   const nextVisitAt = nextVisitDate ? new Date(`${nextVisitDate}T${nextVisitTime || "09:00"}`).toISOString() : null;
   update.next_visit_at = nextVisitAt;
 
@@ -610,4 +594,48 @@ export async function deleteProjectPhoto(photoId: string, storagePath: string) {
   await supabase.storage.from("project-photos").remove([storagePath]);
   await supabase.from("project_photos").delete().eq("id", photoId);
   revalidatePath("/dashboard");
+}
+
+const COST_CATEGORIES = ["materials", "labour", "subcontractors", "plant", "other"];
+
+// A cost item starts "committed" the moment it's logged (an order placed, a
+// sub booked) and only becomes "actual" once markCostItemPaid is called -
+// see migration 017 for why that's the whole budget/committed/actual model.
+export async function addProjectCostItem(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "");
+  const category = String(formData.get("category") ?? "other");
+  const amountPounds = Number(formData.get("amount"));
+  if (!tenantId || !projectId || !Number.isFinite(amountPounds) || amountPounds < 0) return;
+
+  await createClient()
+    .from("project_cost_items")
+    .insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      category: COST_CATEGORIES.includes(category) ? category : "other",
+      description: String(formData.get("description") ?? "").trim() || null,
+      supplier: String(formData.get("supplier") ?? "").trim() || null,
+      amount_pence: Math.round(amountPounds * 100),
+      cost_date: String(formData.get("costDate") ?? "") || new Date().toISOString().slice(0, 10),
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      status: "committed",
+    });
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// projectId first (not itemId) so this can be pre-bound with
+// .bind(null, project.id) and handed to DeleteButton, which calls its
+// action with a single remaining id argument.
+export async function markCostItemPaid(projectId: string, itemId: string) {
+  const supabase = createClient();
+  await supabase.from("project_cost_items").update({ status: "paid" }).eq("id", itemId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteProjectCostItem(projectId: string, itemId: string) {
+  const supabase = createClient();
+  await supabase.from("project_cost_items").delete().eq("id", itemId);
+  revalidatePath(`/projects/${projectId}`);
 }

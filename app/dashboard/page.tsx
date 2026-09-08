@@ -110,7 +110,7 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes, costItemsRes] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, phone, source, status, value_pence, created_at")
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
     supabase
       .from("projects")
       .select(
-        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, materials_cost_pence, labour_cost_pence, subcontractor_cost_pence, plant_cost_pence, other_cost_pence, created_at"
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, created_at"
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
@@ -151,6 +151,10 @@ export default async function DashboardPage() {
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("project_cost_items")
+      .select("project_id, amount_pence, status")
+      .eq("tenant_id", tenant.id),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -160,6 +164,7 @@ export default async function DashboardPage() {
   const trades = tradesRes.data ?? [];
   const projectPhotos = photosRes.data ?? [];
   const quotes = quotesRes.data ?? [];
+  const costItems = costItemsRes.data ?? [];
 
   // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
   // take the whole dashboard down - fall back to "connected, nothing to show"
@@ -180,21 +185,20 @@ export default async function DashboardPage() {
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
 
-  function actualCostPence(p: (typeof projects)[number]) {
-    return (
-      (p.materials_cost_pence ?? 0) +
-      (p.labour_cost_pence ?? 0) +
-      (p.subcontractor_cost_pence ?? 0) +
-      (p.plant_cost_pence ?? 0) +
-      (p.other_cost_pence ?? 0)
-    );
+  // "Actual" cost is paid cost items only (see migration 017) - committed-
+  // but-unpaid items don't count here, same distinction the project detail
+  // page draws between projected and actual profit.
+  const actualCostByProject = new Map<string, number>();
+  for (const item of costItems) {
+    if (item.status !== "paid") continue;
+    actualCostByProject.set(item.project_id, (actualCostByProject.get(item.project_id) ?? 0) + item.amount_pence);
   }
-  // Only projects with both a value and at least one cost logged count -
+  // Only projects with both a value and at least one paid cost count -
   // otherwise every un-costed job would drag this toward a meaningless 100%
   // margin instead of just being left out of the average.
-  const costedProjects = projects.filter((p) => p.value_pence != null && actualCostPence(p) > 0);
+  const costedProjects = projects.filter((p) => p.value_pence != null && (actualCostByProject.get(p.id) ?? 0) > 0);
   const costedRevenue = costedProjects.reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
-  const costedActualCost = costedProjects.reduce((sum, p) => sum + actualCostPence(p), 0);
+  const costedActualCost = costedProjects.reduce((sum, p) => sum + (actualCostByProject.get(p.id) ?? 0), 0);
   const grossProfitTracked = costedRevenue - costedActualCost;
   const portfolioMargin = costedRevenue > 0 ? (grossProfitTracked / costedRevenue) * 100 : null;
 
