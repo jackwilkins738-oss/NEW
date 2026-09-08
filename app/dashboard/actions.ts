@@ -1051,3 +1051,30 @@ export async function deleteSupplier(id: string) {
   await supabase.from("suppliers").delete().eq("id", id);
   revalidatePath("/suppliers");
 }
+
+const COMMUNICATION_TYPES = ["email", "sms", "call", "note"];
+
+export async function addCommunication(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "");
+  const type = String(formData.get("type") ?? "note");
+  const summary = String(formData.get("summary") ?? "").trim();
+  if (!tenantId || !projectId || !summary) return;
+
+  await createClient()
+    .from("communications")
+    .insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      type: COMMUNICATION_TYPES.includes(type) ? type : "note",
+      summary,
+    });
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteCommunication(projectId: string, id: string) {
+  const supabase = createClient();
+  await supabase.from("communications").delete().eq("id", id);
+  revalidatePath(`/projects/${projectId}`);
+}
