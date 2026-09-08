@@ -1,5 +1,5 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import * as Sentry from "@sentry/nextjs";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
@@ -12,13 +12,11 @@ import { ProjectPhotosPanel } from "@/components/ProjectPhotosPanel";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
-import { CalendarPanel } from "@/components/CalendarPanel";
+import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
 import { NavMenu } from "@/components/NavMenu";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
-import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnection";
-import { listUpcomingEvents } from "@/lib/googleCalendar";
 
 // Leads/projects/invoices change from outside this app (a customer's own
 // website, another teammate) - never let Next.js serve a cached snapshot of
@@ -191,21 +189,6 @@ export default async function DashboardPage() {
   const pendingVariations = variationsRes.data ?? [];
   const pendingReviews = pendingReviewsRes.data ?? [];
 
-  // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
-  // take the whole dashboard down - fall back to "connected, nothing to show"
-  // and let the panel's own "Disconnect"/reconnect flow handle real problems.
-  const calendarConnection = await getCalendarConnection(userData.user.id);
-  let calendarEvents: { id: string; summary: string; start: string; end: string; htmlLink: string }[] = [];
-  if (calendarConnection) {
-    try {
-      const accessToken = await getValidAccessToken(calendarConnection);
-      const in14Days = new Date(Date.now() + 14 * 86_400_000);
-      calendarEvents = await listUpcomingEvents(accessToken, calendarConnection.google_calendar_id, new Date(), in14Days);
-    } catch (err) {
-      console.error("Failed to load Google Calendar events:", err);
-      Sentry.captureException(err);
-    }
-  }
   const pipelineValue = projects
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
@@ -370,7 +353,16 @@ export default async function DashboardPage() {
             pendingReviews={reviewAlerts}
           />
           <CapacityPanel tenantId={tenant.id} trades={trades} />
-          <CalendarPanel connected={!!calendarConnection} events={calendarEvents} />
+          <Suspense
+            fallback={
+              <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-ink">Your calendar</h2>
+                <p className="mt-1 text-sm text-muted">Loading&hellip;</p>
+              </div>
+            }
+          >
+            <CalendarPanelData userId={userData.user.id} />
+          </Suspense>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
