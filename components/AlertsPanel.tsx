@@ -20,21 +20,25 @@ const SEVERITY_CLASS: Record<Alert["severity"], string> = {
   info: "bg-surface-2 text-ink-2",
 };
 
-const SEVERITY_ICON: Record<Alert["severity"], string> = {
-  critical: "!",
-  warning: "!",
-  info: "i",
-};
-
-// Solid background + white glyph, not the bg-current trick: that only
-// works if the icon element's OWN text color is the severity color, but
-// this icon's text is white (for the glyph) - bg-current would just
-// resolve to white-on-white.
-const SEVERITY_ICON_CLASS: Record<Alert["severity"], string> = {
-  critical: "bg-critical",
-  warning: "bg-warning",
-  info: "bg-muted",
-};
+function AlertIcon({ severity }: { severity: Alert["severity"] }) {
+  const shared = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (severity === "info") {
+    return (
+      <svg viewBox="0 0 20 20" className="h-4 w-4 flex-none" {...shared}>
+        <circle cx="10" cy="10" r="7.5" />
+        <path d="M10 9v4.5" />
+        <circle cx="10" cy="6.5" r="0.9" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 flex-none" {...shared}>
+      <path d="M10 2.5l8.5 15h-17l8.5-15z" />
+      <path d="M10 8v4" />
+      <circle cx="10" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 export function AlertsPanel({
   leads,
@@ -70,11 +74,8 @@ export function AlertsPanel({
         ) : (
           alerts.map((a, i) => (
             <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2 text-sm ${SEVERITY_CLASS[a.severity]}`}>
-              <span
-                aria-hidden
-                className={`mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] font-bold text-white ${SEVERITY_ICON_CLASS[a.severity]}`}
-              >
-                {SEVERITY_ICON[a.severity]}
+              <span aria-hidden className="mt-0.5">
+                <AlertIcon severity={a.severity} />
               </span>
               <span>{a.text}</span>
             </div>

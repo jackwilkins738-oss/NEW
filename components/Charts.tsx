@@ -119,9 +119,27 @@ export function RevenueTrend({
     return { x, y, ...p };
   });
 
-  const linePath = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c.x},${c.y}`).join(" ");
+  // Smooth curve through the points (Catmull-Rom converted to cubic
+  // bezier segments) instead of straight line segments between them -
+  // this alone is most of what separates a "spreadsheet export" line
+  // chart from something that reads as considered.
+  const linePath = coords
+    .map((c, i) => {
+      if (i === 0) return `M${c.x},${c.y}`;
+      const p0 = coords[Math.max(0, i - 2)];
+      const p1 = coords[i - 1];
+      const p2 = c;
+      const p3 = coords[Math.min(coords.length - 1, i + 1)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      return `C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    })
+    .join(" ");
   const areaPath = `${linePath} L${coords[coords.length - 1]?.x ?? 0},${bottom} L${coords[0]?.x ?? 0},${bottom} Z`;
   const total = values.reduce((a, b) => a + b, 0);
+  const gradientId = `revenue-trend-fill-${title.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
@@ -138,9 +156,15 @@ export function RevenueTrend({
       ) : (
         <div className="relative mt-3">
           <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible">
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--series-1)" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="var(--series-1)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <line x1={padL} y1={top} x2={W - padR} y2={top} stroke="var(--chart-grid)" strokeWidth={1} />
             <line x1={padL} y1={bottom} x2={W - padR} y2={bottom} stroke="var(--chart-grid)" strokeWidth={1} />
-            <path d={areaPath} fill="var(--series-1)" opacity={0.1} />
+            <path d={areaPath} fill={`url(#${gradientId})`} />
             <path d={linePath} fill="none" stroke="var(--series-1)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             {coords.map((c, i) => (
               <g key={i}>

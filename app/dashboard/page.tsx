@@ -15,6 +15,8 @@ import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
 import { NavMenu } from "@/components/NavMenu";
+import { Sparkline } from "@/components/Sparkline";
+import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 
@@ -43,6 +45,28 @@ function monthlyValueTrend(projects: { created_at: string; value_pence: number |
     if (bucket) bucket.value += p.value_pence ?? 0;
   }
   return buckets.map(({ label, value }) => ({ label, value: value / 100 }));
+}
+
+// Same bucketing as monthlyValueTrend, but for paid invoices by due_date
+// (there's no paid_at timestamp, only status) - feeds the Revenue tile's
+// sparkline. A rougher proxy than a true payment-date trend, but the best
+// available without adding a new column just for a glance-able chart.
+function monthlyPaidTrend(invoices: { due_date: string; amount_pence: number; status: string }[]) {
+  const now = new Date();
+  const buckets: { key: string; value: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, value: 0 });
+  }
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  for (const inv of invoices) {
+    if (inv.status !== "paid") continue;
+    const d = new Date(inv.due_date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const bucket = byKey.get(key);
+    if (bucket) bucket.value += inv.amount_pence;
+  }
+  return buckets.map((b) => b.value / 100);
 }
 
 // Groups arbitrary rows by a label, sums (or counts) a value, sorts
@@ -259,6 +283,8 @@ export default async function DashboardPage() {
   const dueSoonTotal = dueSoonInvoices.reduce((sum, i) => sum + outstanding(i), 0);
 
   const revenueTrend = monthlyValueTrend(projects);
+  const pipelineSparkline = revenueTrend.map((p) => p.value);
+  const revenueSparkline = monthlyPaidTrend(invoices);
   const projectTypeBreakdown = groupTopN(
     projects,
     (p) => p.project_type ?? "",
@@ -284,13 +310,20 @@ export default async function DashboardPage() {
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Operations &amp; Sales Dashboard
-            </p>
-            <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
-              {tenant.business_name}
-            </h1>
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="h-9 w-1 flex-none rounded-full"
+              style={{ background: "linear-gradient(180deg, var(--brand), var(--brand-strong))" }}
+            />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                Operations &amp; Sales Dashboard
+              </p>
+              <h1 className="font-display text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
+                {tenant.business_name}
+              </h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <NavMenu />
@@ -303,42 +336,63 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
-            <p className="text-xs font-semibold text-ink-2">Revenue</p>
-            <p className="mt-1 font-mono text-xl font-bold text-ink">{formatGBP(revenue)}</p>
+        {/* Hero row: the two numbers actually worth a glance before anything
+            else, each with a trailing-12-month trend line so a number reads
+            as a trajectory, not just a snapshot. */}
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-5">
+          <div className="hero-tile kpi-tile rounded-2xl p-5 sm:col-span-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
+                <p className="mt-1 font-display text-4xl font-extrabold tracking-tight text-ink [font-feature-settings:'tnum'] sm:text-5xl">
+                  {formatGBP(pipelineValue)}
+                </p>
+                <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
+              </div>
+              <IconTrendUp className="h-8 w-8 flex-none text-brand-strong opacity-70" />
+            </div>
+            <Sparkline values={pipelineSparkline} color="var(--brand-strong)" />
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
-            <p className="text-xs font-semibold text-ink-2">Won this month</p>
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink-2">Revenue</p>
+                <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
+                <p className="mt-1 text-xs text-muted">All paid invoices</p>
+              </div>
+              <IconBanknote className="h-6 w-6 flex-none text-muted" />
+            </div>
+            <Sparkline values={revenueSparkline} color="var(--series-3)" />
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <IconTrophy className="h-5 w-5 text-muted" />
+            <p className="mt-2 text-xs font-semibold text-ink-2">Won this month</p>
             <p className="mt-1 font-mono text-xl font-bold text-ink">{formatGBP(wonThisMonth)}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
-            <p className="text-xs font-semibold text-ink-2">Outstanding</p>
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <IconClock className={`h-5 w-5 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
+            <p className="mt-2 text-xs font-semibold text-ink-2">Outstanding</p>
             <p className={`mt-1 font-mono text-xl font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
               {formatGBP(outstandingTotal)}
             </p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
-            <p className="text-xs font-semibold text-ink-2">Quotes awaiting decision</p>
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <IconDocument className="h-5 w-5 text-muted" />
+            <p className="mt-2 text-xs font-semibold text-ink-2">Quotes awaiting</p>
             <p className="mt-1 font-mono text-xl font-bold text-ink">{quotesAwaitingDecision}</p>
           </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-5">
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-1">
-            <p className="text-sm font-semibold text-ink-2">Leads &middot; last 30 days</p>
-            <p className="mt-2 text-3xl font-bold text-ink">{leads.length}</p>
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <IconUsers className="h-5 w-5 text-muted" />
+            <p className="mt-2 text-xs font-semibold text-ink-2">Leads &middot; 30d</p>
+            <p className="mt-1 font-mono text-xl font-bold text-ink">{leads.length}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-1">
-            <p className="text-sm font-semibold text-ink-2">Page views &middot; last 30 days</p>
-            <p className="mt-2 text-3xl font-bold text-ink">{pageviewCount}</p>
-          </div>
-          {/* The one number worth seeing before any other - brand-tinted and
-              larger than its neighbours, not just another identical tile. */}
-          <div className="rounded-2xl border border-black/10 bg-brand-tint p-5 shadow-sm sm:col-span-3">
-            <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
-            <p className="mt-2 font-display text-4xl font-extrabold text-ink sm:text-5xl">{formatGBP(pipelineValue)}</p>
-            <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
+          <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <IconEye className="h-5 w-5 text-muted" />
+            <p className="mt-2 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
+            <p className="mt-1 font-mono text-xl font-bold text-ink">{pageviewCount}</p>
           </div>
         </div>
 
@@ -366,16 +420,16 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] p-5 shadow-sm">
+          <div className="kpi-tile rounded-2xl border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] p-5 shadow-sm">
             <p className="text-sm font-semibold text-critical">Overdue invoices</p>
-            <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(overdueTotal)}</p>
+            <p className="mt-2 text-3xl font-bold text-ink [font-feature-settings:'tnum']">{formatGBP(overdueTotal)}</p>
             <p className="mt-1 text-xs text-muted">
               {overdueInvoices.length} invoice{overdueInvoices.length === 1 ? "" : "s"}
             </p>
           </div>
-          <div className="rounded-2xl border border-[rgba(250,178,25,0.4)] bg-[rgba(250,178,25,0.1)] p-5 shadow-sm">
+          <div className="kpi-tile rounded-2xl border border-[rgba(250,178,25,0.4)] bg-[rgba(250,178,25,0.1)] p-5 shadow-sm">
             <p className="text-sm font-semibold text-[#8a5a00]">Due in next 7 days</p>
-            <p className="mt-2 text-3xl font-bold text-ink">{formatGBP(dueSoonTotal)}</p>
+            <p className="mt-2 text-3xl font-bold text-ink [font-feature-settings:'tnum']">{formatGBP(dueSoonTotal)}</p>
             <p className="mt-1 text-xs text-muted">
               {dueSoonInvoices.length} invoice{dueSoonInvoices.length === 1 ? "" : "s"}
             </p>
@@ -383,7 +437,7 @@ export default async function DashboardPage() {
         </div>
 
         {portfolioMargin !== null && (
-          <div className="mt-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <div className="kpi-tile mt-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
             <p className="text-sm font-semibold text-ink-2">Gross profit tracked</p>
             <p className="mt-1 text-xs text-muted">
               Across {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged

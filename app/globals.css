@@ -109,3 +109,44 @@ body {
     transform: none;
   }
 }
+
+/* Dashboard elevation system - a card lifts and its shadow deepens on
+   hover/focus rather than every surface sitting at the same flat
+   shadow-sm, and the brand color (different per tenant) shows through as
+   a faint sheen instead of a plain grey shadow, which is most of what
+   reads as "considered" rather than "generic SaaS card grid". */
+.kpi-tile {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.kpi-tile:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--hairline));
+  box-shadow: 0 20px 36px -22px color-mix(in srgb, var(--brand) 55%, transparent), 0 2px 6px -2px rgba(0, 0, 0, 0.08);
+}
+.kpi-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 12%, transparent), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.kpi-tile:hover::after {
+  opacity: 1;
+}
+
+.hero-tile {
+  background: linear-gradient(135deg, var(--brand-tint), var(--surface) 78%);
+  border: 1px solid color-mix(in srgb, var(--brand) 38%, var(--hairline));
+  box-shadow: 0 28px 52px -30px color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-tile,
+  .kpi-tile:hover {
+    transform: none;
+  }
+}
