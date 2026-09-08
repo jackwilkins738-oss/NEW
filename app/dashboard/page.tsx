@@ -400,6 +400,7 @@ export default async function DashboardPage() {
             tenantId={tenant.id}
             invoices={invoices}
             projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
+            leads={leads.map((l) => ({ id: l.id, name: l.name, email: l.email, status: l.status }))}
           />
         </div>
 

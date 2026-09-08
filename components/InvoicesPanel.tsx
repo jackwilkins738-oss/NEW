@@ -17,6 +17,7 @@ type Invoice = {
 };
 
 type ProjectOption = { id: string; client_name: string };
+type LeadOption = { id: string; name: string | null; email: string | null; status: string };
 
 function invoiceState(inv: Invoice): "paid" | "overdue" | "due_soon" | "upcoming" | "part_paid" {
   if (inv.status === "paid") return "paid";
@@ -96,14 +97,110 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
   );
 }
 
+// A lead only shows up here once it's been marked "contacted" - "new"
+// hasn't had a real conversation yet, and anything past "quoted" belongs to
+// the quote/project flow instead. Picking one autofills the client name and
+// tags the invoice with lead_id (no customer record is created - a lead
+// only gets one of those by actually being won).
+function NewInvoiceForm({
+  tenantId,
+  projects,
+  leads,
+}: {
+  tenantId: string;
+  projects: ProjectOption[];
+  leads: LeadOption[];
+}) {
+  const [clientName, setClientName] = useState("");
+  const [leadId, setLeadId] = useState("");
+  const contactedLeads = leads.filter((l) => l.status === "contacted");
+
+  return (
+    <form
+      action={addInvoice}
+      className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
+    >
+      <input type="hidden" name="tenantId" value={tenantId} />
+      <input type="hidden" name="leadId" value={leadId} />
+      {contactedLeads.length > 0 && (
+        <label className="text-xs font-semibold text-ink-2 sm:col-span-2">
+          Recent contacted lead
+          <select
+            value={leadId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setLeadId(id);
+              const lead = contactedLeads.find((l) => l.id === id);
+              if (lead) setClientName(lead.name ?? lead.email ?? "");
+            }}
+            className={field}
+          >
+            <option value="">Not from a lead</option>
+            {contactedLeads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name ?? l.email ?? "Unnamed lead"}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label className="text-xs font-semibold text-ink-2">
+        Client
+        <input
+          name="clientName"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          required
+          className={field}
+        />
+      </label>
+      <label className="text-xs font-semibold text-ink-2">
+        Project
+        <select name="projectId" defaultValue="" className={field}>
+          <option value="">Not linked</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.client_name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-ink-2">
+        Milestone
+        <input name="milestone" className={field} placeholder="Deposit / Stage 1 / Final" />
+      </label>
+      <label className="text-xs font-semibold text-ink-2">
+        Reference
+        <input name="reference" className={field} />
+      </label>
+      <label className="text-xs font-semibold text-ink-2">
+        Amount (&pound;)
+        <input name="amount" type="number" min="0" step="0.01" required className={field} />
+      </label>
+      <label className="text-xs font-semibold text-ink-2">
+        Due date
+        <input name="dueDate" type="date" required className={field} />
+      </label>
+      <button
+        type="submit"
+        className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+      >
+        Add
+      </button>
+    </form>
+  );
+}
+
 export function InvoicesPanel({
   tenantId,
   invoices,
   projects,
+  leads,
 }: {
   tenantId: string;
   invoices: Invoice[];
   projects: ProjectOption[];
+  leads: LeadOption[];
 }) {
   const sorted = [...invoices].sort((a, b) => {
     const rankDiff = SORT_RANK[invoiceState(a)] - SORT_RANK[invoiceState(b)];
@@ -123,49 +220,7 @@ export function InvoicesPanel({
         </a>
       </div>
 
-      <form
-        action={addInvoice}
-        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
-      >
-        <input type="hidden" name="tenantId" value={tenantId} />
-        <label className="text-xs font-semibold text-ink-2">
-          Client
-          <input name="clientName" required className={field} />
-        </label>
-        <label className="text-xs font-semibold text-ink-2">
-          Project
-          <select name="projectId" defaultValue="" className={field}>
-            <option value="">Not linked</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.client_name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold text-ink-2">
-          Milestone
-          <input name="milestone" className={field} placeholder="Deposit / Stage 1 / Final" />
-        </label>
-        <label className="text-xs font-semibold text-ink-2">
-          Reference
-          <input name="reference" className={field} />
-        </label>
-        <label className="text-xs font-semibold text-ink-2">
-          Amount (&pound;)
-          <input name="amount" type="number" min="0" step="0.01" required className={field} />
-        </label>
-        <label className="text-xs font-semibold text-ink-2">
-          Due date
-          <input name="dueDate" type="date" required className={field} />
-        </label>
-        <button
-          type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
-        >
-          Add
-        </button>
-      </form>
+      <NewInvoiceForm tenantId={tenantId} projects={projects} leads={leads} />
 
       <div className="mt-4 flex flex-col gap-3">
         {sorted.length === 0 && (

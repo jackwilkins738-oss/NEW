@@ -113,6 +113,7 @@ export async function addInvoice(formData: FormData) {
   const reference = String(formData.get("reference") ?? "").trim();
   const milestone = String(formData.get("milestone") ?? "").trim();
   const projectId = String(formData.get("projectId") ?? "").trim();
+  const leadId = String(formData.get("leadId") ?? "").trim();
   const amountPounds = Number(formData.get("amount"));
   const dueDate = String(formData.get("dueDate") ?? "");
 
@@ -137,6 +138,7 @@ export async function addInvoice(formData: FormData) {
     reference: reference || null,
     milestone: milestone || null,
     project_id: projectId || null,
+    lead_id: leadId || null,
     customer_id: customerId,
     amount_pence: Math.round(amountPounds * 100),
     due_date: dueDate,
