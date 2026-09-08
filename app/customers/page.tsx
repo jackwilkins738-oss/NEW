@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { IconUsers } from "@/components/DashboardIcons";
+import { addCustomer } from "@/app/dashboard/actions";
+
+const field =
+  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+const label = "text-xs font-semibold text-ink-2";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +56,32 @@ export default async function CustomersPage() {
             Customers
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Created automatically when a lead or quote converts to a project - one record per customer across
-            every job they've had.
+            Created automatically when a lead or quote converts to a project, or add one by hand below - one
+            record per customer across every job they've had.
           </p>
         </header>
+
+        <form
+          action={addCustomer}
+          className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:grid-cols-4 sm:items-end"
+        >
+          <input type="hidden" name="tenantId" value={tenant.id} />
+          <label className={label}>
+            Name
+            <input name="name" required className={field} />
+          </label>
+          <label className={label}>
+            Email
+            <input name="email" type="email" className={field} />
+          </label>
+          <label className={label}>
+            Phone
+            <input name="phone" className={field} />
+          </label>
+          <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5">
+            Add customer
+          </button>
+        </form>
 
         <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
           {customers.length === 0 ? (

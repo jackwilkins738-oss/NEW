@@ -1235,3 +1235,46 @@ export async function sendReviewRequestEmail(
   revalidatePath(`/projects/${projectId}`);
   return { ok: true };
 }
+
+// Manual creation - for a customer who never came through a lead/quote
+// conversion (an old job entered by hand, a walk-in). Conversion still
+// remains the normal path; this just covers the gap.
+export async function addCustomer(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!tenantId || !name) return;
+
+  await createClient()
+    .from("customers")
+    .insert({
+      tenant_id: tenantId,
+      name,
+      email: String(formData.get("email") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim() || null,
+      address: String(formData.get("address") ?? "").trim() || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    });
+
+  revalidatePath("/customers");
+}
+
+export async function updateCustomer(customerId: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = createClient();
+  await supabase
+    .from("customers")
+    .update({
+      name,
+      email: String(formData.get("email") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim() || null,
+      address: String(formData.get("address") ?? "").trim() || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", customerId);
+
+  revalidatePath(`/customers/${customerId}`);
+  revalidatePath("/customers");
+}

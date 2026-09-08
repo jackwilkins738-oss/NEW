@@ -4,6 +4,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { CustomerHeader } from "@/components/CustomerHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -76,23 +77,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           &larr; Back to customers
         </Link>
 
-        <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
-          <h1 className="font-display text-xl font-extrabold text-ink sm:text-2xl">{customer.name}</h1>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
-            {customer.email && (
-              <a href={`mailto:${customer.email}`} className="hover:text-brand hover:underline">
-                {customer.email}
-              </a>
-            )}
-            {customer.phone && (
-              <a href={`tel:${customer.phone}`} className="hover:text-brand hover:underline">
-                {customer.phone}
-              </a>
-            )}
-            {customer.address && <span>{customer.address}</span>}
-          </div>
-          {customer.notes && <p className="mt-2 text-sm text-muted">{customer.notes}</p>}
-        </header>
+        <CustomerHeader customer={customer} />
 
         <div className="mt-5 grid grid-cols-3 gap-3">
           <div className="rounded-2xl border border-black/10 bg-surface p-4 text-center shadow-sm">
