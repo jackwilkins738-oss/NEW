@@ -237,11 +237,19 @@ export default async function DashboardPage() {
               {tenant.business_name}
             </h1>
           </div>
-          <form action={signOut}>
-            <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            <a
+              href="/customers"
+              className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
+            >
+              Customers
+            </a>
+            <form action={signOut}>
+              <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-5">
