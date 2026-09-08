@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
+import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
 import { Stars } from "@/components/ReviewsPanel";
 import { ReviewsSortSelect } from "@/components/ReviewsSortSelect";
 import { deleteReview } from "@/app/dashboard/actions";
@@ -98,6 +99,9 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
                       <div className="flex flex-none items-center gap-2">
                         {r.status === "received" && (
                           <ReviewPublishToggle projectId={r.project_id} reviewId={r.id} published={r.published} />
+                        )}
+                        {r.status === "requested" && (
+                          <ReviewSendRequestButton projectId={r.project_id} tenantId={tenant.id} reviewId={r.id} />
                         )}
                         <DeleteButton
                           action={deleteReview.bind(null, r.project_id)}

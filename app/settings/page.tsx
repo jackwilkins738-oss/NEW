@@ -66,6 +66,20 @@ export default async function SettingsPage() {
               className={field}
             />
           </label>
+          <label className={label}>
+            Google review link
+            <input
+              name="googleReviewUrl"
+              type="url"
+              defaultValue={tenant.google_review_url ?? ""}
+              placeholder="https://g.page/r/.../review"
+              className={field}
+            />
+            <span className="mt-1 block text-xs font-normal text-muted">
+              From your Google Business Profile ("Get more reviews" / "Ask for reviews"). Once set, marking a
+              project complete automatically emails the customer this link.
+            </span>
+          </label>
           <button
             type="submit"
             className="self-start rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"

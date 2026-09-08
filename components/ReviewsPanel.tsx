@@ -4,6 +4,7 @@ import { useState } from "react";
 import { requestReview, recordReview, deleteReview } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
+import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
 
 type Review = {
   id: string;
@@ -23,7 +24,7 @@ export function Stars({ rating }: { rating: number | null }) {
   return <span className="text-[#e0a400]">{"★".repeat(rating)}{"☆".repeat(5 - rating)}</span>;
 }
 
-function ReviewRow({ review, projectId }: { review: Review; projectId: string }) {
+function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId: string; tenantId: string }) {
   const [recording, setRecording] = useState(false);
 
   return (
@@ -82,13 +83,16 @@ function ReviewRow({ review, projectId }: { review: Review; projectId: string })
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              onClick={() => setRecording(true)}
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              Record response
-            </button>
+            <div className="flex items-center gap-3">
+              <ReviewSendRequestButton projectId={projectId} tenantId={tenantId} reviewId={review.id} />
+              <button
+                type="button"
+                onClick={() => setRecording(true)}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                Record response
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -126,7 +130,7 @@ export function ReviewsPanel({
         {reviews.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">No reviews requested yet.</p>
         ) : (
-          reviews.map((r) => <ReviewRow key={r.id} review={r} projectId={projectId} />)
+          reviews.map((r) => <ReviewRow key={r.id} review={r} projectId={projectId} tenantId={tenantId} />)
         )}
       </div>
     </div>

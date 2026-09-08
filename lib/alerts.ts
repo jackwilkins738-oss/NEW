@@ -24,6 +24,7 @@ export type AlertVariation = {
   status: string;
 };
 export type AlertProjectBudget = { client_name: string; budget_pence: number; committed_pence: number };
+export type AlertReview = { id: string; customer_name: string; project_client_name: string; status: string };
 
 export type Alert = { severity: "critical" | "warning" | "info"; text: string };
 
@@ -32,7 +33,7 @@ export const SEVERITY_RANK = { critical: 0, warning: 1, info: 2 };
 // Shared between the dashboard's own AlertsPanel and the weekly digest
 // email (app/api/cron/weekly-digest/route.ts) - one definition of "needs
 // attention", so the email can never say something different from what
-// the dashboard itself shows. The last three params default to empty so
+// the dashboard itself shows. The trailing params default to empty so
 // existing call sites don't have to change to keep compiling.
 export function buildAlerts(
   leads: AlertLead[],
@@ -40,7 +41,8 @@ export function buildAlerts(
   projects: AlertProject[],
   quotes: AlertQuote[] = [],
   variations: AlertVariation[] = [],
-  projectBudgets: AlertProjectBudget[] = []
+  projectBudgets: AlertProjectBudget[] = [],
+  pendingReviews: AlertReview[] = []
 ): Alert[] {
   const alerts: Alert[] = [];
   const now = Date.now();
@@ -112,6 +114,15 @@ export function buildAlerts(
         text: `${b.client_name} is ${formatGBP(b.committed_pence - b.budget_pence)} over budget`,
       });
     }
+  }
+
+  // Not automatic - marking a project complete only logs the request
+  // (status "requested"), someone still has to actually send it. This
+  // keeps nagging every time alerts are computed until it's sent (or the
+  // customer's response is recorded, which flips status to "received").
+  for (const r of pendingReviews) {
+    if (r.status !== "requested") continue;
+    alerts.push({ severity: "info", text: `Review request pending for ${r.customer_name} (${r.project_client_name})` });
   }
 
   return alerts.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);

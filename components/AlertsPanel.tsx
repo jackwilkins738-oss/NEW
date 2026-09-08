@@ -7,6 +7,7 @@ import {
   type AlertQuote,
   type AlertVariation,
   type AlertProjectBudget,
+  type AlertReview,
 } from "@/lib/alerts";
 
 type Lead = AlertLead;
@@ -42,6 +43,7 @@ export function AlertsPanel({
   quotes = [],
   variations = [],
   projectBudgets = [],
+  pendingReviews = [],
 }: {
   leads: Lead[];
   invoices: Invoice[];
@@ -49,8 +51,9 @@ export function AlertsPanel({
   quotes?: AlertQuote[];
   variations?: AlertVariation[];
   projectBudgets?: AlertProjectBudget[];
+  pendingReviews?: AlertReview[];
 }) {
-  const alerts = buildAlerts(leads, invoices, projects, quotes, variations, projectBudgets);
+  const alerts = buildAlerts(leads, invoices, projects, quotes, variations, projectBudgets, pendingReviews);
 
   return (
     // Spans the full grid row once there's something real to show - a

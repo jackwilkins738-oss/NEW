@@ -11,6 +11,7 @@ import { SnagsPanel } from "@/components/SnagsPanel";
 import { AssignedTeamPanel } from "@/components/AssignedTeamPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { ReviewsPanel } from "@/components/ReviewsPanel";
+import { markProjectComplete } from "@/app/dashboard/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, created_at"
+      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, completed_at, created_at"
     )
     .eq("id", params.id)
     .eq("tenant_id", tenant.id)
@@ -168,6 +169,20 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               <p className="text-xs text-muted">
                 {project.start_date ?? "no start date"} &rarr; {project.target_date ?? "no end date"}
               </p>
+              {project.completed_at ? (
+                <span className="mt-2 inline-block rounded-full bg-[rgba(12,163,12,0.15)] px-2.5 py-1 text-xs font-bold text-good">
+                  Completed {new Date(project.completed_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                </span>
+              ) : (
+                <form action={markProjectComplete.bind(null, project.id, tenant.id)} className="mt-2">
+                  <button
+                    type="submit"
+                    className="rounded-md border border-black/10 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                  >
+                    Mark complete
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </header>

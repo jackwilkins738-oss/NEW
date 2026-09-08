@@ -873,6 +873,7 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
   const vatRate = Number(formData.get("defaultVatRate") ?? 20);
   const quoteTerms = String(formData.get("defaultQuoteTerms") ?? "").trim();
   const paymentTerms = String(formData.get("defaultPaymentTerms") ?? "").trim();
+  const googleReviewUrl = String(formData.get("googleReviewUrl") ?? "").trim();
 
   const admin = createAdminClient();
   await admin
@@ -881,6 +882,7 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
       default_vat_rate: Number.isFinite(vatRate) && vatRate >= 0 ? vatRate : 20,
       default_quote_terms: quoteTerms || null,
       default_payment_terms: paymentTerms || null,
+      google_review_url: googleReviewUrl || null,
     })
     .eq("id", tenantId);
 
@@ -1127,4 +1129,109 @@ export async function deleteReview(projectId: string, reviewId: string) {
   await supabase.from("reviews").delete().eq("id", reviewId);
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/reviews");
+}
+
+// Marking a project complete does NOT email the customer by itself - it
+// logs a pending review request (status "requested") and leaves it for
+// Needs Attention to keep surfacing until someone actually sends it (via
+// the "Send request" button on the review, or however they choose to ask).
+// Guarded by completed_at already being set (idempotent - re-visiting an
+// already-complete project doesn't create a duplicate) and by an existing
+// review row for this project (covers requesting one by hand before
+// marking it complete).
+export async function markProjectComplete(projectId: string, tenantId: string) {
+  const supabase = createClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, tenant_id, client_name, completed_at")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project || project.tenant_id !== tenantId || project.completed_at) return;
+
+  await supabase.from("projects").update({ completed_at: new Date().toISOString() }).eq("id", projectId);
+
+  const { count: existingReviews } = await supabase
+    .from("reviews")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId);
+  if ((existingReviews ?? 0) === 0) {
+    await supabase.from("reviews").insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      customer_name: project.client_name,
+      status: "requested",
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/reviews");
+  revalidatePath("/dashboard");
+}
+
+// Manual, one click - the owner decides when to actually ask, this just
+// makes it easy once they do. No-op if the tenant hasn't set a Google
+// review link yet (Settings).
+export async function sendReviewRequestEmail(
+  projectId: string,
+  tenantId: string,
+  reviewId: string
+): Promise<{ ok: boolean; reason?: "no_review_link" | "no_email" | "not_found" }> {
+  const supabase = createClient();
+
+  const { data: review } = await supabase
+    .from("reviews")
+    .select("id, tenant_id, project_id, customer_name")
+    .eq("id", reviewId)
+    .maybeSingle();
+  if (!review || review.tenant_id !== tenantId) return { ok: false, reason: "not_found" };
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("business_name, google_review_url, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (!tenant?.google_review_url) return { ok: false, reason: "no_review_link" };
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("customer_id, lead_id, quote_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  let recipient: string | null = null;
+  if (project?.customer_id) {
+    const { data: customer } = await supabase.from("customers").select("email").eq("id", project.customer_id).maybeSingle();
+    recipient = customer?.email ?? null;
+  }
+  if (!recipient && project?.lead_id) {
+    const { data: lead } = await supabase.from("leads").select("email").eq("id", project.lead_id).maybeSingle();
+    recipient = lead?.email ?? null;
+  }
+  if (!recipient && project?.quote_id) {
+    const { data: quote } = await supabase.from("quotes").select("customer_email").eq("id", project.quote_id).maybeSingle();
+    recipient = quote?.customer_email ?? null;
+  }
+  if (!recipient) return { ok: false, reason: "no_email" };
+
+  await sendEmail({
+    to: [recipient],
+    subject: `How did we do, ${review.customer_name}?`,
+    html: `
+      <p>Hi ${review.customer_name},</p>
+      <p>Your project with ${tenant.business_name} is complete - thanks for choosing us.</p>
+      <p>If you have a minute, a review would mean a lot: <a href="${tenant.google_review_url}">Leave us a Google review</a></p>
+    `,
+    replyTo: tenant.contact_email ?? undefined,
+  });
+
+  await supabase.from("communications").insert({
+    tenant_id: tenantId,
+    project_id: projectId,
+    type: "email",
+    summary: "Review request emailed to customer",
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
 }

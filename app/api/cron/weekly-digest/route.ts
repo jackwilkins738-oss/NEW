@@ -46,7 +46,7 @@ async function sendDigestForTenant(
   admin: ReturnType<typeof createAdminClient>,
   tenant: { id: string; business_name: string; slug: string; domain: string | null; brand_theme: string }
 ): Promise<boolean> {
-  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes] = await Promise.all([
+  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes] = await Promise.all([
     admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
     admin.from("invoices").select("id, client_name, amount_pence, due_date, status").eq("tenant_id", tenant.id),
     admin
@@ -63,6 +63,11 @@ async function sendDigestForTenant(
       .eq("tenant_id", tenant.id)
       .eq("status", "pending"),
     admin.from("project_cost_items").select("project_id, amount_pence").eq("tenant_id", tenant.id),
+    admin
+      .from("reviews")
+      .select("id, customer_name, project_id, status")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "requested"),
   ]);
 
   const projects = projectsRes.data ?? [];
@@ -90,7 +95,22 @@ async function sendDigestForTenant(
     status: v.status,
   }));
 
-  const alerts = buildAlerts(leadsRes.data ?? [], invoicesRes.data ?? [], projects, quotes, variationAlerts, projectBudgets);
+  const reviewAlerts = (reviewsRes.data ?? []).map((r) => ({
+    id: r.id,
+    customer_name: r.customer_name,
+    project_client_name: r.project_id ? projectNameById.get(r.project_id) ?? "a project" : "a project",
+    status: r.status,
+  }));
+
+  const alerts = buildAlerts(
+    leadsRes.data ?? [],
+    invoicesRes.data ?? [],
+    projects,
+    quotes,
+    variationAlerts,
+    projectBudgets,
+    reviewAlerts
+  );
   // A "nothing to report" email every Monday is noise, not help - only
   // send when there's actually something worth a tenant's attention.
   if (alerts.length === 0) return false;

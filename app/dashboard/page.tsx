@@ -112,8 +112,18 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes, costItemsRes, variationsRes] =
-    await Promise.all([
+  const [
+    leadsRes,
+    pageviewsRes,
+    projectsRes,
+    invoicesRes,
+    tradesRes,
+    photosRes,
+    quotesRes,
+    costItemsRes,
+    variationsRes,
+    pendingReviewsRes,
+  ] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, phone, source, status, value_pence, created_at")
@@ -163,6 +173,11 @@ export default async function DashboardPage() {
       .select("id, number, description, project_id, status")
       .eq("tenant_id", tenant.id)
       .eq("status", "pending"),
+    supabase
+      .from("reviews")
+      .select("id, customer_name, project_id, status")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "requested"),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -174,6 +189,7 @@ export default async function DashboardPage() {
   const quotes = quotesRes.data ?? [];
   const costItems = costItemsRes.data ?? [];
   const pendingVariations = variationsRes.data ?? [];
+  const pendingReviews = pendingReviewsRes.data ?? [];
 
   // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
   // take the whole dashboard down - fall back to "connected, nothing to show"
@@ -218,6 +234,12 @@ export default async function DashboardPage() {
     number: v.number,
     project_client_name: projectNameById.get(v.project_id) ?? "a project",
     status: v.status,
+  }));
+  const reviewAlerts = pendingReviews.map((r) => ({
+    id: r.id,
+    customer_name: r.customer_name,
+    project_client_name: r.project_id ? projectNameById.get(r.project_id) ?? "a project" : "a project",
+    status: r.status,
   }));
 
   // "Actual" cost is paid cost items only (see migration 017) - committed-
@@ -345,6 +367,7 @@ export default async function DashboardPage() {
             quotes={quotes}
             variations={variationAlerts}
             projectBudgets={projectBudgets}
+            pendingReviews={reviewAlerts}
           />
           <CapacityPanel tenantId={tenant.id} trades={trades} />
           <CalendarPanel connected={!!calendarConnection} events={calendarEvents} />
