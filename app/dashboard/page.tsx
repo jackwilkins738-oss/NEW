@@ -111,7 +111,8 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes, costItemsRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes, costItemsRes, variationsRes] =
+    await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, phone, source, status, value_pence, created_at")
@@ -156,6 +157,11 @@ export default async function DashboardPage() {
       .from("project_cost_items")
       .select("project_id, amount_pence, status")
       .eq("tenant_id", tenant.id),
+    supabase
+      .from("variations")
+      .select("id, number, description, project_id, status")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "pending"),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -166,6 +172,7 @@ export default async function DashboardPage() {
   const projectPhotos = photosRes.data ?? [];
   const quotes = quotesRes.data ?? [];
   const costItems = costItemsRes.data ?? [];
+  const pendingVariations = variationsRes.data ?? [];
 
   // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
   // take the whole dashboard down - fall back to "connected, nothing to show"
@@ -185,6 +192,32 @@ export default async function DashboardPage() {
   const pipelineValue = projects
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
+
+  // For the "over budget" alert: budget comes from the originating quote's
+  // line items (same source the project detail page uses), committed comes
+  // from every cost item regardless of paid/unpaid - a cost is "committed"
+  // the moment it's logged, not once it's actually settled.
+  const quoteById = new Map(quotes.map((q) => [q.id, q]));
+  const committedByProject = new Map<string, number>();
+  for (const item of costItems) {
+    committedByProject.set(item.project_id, (committedByProject.get(item.project_id) ?? 0) + item.amount_pence);
+  }
+  const projectBudgets = projects
+    .filter((p) => p.quote_id)
+    .map((p) => {
+      const quote = quoteById.get(p.quote_id!);
+      const lineItems = (quote?.line_items ?? []) as { unit_price_pence: number }[];
+      const budgetPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
+      return { client_name: p.client_name, budget_pence: budgetPence, committed_pence: committedByProject.get(p.id) ?? 0 };
+    });
+
+  const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
+  const variationAlerts = pendingVariations.map((v) => ({
+    id: v.id,
+    number: v.number,
+    project_client_name: projectNameById.get(v.project_id) ?? "a project",
+    status: v.status,
+  }));
 
   // "Actual" cost is paid cost items only (see migration 017) - committed-
   // but-unpaid items don't count here, same distinction the project detail
@@ -283,7 +316,14 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <AlertsPanel leads={leads} invoices={invoices} projects={projects} />
+          <AlertsPanel
+            leads={leads}
+            invoices={invoices}
+            projects={projects}
+            quotes={quotes}
+            variations={variationAlerts}
+            projectBudgets={projectBudgets}
+          />
           <CapacityPanel tenantId={tenant.id} trades={trades} />
           <CalendarPanel connected={!!calendarConnection} events={calendarEvents} />
         </div>

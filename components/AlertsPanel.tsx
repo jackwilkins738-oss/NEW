@@ -1,4 +1,13 @@
-import { buildAlerts, type Alert, type AlertLead, type AlertInvoice, type AlertProject } from "@/lib/alerts";
+import {
+  buildAlerts,
+  type Alert,
+  type AlertLead,
+  type AlertInvoice,
+  type AlertProject,
+  type AlertQuote,
+  type AlertVariation,
+  type AlertProjectBudget,
+} from "@/lib/alerts";
 
 type Lead = AlertLead;
 type Invoice = AlertInvoice;
@@ -26,8 +35,22 @@ const SEVERITY_ICON_CLASS: Record<Alert["severity"], string> = {
   info: "bg-muted",
 };
 
-export function AlertsPanel({ leads, invoices, projects }: { leads: Lead[]; invoices: Invoice[]; projects: Project[] }) {
-  const alerts = buildAlerts(leads, invoices, projects);
+export function AlertsPanel({
+  leads,
+  invoices,
+  projects,
+  quotes = [],
+  variations = [],
+  projectBudgets = [],
+}: {
+  leads: Lead[];
+  invoices: Invoice[];
+  projects: Project[];
+  quotes?: AlertQuote[];
+  variations?: AlertVariation[];
+  projectBudgets?: AlertProjectBudget[];
+}) {
+  const alerts = buildAlerts(leads, invoices, projects, quotes, variations, projectBudgets);
 
   return (
     // Spans the full grid row once there's something real to show - a

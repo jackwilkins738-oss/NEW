@@ -46,13 +46,51 @@ async function sendDigestForTenant(
   admin: ReturnType<typeof createAdminClient>,
   tenant: { id: string; business_name: string; slug: string; domain: string | null; brand_theme: string }
 ): Promise<boolean> {
-  const [leadsRes, invoicesRes, projectsRes] = await Promise.all([
+  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes] = await Promise.all([
     admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
     admin.from("invoices").select("id, client_name, amount_pence, due_date, status").eq("tenant_id", tenant.id),
-    admin.from("projects").select("id, client_name, target_date, next_visit_at, status").eq("tenant_id", tenant.id),
+    admin
+      .from("projects")
+      .select("id, client_name, target_date, next_visit_at, status, quote_id")
+      .eq("tenant_id", tenant.id),
+    admin
+      .from("quotes")
+      .select("id, client_name, quote_number, status, sent_at, line_items")
+      .eq("tenant_id", tenant.id),
+    admin
+      .from("variations")
+      .select("id, number, project_id, status")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "pending"),
+    admin.from("project_cost_items").select("project_id, amount_pence").eq("tenant_id", tenant.id),
   ]);
 
-  const alerts = buildAlerts(leadsRes.data ?? [], invoicesRes.data ?? [], projectsRes.data ?? []);
+  const projects = projectsRes.data ?? [];
+  const quotes = quotesRes.data ?? [];
+
+  const quoteById = new Map(quotes.map((q) => [q.id, q]));
+  const committedByProject = new Map<string, number>();
+  for (const item of costItemsRes.data ?? []) {
+    committedByProject.set(item.project_id, (committedByProject.get(item.project_id) ?? 0) + item.amount_pence);
+  }
+  const projectBudgets = projects
+    .filter((p) => p.quote_id)
+    .map((p) => {
+      const quote = quoteById.get(p.quote_id!);
+      const lineItems = (quote?.line_items ?? []) as { unit_price_pence: number }[];
+      const budgetPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
+      return { client_name: p.client_name, budget_pence: budgetPence, committed_pence: committedByProject.get(p.id) ?? 0 };
+    });
+
+  const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
+  const variationAlerts = (variationsRes.data ?? []).map((v) => ({
+    id: v.id,
+    number: v.number,
+    project_client_name: projectNameById.get(v.project_id) ?? "a project",
+    status: v.status,
+  }));
+
+  const alerts = buildAlerts(leadsRes.data ?? [], invoicesRes.data ?? [], projects, quotes, variationAlerts, projectBudgets);
   // A "nothing to report" email every Monday is noise, not help - only
   // send when there's actually something worth a tenant's attention.
   if (alerts.length === 0) return false;

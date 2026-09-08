@@ -10,6 +10,21 @@ export type AlertProject = {
   status: string | null;
 };
 
+export type AlertQuote = {
+  id: string;
+  client_name: string;
+  quote_number: string | null;
+  status: string;
+  sent_at: string | null;
+};
+export type AlertVariation = {
+  id: string;
+  number: string | null;
+  project_client_name: string;
+  status: string;
+};
+export type AlertProjectBudget = { client_name: string; budget_pence: number; committed_pence: number };
+
 export type Alert = { severity: "critical" | "warning" | "info"; text: string };
 
 export const SEVERITY_RANK = { critical: 0, warning: 1, info: 2 };
@@ -17,8 +32,16 @@ export const SEVERITY_RANK = { critical: 0, warning: 1, info: 2 };
 // Shared between the dashboard's own AlertsPanel and the weekly digest
 // email (app/api/cron/weekly-digest/route.ts) - one definition of "needs
 // attention", so the email can never say something different from what
-// the dashboard itself shows.
-export function buildAlerts(leads: AlertLead[], invoices: AlertInvoice[], projects: AlertProject[]): Alert[] {
+// the dashboard itself shows. The last three params default to empty so
+// existing call sites don't have to change to keep compiling.
+export function buildAlerts(
+  leads: AlertLead[],
+  invoices: AlertInvoice[],
+  projects: AlertProject[],
+  quotes: AlertQuote[] = [],
+  variations: AlertVariation[] = [],
+  projectBudgets: AlertProjectBudget[] = []
+): Alert[] {
   const alerts: Alert[] = [];
   const now = Date.now();
   const today = new Date();
@@ -63,6 +86,31 @@ export function buildAlerts(leads: AlertLead[], invoices: AlertInvoice[], projec
           } (${visit.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" })})`,
         });
       }
+    }
+  }
+
+  for (const q of quotes) {
+    if (q.status !== "sent" || !q.sent_at) continue;
+    const daysSince = (now - new Date(q.sent_at).getTime()) / 86_400_000;
+    if (daysSince >= 4) {
+      alerts.push({
+        severity: "warning",
+        text: `Quote for ${q.client_name}${q.quote_number ? ` (${q.quote_number})` : ""} sent ${Math.floor(daysSince)}d ago with no response`,
+      });
+    }
+  }
+
+  for (const v of variations) {
+    if (v.status !== "pending") continue;
+    alerts.push({ severity: "info", text: `${v.number ?? "A variation"} for ${v.project_client_name} awaiting approval` });
+  }
+
+  for (const b of projectBudgets) {
+    if (b.budget_pence > 0 && b.committed_pence > b.budget_pence) {
+      alerts.push({
+        severity: "warning",
+        text: `${b.client_name} is ${formatGBP(b.committed_pence - b.budget_pence)} over budget`,
+      });
     }
   }
 
