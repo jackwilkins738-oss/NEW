@@ -65,7 +65,7 @@ export async function disconnectGoogleCalendar() {
   revalidatePath("/dashboard");
 }
 
-const VALID_STATUSES = ["new", "contacted", "quoted", "won", "lost"];
+const VALID_STATUSES = ["new", "contacted", "survey_booked", "quoted", "won", "lost"];
 
 // Row-level security (see supabase/schema.sql) is what actually stops one
 // tenant's member updating another tenant's lead - the .eq("id", leadId)
@@ -99,6 +99,20 @@ export async function updateLeadValue(leadId: string, valuePounds: number | null
       ? Math.round(valuePounds * 100)
       : null;
   await supabase.from("leads").update({ value_pence }).eq("id", leadId);
+  revalidatePath("/dashboard");
+}
+
+export async function updateLeadDetails(leadId: string, formData: FormData) {
+  const supabase = createClient();
+  await supabase
+    .from("leads")
+    .update({
+      address: String(formData.get("address") ?? "").trim() || null,
+      job_type: String(formData.get("jobType") ?? "").trim() || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    })
+    .eq("id", leadId);
+
   revalidatePath("/dashboard");
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateLeadStatus, updateLeadValue, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
+import { updateLeadStatus, updateLeadValue, updateLeadDetails, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
 
@@ -13,12 +13,16 @@ type Lead = {
   source: string | null;
   status: string;
   value_pence: number | null;
+  address: string | null;
+  job_type: string | null;
+  notes: string | null;
   created_at: string;
 };
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
+  { value: "survey_booked", label: "Survey booked" },
   { value: "quoted", label: "Quoted" },
   { value: "won", label: "Won" },
   { value: "lost", label: "Lost" },
@@ -27,10 +31,15 @@ const STATUS_OPTIONS = [
 const STATUS_CLASS: Record<string, string> = {
   new: "bg-[rgba(250,178,25,0.25)] text-[#8a5a00]",
   contacted: "bg-surface-2 text-ink-2",
+  survey_booked: "bg-surface-2 text-ink-2",
   quoted: "bg-surface-2 text-ink-2",
   won: "bg-[rgba(12,163,12,0.15)] text-good",
   lost: "bg-[rgba(208,59,59,0.15)] text-critical",
 };
+
+const field =
+  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+const label = "text-xs font-semibold text-ink-2";
 
 function needsFollowUp(lead: Lead) {
   if (lead.status !== "new") return false;
@@ -85,6 +94,49 @@ function ConvertButton({ leadId, tenantId }: { leadId: string; tenantId: string 
   );
 }
 
+function LeadDetails({ lead }: { lead: Lead }) {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-1.5 text-xs font-semibold text-brand hover:underline">
+        {lead.address || lead.job_type || lead.notes ? "Edit details" : "Add address, job type, notes"}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={async (formData) => {
+        await updateLeadDetails(lead.id, formData);
+        setOpen(false);
+      }}
+      className="mt-2 flex flex-col gap-2 rounded-lg bg-surface-2 p-2.5"
+    >
+      <label className={label}>
+        Address
+        <input name="address" defaultValue={lead.address ?? ""} className={field} />
+      </label>
+      <label className={label}>
+        Job type
+        <input name="jobType" defaultValue={lead.job_type ?? ""} className={field} placeholder="e.g. Loft conversion" />
+      </label>
+      <label className={label}>
+        Notes
+        <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} className={field} />
+      </label>
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
+          Save
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-semibold text-ink-2">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; converted: boolean }) {
   const [status, setStatus] = useState(lead.status);
   const [isPending, startTransition] = useTransition();
@@ -96,9 +148,11 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
         <div>
           <p className="text-sm font-semibold text-ink">{lead.name ?? lead.email ?? "Unnamed lead"}</p>
           <p className="text-xs text-muted">
-            {lead.source ?? "unknown source"} &middot;{" "}
+            {lead.source ?? "unknown source"}
+            {lead.job_type ? ` · ${lead.job_type}` : ""} &middot;{" "}
             {new Date(lead.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
           </p>
+          {lead.address && <p className="mt-0.5 text-xs text-muted">{lead.address}</p>}
           {lead.phone && (
             <div className="mt-1.5 flex items-center gap-3">
               <a href={`tel:${lead.phone}`} className="text-xs font-semibold text-brand hover:underline">
@@ -109,6 +163,8 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
               </a>
             </div>
           )}
+          {lead.notes && <p className="mt-1 text-xs text-ink-2">{lead.notes}</p>}
+          <LeadDetails lead={lead} />
         </div>
         {flagged && (
           <span className="whitespace-nowrap rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-critical">

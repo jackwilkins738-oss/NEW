@@ -148,7 +148,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, phone, source, status, value_pence, created_at")
+      .select("id, name, email, phone, source, status, value_pence, address, job_type, notes, created_at")
       .eq("tenant_id", tenant.id)
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false }),
