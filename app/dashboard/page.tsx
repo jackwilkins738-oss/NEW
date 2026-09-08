@@ -6,6 +6,7 @@ import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
+import { QuotesPanel } from "@/components/QuotesPanel";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { ProjectPhotosPanel } from "@/components/ProjectPhotosPanel";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
@@ -109,7 +110,7 @@ export default async function DashboardPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes] = await Promise.all([
+  const [leadsRes, pageviewsRes, projectsRes, invoicesRes, tradesRes, photosRes, quotesRes] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, phone, source, status, value_pence, created_at")
@@ -124,7 +125,7 @@ export default async function DashboardPage() {
     supabase
       .from("projects")
       .select(
-        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, created_at"
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, created_at"
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
@@ -143,6 +144,11 @@ export default async function DashboardPage() {
       .select("id, storage_path, caption, project_id, created_at")
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("quotes")
+      .select("id, client_name, reference, line_items, total_pence, status, created_at")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -151,6 +157,7 @@ export default async function DashboardPage() {
   const invoices = invoicesRes.data ?? [];
   const trades = tradesRes.data ?? [];
   const projectPhotos = photosRes.data ?? [];
+  const quotes = quotesRes.data ?? [];
 
   // Best-effort: a Google API hiccup (expired grant, rate limit) shouldn't
   // take the whole dashboard down - fall back to "connected, nothing to show"
@@ -311,6 +318,14 @@ export default async function DashboardPage() {
 
         <div className="mt-5">
           <MonthlyHistory projects={projects} />
+        </div>
+
+        <div className="mt-5">
+          <QuotesPanel
+            tenantId={tenant.id}
+            quotes={quotes}
+            convertedQuoteIds={projects.map((p) => p.quote_id).filter((id): id is string => !!id)}
+          />
         </div>
 
         <div className="mt-5">

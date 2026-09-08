@@ -179,8 +179,36 @@ export async function addProject(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+// Shared by both conversion paths below (lead -> project, quote -> project).
+// Matches an existing customer by email first - the closest thing to a
+// stable identity either a lead form or a quote gives us - otherwise
+// creates one.
+async function findOrCreateCustomer(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  name: string,
+  email: string | null,
+  phone: string | null
+) {
+  if (email) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("email", email)
+      .maybeSingle();
+    if (existing) return existing.id as string;
+  }
+  const { data: created } = await supabase
+    .from("customers")
+    .insert({ tenant_id: tenantId, name, email, phone })
+    .select("id")
+    .single();
+  return (created?.id as string | undefined) ?? null;
+}
+
 // Converts a won lead into a project (and a matching customer record),
-// carrying over name/value/source instead of re-typing them by hand. RLS on
+// carrying over name/value instead of re-typing them by hand. RLS on
 // customers/projects/leads (not the tenantId argument) is what actually
 // stops this creating or reading rows in a tenant the signed-in user isn't
 // a member of - the lead.tenant_id check below just guards against a
@@ -196,27 +224,7 @@ export async function convertLeadToProject(leadId: string, tenantId: string) {
   if (!lead || lead.tenant_id !== tenantId) return;
 
   const clientName = lead.name?.trim() || lead.email?.trim() || "Unnamed lead";
-
-  // Match an existing customer by email first - the closest thing to a
-  // stable identity a lead form gives us - otherwise create one.
-  let customerId: string | null = null;
-  if (lead.email) {
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("email", lead.email)
-      .maybeSingle();
-    customerId = existing?.id ?? null;
-  }
-  if (!customerId) {
-    const { data: created } = await supabase
-      .from("customers")
-      .insert({ tenant_id: tenantId, name: clientName, email: lead.email, phone: lead.phone })
-      .select("id")
-      .single();
-    customerId = created?.id ?? null;
-  }
+  const customerId = await findOrCreateCustomer(supabase, tenantId, clientName, lead.email, lead.phone);
 
   await supabase.from("projects").insert({
     tenant_id: tenantId,
@@ -233,6 +241,108 @@ export async function convertLeadToProject(leadId: string, tenantId: string) {
     .from("leads")
     .update({ status: "won", status_updated_at: new Date().toISOString() })
     .eq("id", leadId);
+
+  revalidatePath("/dashboard");
+}
+
+const VALID_QUOTE_STATUSES = ["draft", "sent", "accepted", "declined"];
+
+// Line items are stored as-typed (owner controls both sides), so this only
+// guards shape/type, not authenticity - RLS is still what stops a cross-tenant
+// write.
+export async function addQuote(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const clientName = String(formData.get("clientName") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim();
+  const lineItemsRaw = String(formData.get("lineItems") ?? "[]");
+  if (!tenantId || !clientName) return;
+
+  let lineItems: { description: string; unit_price_pence: number }[] = [];
+  try {
+    const parsed = JSON.parse(lineItemsRaw);
+    if (Array.isArray(parsed)) {
+      lineItems = parsed
+        .map((l) => ({
+          description: String(l?.description ?? "").trim(),
+          unit_price_pence: Number.isFinite(l?.unit_price_pence) ? Math.round(l.unit_price_pence) : 0,
+        }))
+        .filter((l) => l.description || l.unit_price_pence > 0);
+    }
+  } catch {
+    lineItems = [];
+  }
+  const totalPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
+
+  const supabase = createClient();
+  await supabase.from("quotes").insert({
+    tenant_id: tenantId,
+    client_name: clientName,
+    reference: reference || null,
+    line_items: lineItems,
+    total_pence: totalPence,
+    status: "draft",
+  });
+
+  revalidatePath("/dashboard");
+}
+
+export async function updateQuoteStatus(quoteId: string, status: string) {
+  if (!VALID_QUOTE_STATUSES.includes(status)) return;
+  const supabase = createClient();
+  await supabase.from("quotes").update({ status, updated_at: new Date().toISOString() }).eq("id", quoteId);
+  revalidatePath("/dashboard");
+}
+
+export async function deleteQuote(quoteId: string) {
+  const supabase = createClient();
+  await supabase.from("quotes").delete().eq("id", quoteId);
+  revalidatePath("/dashboard");
+}
+
+// Same conversion shape as convertLeadToProject, just sourced from a quote's
+// total instead of a lead's estimated value - and it chains back to mark the
+// originating lead "won" too, if this quote came from one.
+export async function convertQuoteToProject(quoteId: string, tenantId: string) {
+  const supabase = createClient();
+
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, client_name, total_pence, lead_id, tenant_id")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote || quote.tenant_id !== tenantId) return;
+
+  let leadEmail: string | null = null;
+  let leadPhone: string | null = null;
+  if (quote.lead_id) {
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("email, phone")
+      .eq("id", quote.lead_id)
+      .maybeSingle();
+    leadEmail = lead?.email ?? null;
+    leadPhone = lead?.phone ?? null;
+  }
+  const customerId = await findOrCreateCustomer(supabase, tenantId, quote.client_name, leadEmail, leadPhone);
+
+  await supabase.from("projects").insert({
+    tenant_id: tenantId,
+    ref: generateRef(),
+    client_name: quote.client_name,
+    quote_id: quote.id,
+    lead_id: quote.lead_id,
+    customer_id: customerId,
+    value_pence: quote.total_pence,
+    stage: "Enquiry",
+    status: "on_track",
+  });
+
+  if (quote.lead_id) {
+    await supabase
+      .from("leads")
+      .update({ status: "won", status_updated_at: new Date().toISOString() })
+      .eq("id", quote.lead_id);
+  }
 
   revalidatePath("/dashboard");
 }
