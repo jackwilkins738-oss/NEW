@@ -131,7 +131,7 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("invoices")
-      .select("id, client_name, reference, amount_pence, due_date, status")
+      .select("id, client_name, reference, milestone, amount_pence, paid_pence, due_date, status")
       .eq("tenant_id", tenant.id)
       .order("due_date", { ascending: true }),
     supabase
@@ -211,8 +211,12 @@ export default async function DashboardPage() {
     const due = new Date(i.due_date + "T00:00:00");
     return due >= today && due <= in7Days;
   });
-  const overdueTotal = overdueInvoices.reduce((sum, i) => sum + i.amount_pence, 0);
-  const dueSoonTotal = dueSoonInvoices.reduce((sum, i) => sum + i.amount_pence, 0);
+  // amount_pence minus paid_pence, not the full original amount - a
+  // part-paid invoice only owes what's left, so overdue/due-soon totals
+  // should reflect that rather than the invoice's face value.
+  const outstanding = (i: { amount_pence: number; paid_pence: number | null }) => i.amount_pence - (i.paid_pence ?? 0);
+  const overdueTotal = overdueInvoices.reduce((sum, i) => sum + outstanding(i), 0);
+  const dueSoonTotal = dueSoonInvoices.reduce((sum, i) => sum + outstanding(i), 0);
 
   const revenueTrend = monthlyValueTrend(projects);
   const projectTypeBreakdown = groupTopN(
@@ -392,7 +396,11 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-5">
-          <InvoicesPanel tenantId={tenant.id} invoices={invoices} />
+          <InvoicesPanel
+            tenantId={tenant.id}
+            invoices={invoices}
+            projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
+          />
         </div>
 
         <footer className="mt-8 flex justify-end">

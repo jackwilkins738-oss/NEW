@@ -38,7 +38,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes, variationsRes] = await Promise.all([
+  const [costItemsRes, quoteRes, variationsRes, invoicesRes] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -52,10 +52,16 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       .select("id, number, description, materials_cost_pence, labour_cost_pence, other_cost_pence, customer_price_pence, additional_days, status, invoice_id")
       .eq("project_id", project.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("invoices")
+      .select("id, milestone, reference, amount_pence, paid_pence, due_date, status")
+      .eq("project_id", project.id)
+      .order("due_date", { ascending: true }),
   ]);
 
   const costItems = costItemsRes.data ?? [];
   const variations = variationsRes.data ?? [];
+  const invoices = invoicesRes.data ?? [];
   const quoteLineItems: QuoteLineItem[] = (quoteRes.data?.line_items as QuoteLineItem[] | undefined) ?? [];
 
   const budgetByCategory = new Map<string, number>();
@@ -174,6 +180,44 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-ink">Payment schedule</h2>
+          <p className="text-xs text-muted">
+            Add or manage these from the Invoices panel on the dashboard - pick this project when adding one.
+          </p>
+          {invoices.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">No invoices raised against this project yet.</p>
+          ) : (
+            <div className="mt-3 flex flex-col">
+              {invoices.map((inv) => {
+                const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
+                return (
+                  <div key={inv.id} className="flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+                    <p className="text-sm text-ink-2">
+                      {inv.milestone ?? inv.reference ?? "Invoice"}
+                      <span className="ml-2 text-xs text-muted">
+                        due {new Date(inv.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                      </span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-ink">{formatGBP(inv.amount_pence)}</span>
+                      {inv.status === "paid" ? (
+                        <span className="text-good">✓</span>
+                      ) : inv.status === "part_paid" ? (
+                        <span className="text-xs font-semibold text-[#8a5a00]">{formatGBP(outstanding)} left</span>
+                      ) : new Date(inv.due_date + "T00:00:00") < new Date() ? (
+                        <span className="text-xs font-semibold text-critical">Overdue</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-muted">Upcoming</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="mt-5">

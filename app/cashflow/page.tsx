@@ -26,7 +26,7 @@ export default async function CashflowPage() {
   const [invoicesRes, costItemsRes] = await Promise.all([
     supabase
       .from("invoices")
-      .select("id, client_name, reference, amount_pence, due_date, status")
+      .select("id, client_name, reference, amount_pence, paid_pence, due_date, status")
       .eq("tenant_id", tenant.id)
       .neq("status", "paid")
       .order("due_date", { ascending: true }),
@@ -57,7 +57,9 @@ export default async function CashflowPage() {
   const dueLater = invoices.filter((i) => new Date(i.due_date + "T00:00:00") > in30Days);
 
   const sum = (rows: { amount_pence: number }[]) => rows.reduce((s, r) => s + r.amount_pence, 0);
-  const totalIn = sum(invoices);
+  const outstandingSum = (rows: { amount_pence: number; paid_pence: number | null }[]) =>
+    rows.reduce((s, r) => s + (r.amount_pence - (r.paid_pence ?? 0)), 0);
+  const totalIn = outstandingSum(invoices);
 
   const costByCategory = new Map<string, number>();
   for (const item of costItems) {
@@ -98,19 +100,19 @@ export default async function CashflowPage() {
             <div className="mt-3 flex flex-col gap-2 text-sm">
               <div className="flex items-center justify-between rounded-lg bg-[rgba(208,59,59,0.08)] px-3 py-2">
                 <span className="font-semibold text-critical">Overdue</span>
-                <span className="font-mono font-semibold text-ink">{formatGBP(sum(overdue))}</span>
+                <span className="font-mono font-semibold text-ink">{formatGBP(outstandingSum(overdue))}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-[rgba(250,178,25,0.1)] px-3 py-2">
                 <span className="font-semibold text-[#8a5a00]">Due this week</span>
-                <span className="font-mono font-semibold text-ink">{formatGBP(sum(dueThisWeek))}</span>
+                <span className="font-mono font-semibold text-ink">{formatGBP(outstandingSum(dueThisWeek))}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
                 <span className="font-semibold text-ink-2">Due in 30 days</span>
-                <span className="font-mono font-semibold text-ink">{formatGBP(sum(dueNext30))}</span>
+                <span className="font-mono font-semibold text-ink">{formatGBP(outstandingSum(dueNext30))}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
                 <span className="font-semibold text-ink-2">Due later</span>
-                <span className="font-mono font-semibold text-ink">{formatGBP(sum(dueLater))}</span>
+                <span className="font-mono font-semibold text-ink">{formatGBP(outstandingSum(dueLater))}</span>
               </div>
             </div>
 

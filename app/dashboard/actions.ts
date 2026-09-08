@@ -111,6 +111,8 @@ export async function addInvoice(formData: FormData) {
   const tenantId = String(formData.get("tenantId") ?? "");
   const clientName = String(formData.get("clientName") ?? "").trim();
   const reference = String(formData.get("reference") ?? "").trim();
+  const milestone = String(formData.get("milestone") ?? "").trim();
+  const projectId = String(formData.get("projectId") ?? "").trim();
   const amountPounds = Number(formData.get("amount"));
   const dueDate = String(formData.get("dueDate") ?? "");
 
@@ -119,22 +121,62 @@ export async function addInvoice(formData: FormData) {
   }
 
   const supabase = createClient();
+
+  // A project's customer_id is copied onto the invoice at creation time (not
+  // looked up later) so the customer page's invoice list stays correct even
+  // if the project's own customer link changes afterwards.
+  let customerId: string | null = null;
+  if (projectId) {
+    const { data: project } = await supabase.from("projects").select("customer_id").eq("id", projectId).maybeSingle();
+    customerId = project?.customer_id ?? null;
+  }
+
   await supabase.from("invoices").insert({
     tenant_id: tenantId,
     client_name: clientName,
     reference: reference || null,
+    milestone: milestone || null,
+    project_id: projectId || null,
+    customer_id: customerId,
     amount_pence: Math.round(amountPounds * 100),
     due_date: dueDate,
     status: "unpaid",
   });
 
   revalidatePath("/dashboard");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
 }
 
 export async function markInvoicePaid(invoiceId: string) {
   const supabase = createClient();
-  await supabase.from("invoices").update({ status: "paid" }).eq("id", invoiceId);
+  const { data: invoice } = await supabase.from("invoices").select("amount_pence, project_id").eq("id", invoiceId).maybeSingle();
+  await supabase.from("invoices").update({ status: "paid", paid_pence: invoice?.amount_pence ?? 0 }).eq("id", invoiceId);
   revalidatePath("/dashboard");
+  if (invoice?.project_id) revalidatePath(`/projects/${invoice.project_id}`);
+}
+
+// Supports part-payment: paid_pence accumulates, status becomes "paid" once
+// it reaches the full amount and "part_paid" otherwise - due/overdue stay
+// computed from due_date wherever they're shown, unaffected by this.
+export async function recordInvoicePayment(invoiceId: string, amountPounds: number) {
+  if (!Number.isFinite(amountPounds) || amountPounds <= 0) return;
+
+  const supabase = createClient();
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("amount_pence, paid_pence, project_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (!invoice) return;
+
+  const newPaidPence = Math.min(invoice.amount_pence, (invoice.paid_pence ?? 0) + Math.round(amountPounds * 100));
+  await supabase
+    .from("invoices")
+    .update({ paid_pence: newPaidPence, status: newPaidPence >= invoice.amount_pence ? "paid" : "part_paid" })
+    .eq("id", invoiceId);
+
+  revalidatePath("/dashboard");
+  if (invoice.project_id) revalidatePath(`/projects/${invoice.project_id}`);
 }
 
 export async function deleteInvoice(invoiceId: string) {

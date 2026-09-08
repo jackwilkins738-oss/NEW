@@ -1,4 +1,7 @@
-import { addInvoice, markInvoicePaid, deleteInvoice } from "@/app/dashboard/actions";
+"use client";
+
+import { useState, useTransition } from "react";
+import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 
@@ -6,13 +9,18 @@ type Invoice = {
   id: string;
   client_name: string;
   reference: string | null;
+  milestone: string | null;
   amount_pence: number;
+  paid_pence: number | null;
   due_date: string;
   status: string;
 };
 
-function invoiceState(inv: Invoice): "paid" | "overdue" | "due_soon" | "upcoming" {
+type ProjectOption = { id: string; client_name: string };
+
+function invoiceState(inv: Invoice): "paid" | "overdue" | "due_soon" | "upcoming" | "part_paid" {
   if (inv.status === "paid") return "paid";
+  if (inv.status === "part_paid") return "part_paid";
   const due = new Date(inv.due_date + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -23,6 +31,7 @@ function invoiceState(inv: Invoice): "paid" | "overdue" | "due_soon" | "upcoming
 
 const STATE_LABEL: Record<string, string> = {
   paid: "Paid",
+  part_paid: "Part paid",
   overdue: "Overdue",
   due_soon: "Due soon",
   upcoming: "Upcoming",
@@ -30,19 +39,72 @@ const STATE_LABEL: Record<string, string> = {
 
 const STATE_CLASS: Record<string, string> = {
   paid: "bg-[rgba(12,163,12,0.15)] text-good",
+  part_paid: "bg-[rgba(250,178,25,0.25)] text-[#8a5a00]",
   overdue: "bg-[rgba(208,59,59,0.15)] text-critical",
   due_soon: "bg-[rgba(250,178,25,0.25)] text-[#8a5a00]",
   upcoming: "bg-surface-2 text-ink-2",
 };
 
-const SORT_RANK: Record<string, number> = { overdue: 0, due_soon: 1, upcoming: 2, paid: 3 };
+const SORT_RANK: Record<string, number> = { overdue: 0, due_soon: 1, part_paid: 2, upcoming: 3, paid: 4 };
 
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
 // 16px on focus, which is a real usability problem on a form meant for a phone.
 const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 
-export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoices: Invoice[] }) {
+function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; outstanding: number }) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(String(outstanding / 100));
+  const [isPending, startTransition] = useTransition();
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+      >
+        Record payment
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        className="min-h-[32px] w-20 rounded-md border border-black/15 bg-surface px-2 py-1 text-xs text-ink"
+      />
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() =>
+          startTransition(() => {
+            recordInvoicePayment(invoiceId, Number(amount));
+            setOpen(false);
+          })
+        }
+        className="min-h-[32px] rounded-md bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
+      >
+        Save
+      </button>
+    </div>
+  );
+}
+
+export function InvoicesPanel({
+  tenantId,
+  invoices,
+  projects,
+}: {
+  tenantId: string;
+  invoices: Invoice[];
+  projects: ProjectOption[];
+}) {
   const sorted = [...invoices].sort((a, b) => {
     const rankDiff = SORT_RANK[invoiceState(a)] - SORT_RANK[invoiceState(b)];
     if (rankDiff !== 0) return rankDiff;
@@ -63,12 +125,27 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
 
       <form
         action={addInvoice}
-        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
+        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
       >
         <input type="hidden" name="tenantId" value={tenantId} />
         <label className="text-xs font-semibold text-ink-2">
           Client
           <input name="clientName" required className={field} />
+        </label>
+        <label className="text-xs font-semibold text-ink-2">
+          Project
+          <select name="projectId" defaultValue="" className={field}>
+            <option value="">Not linked</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.client_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-ink-2">
+          Milestone
+          <input name="milestone" className={field} placeholder="Deposit / Stage 1 / Final" />
         </label>
         <label className="text-xs font-semibold text-ink-2">
           Reference
@@ -82,7 +159,10 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
           Due date
           <input name="dueDate" type="date" required className={field} />
         </label>
-        <button type="submit" className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5">
+        <button
+          type="submit"
+          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+        >
           Add
         </button>
       </form>
@@ -96,32 +176,40 @@ export function InvoicesPanel({ tenantId, invoices }: { tenantId: string; invoic
         )}
         {sorted.map((inv) => {
           const state = invoiceState(inv);
+          const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
           return (
             <div
               key={inv.id}
               className="flex flex-col gap-2 border-b border-black/10 pb-3 last:border-none last:pb-0 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="text-sm font-semibold text-ink">{inv.client_name}</p>
+                <p className="text-sm font-semibold text-ink">
+                  {inv.client_name}
+                  {inv.milestone && <span className="font-normal text-muted"> &middot; {inv.milestone}</span>}
+                </p>
                 <p className="text-xs text-muted">
                   {inv.reference ?? "no reference"} &middot; due{" "}
                   {new Date(inv.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  {state === "part_paid" && ` · ${formatGBP(outstanding)} outstanding`}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-sm font-semibold text-ink">{formatGBP(inv.amount_pence)}</span>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATE_CLASS[state]}`}>
                   {STATE_LABEL[state]}
                 </span>
                 {inv.status !== "paid" && (
-                  <form action={markInvoicePaid.bind(null, inv.id)}>
-                    <button
-                      type="submit"
-                      className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
-                    >
-                      Mark paid
-                    </button>
-                  </form>
+                  <>
+                    <RecordPaymentButton invoiceId={inv.id} outstanding={outstanding} />
+                    <form action={markInvoicePaid.bind(null, inv.id)}>
+                      <button
+                        type="submit"
+                        className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                      >
+                        Mark fully paid
+                      </button>
+                    </form>
+                  </>
                 )}
                 <DeleteButton
                   action={deleteInvoice}
