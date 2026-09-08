@@ -288,6 +288,12 @@ export default async function DashboardPage() {
             >
               Customers
             </a>
+            <a
+              href="/settings"
+              className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
+            >
+              Settings
+            </a>
             <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
             <form action={signOut}>
               <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
@@ -434,6 +440,9 @@ export default async function DashboardPage() {
             tenantId={tenant.id}
             quotes={quotes}
             convertedQuoteIds={projects.map((p) => p.quote_id).filter((id): id is string => !!id)}
+            defaultVatRate={tenant.default_vat_rate}
+            defaultQuoteTerms={tenant.default_quote_terms}
+            defaultPaymentTerms={tenant.default_payment_terms}
           />
         </div>
 

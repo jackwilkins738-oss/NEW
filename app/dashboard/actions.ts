@@ -853,3 +853,37 @@ export async function updateTenantContactEmail(tenantId: string, email: string) 
   await admin.from("tenants").update({ contact_email: email.trim() || null }).eq("id", tenantId);
   revalidatePath("/dashboard");
 }
+
+// Same membership-check-then-admin-write pattern as updateTenantContactEmail
+// above, for the same reason: tenants only has an RLS update policy for
+// platform admins, and this needs to be settable by the business owner.
+export async function updateTenantSettings(tenantId: string, formData: FormData) {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+  if (!membership) return;
+
+  const vatRate = Number(formData.get("defaultVatRate") ?? 20);
+  const quoteTerms = String(formData.get("defaultQuoteTerms") ?? "").trim();
+  const paymentTerms = String(formData.get("defaultPaymentTerms") ?? "").trim();
+
+  const admin = createAdminClient();
+  await admin
+    .from("tenants")
+    .update({
+      default_vat_rate: Number.isFinite(vatRate) && vatRate >= 0 ? vatRate : 20,
+      default_quote_terms: quoteTerms || null,
+      default_payment_terms: paymentTerms || null,
+    })
+    .eq("id", tenantId);
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+}

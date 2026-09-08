@@ -70,10 +70,20 @@ function computeTotals(lines: DraftLine[], markupPercent: number, vatRate: numbe
   return { costSubtotal, saleSubtotal, vatAmount, total };
 }
 
-function NewQuoteForm({ tenantId }: { tenantId: string }) {
+function NewQuoteForm({
+  tenantId,
+  defaultVatRate,
+  defaultQuoteTerms,
+  defaultPaymentTerms,
+}: {
+  tenantId: string;
+  defaultVatRate: number;
+  defaultQuoteTerms: string | null;
+  defaultPaymentTerms: string | null;
+}) {
   const [lines, setLines] = useState<DraftLine[]>([{ category: "materials", description: "", amountPounds: "" }]);
   const [markupPercent, setMarkupPercent] = useState("0");
-  const [vatRate, setVatRate] = useState("20");
+  const [vatRate, setVatRate] = useState(String(defaultVatRate));
   const totals = computeTotals(lines, Number(markupPercent) || 0, Number(vatRate) || 0);
 
   const updateLine = (i: number, patch: Partial<DraftLine>) =>
@@ -97,7 +107,7 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
         setTimeout(() => {
           setLines([{ category: "materials", description: "", amountPounds: "" }]);
           setMarkupPercent("0");
-          setVatRate("20");
+          setVatRate(String(defaultVatRate));
         }, 0);
       }}
     >
@@ -216,7 +226,12 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className={label}>
           Payment terms
-          <input name="paymentTerms" className={field} placeholder="e.g. 50% deposit, balance on completion" />
+          <input
+            name="paymentTerms"
+            defaultValue={defaultPaymentTerms ?? ""}
+            className={field}
+            placeholder="e.g. 50% deposit, balance on completion"
+          />
         </label>
         <label className={label}>
           Exclusions
@@ -224,7 +239,7 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
         </label>
         <label className={`${label} sm:col-span-2`}>
           Terms &amp; conditions
-          <textarea name="terms" rows={2} className={field} />
+          <textarea name="terms" rows={2} defaultValue={defaultQuoteTerms ?? ""} className={field} />
         </label>
       </div>
 
@@ -358,17 +373,28 @@ export function QuotesPanel({
   tenantId,
   quotes,
   convertedQuoteIds,
+  defaultVatRate,
+  defaultQuoteTerms,
+  defaultPaymentTerms,
 }: {
   tenantId: string;
   quotes: Quote[];
   convertedQuoteIds: string[];
+  defaultVatRate: number;
+  defaultQuoteTerms: string | null;
+  defaultPaymentTerms: string | null;
 }) {
   const converted = new Set(convertedQuoteIds);
 
   return (
     <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Quotes</h2>
-      <NewQuoteForm tenantId={tenantId} />
+      <NewQuoteForm
+        tenantId={tenantId}
+        defaultVatRate={defaultVatRate}
+        defaultQuoteTerms={defaultQuoteTerms}
+        defaultPaymentTerms={defaultPaymentTerms}
+      />
       <div className="mt-4 flex flex-col gap-3">
         {quotes.length === 0 ? (
           <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">

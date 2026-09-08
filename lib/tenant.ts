@@ -8,6 +8,9 @@ export type Tenant = {
   domain: string | null;
   brand_theme: string;
   contact_email: string | null;
+  default_vat_rate: number;
+  default_quote_terms: string | null;
+  default_payment_terms: string | null;
 };
 
 // Figures out which customer this request is for, purely from the hostname
@@ -20,7 +23,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
 
   const byDomain = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email")
+    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms")
     .eq("domain", host)
     .maybeSingle();
 
@@ -29,7 +32,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
   const subdomain = host.split(".")[0];
   const bySlug = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email")
+    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms")
     .eq("slug", subdomain)
     .maybeSingle();
 
