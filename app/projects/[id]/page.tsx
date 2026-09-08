@@ -7,6 +7,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { ProjectCostLedger } from "@/components/ProjectCostLedger";
 import { VariationsPanel } from "@/components/VariationsPanel";
 import { DocumentsPanel } from "@/components/DocumentsPanel";
+import { SnagsPanel } from "@/components/SnagsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes] = await Promise.all([
+  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes, snagsRes] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -63,6 +64,11 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       .select("id, storage_path, filename, category, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("snags")
+      .select("id, description, location, assigned_to, due_date, status")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const costItems = costItemsRes.data ?? [];
@@ -80,6 +86,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       return { ...doc, url: signed?.signedUrl ?? null };
     })
   );
+  const snags = snagsRes.data ?? [];
 
   const budgetByCategory = new Map<string, number>();
   for (const item of quoteLineItems) {
@@ -247,6 +254,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
         <div className="mt-5">
           <DocumentsPanel tenantId={tenant.id} projectId={project.id} documents={documents} />
+        </div>
+
+        <div className="mt-5">
+          <SnagsPanel tenantId={tenant.id} projectId={project.id} snags={snags} />
         </div>
       </div>
     </main>

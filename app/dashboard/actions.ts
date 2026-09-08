@@ -940,3 +940,41 @@ export async function deleteProjectDocument(projectId: string, documentId: strin
   await supabase.from("project_documents").delete().eq("id", documentId);
   if (projectId) revalidatePath(`/projects/${projectId}`);
 }
+
+const SNAG_STATUSES = ["open", "assigned", "complete"];
+
+export async function addSnag(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  if (!tenantId || !projectId || !description) return;
+
+  await createClient()
+    .from("snags")
+    .insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      description,
+      location: String(formData.get("location") ?? "").trim() || null,
+      assigned_to: String(formData.get("assignedTo") ?? "").trim() || null,
+      due_date: String(formData.get("dueDate") ?? "") || null,
+      status: "open",
+    });
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// projectId first, same reason as the cost-item actions - lets this be
+// pre-bound with .bind(null, project.id) for DeleteButton.
+export async function updateSnagStatus(projectId: string, snagId: string, status: string) {
+  if (!SNAG_STATUSES.includes(status)) return;
+  const supabase = createClient();
+  await supabase.from("snags").update({ status }).eq("id", snagId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteSnag(projectId: string, snagId: string) {
+  const supabase = createClient();
+  await supabase.from("snags").delete().eq("id", snagId);
+  revalidatePath(`/projects/${projectId}`);
+}
