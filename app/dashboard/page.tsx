@@ -13,6 +13,7 @@ import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanel } from "@/components/CalendarPanel";
+import { ContactEmailField } from "@/components/ContactEmailField";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnection";
@@ -254,6 +255,7 @@ export default async function DashboardPage() {
             >
               Customers
             </a>
+            <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
             <form action={signOut}>
               <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
                 Sign out

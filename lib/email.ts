@@ -2,7 +2,7 @@
 // "new lead" notification already made; both that email and the weekly
 // digest (app/api/cron/weekly-digest/route.ts) now send through here
 // instead of duplicating this fetch.
-export async function sendEmail(params: { to: string[]; subject: string; html: string; from?: string }) {
+export async function sendEmail(params: { to: string[]; subject: string; html: string; from?: string; replyTo?: string }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
@@ -14,6 +14,11 @@ export async function sendEmail(params: { to: string[]; subject: string; html: s
       to: params.to,
       subject: params.subject,
       html: params.html,
+      // Sends still go out from Scalar's own verified domain (deliverability
+      // depends on that domain's SPF/DKIM, which a per-tenant domain
+      // wouldn't have without them doing their own DNS setup) - reply_to is
+      // what makes "Reply" land in the tenant's own inbox instead.
+      ...(params.replyTo ? { reply_to: params.replyTo } : {}),
     }),
   });
 }

@@ -429,7 +429,11 @@ export async function sendQuote(quoteId: string, tenantId: string) {
     recipient = customer?.email ?? null;
   }
 
-  const { data: tenant } = await supabase.from("tenants").select("business_name, domain").eq("id", tenantId).maybeSingle();
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("business_name, domain, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
   const businessName = tenant?.business_name ?? "your contractor";
   const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
   const acceptUrl = `${origin}/quote/${quote.id}/${quote.accept_token}`;
@@ -443,6 +447,10 @@ export async function sendQuote(quoteId: string, tenantId: string) {
         <p>${businessName} has sent you a quote${quote.total_pence ? ` for ${formatGBP(quote.total_pence)}` : ""}.</p>
         <p><a href="${acceptUrl}">View and respond to your quote</a></p>
       `,
+      // Sends from Scalar's own domain either way - this just makes a reply
+      // land in the tenant's own inbox instead of Scalar's, when they've set
+      // one.
+      replyTo: tenant?.contact_email ?? undefined,
     });
   }
 
@@ -818,5 +826,30 @@ export async function createInvoiceFromVariation(projectId: string, variationId:
   }
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+}
+
+// The only RLS update policy on tenants is "platform admin can update
+// tenants" (schema.sql) - a regular business owner can't write to their own
+// tenant row through the session-scoped client at all. Rather than widen
+// that policy (which would let any member rewrite domain/site_key/slug too,
+// not just contact_email), this checks membership itself and then writes
+// through the service-role admin client - same pattern already used for
+// calendar_connections and platform_admins.
+export async function updateTenantContactEmail(tenantId: string, email: string) {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+  if (!membership) return;
+
+  const admin = createAdminClient();
+  await admin.from("tenants").update({ contact_email: email.trim() || null }).eq("id", tenantId);
   revalidatePath("/dashboard");
 }
