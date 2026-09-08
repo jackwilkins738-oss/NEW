@@ -1025,3 +1025,29 @@ export async function unassignTeamMemberFromProject(projectId: string, teamMembe
     .eq("team_member_id", teamMemberId);
   revalidatePath(`/projects/${projectId}`);
 }
+
+export async function addSupplier(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!tenantId || !name) return;
+
+  await createClient()
+    .from("suppliers")
+    .insert({
+      tenant_id: tenantId,
+      name,
+      contact_name: String(formData.get("contactName") ?? "").trim() || null,
+      account_number: String(formData.get("accountNumber") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim() || null,
+      email: String(formData.get("email") ?? "").trim() || null,
+      categories: String(formData.get("categories") ?? "").trim() || null,
+    });
+
+  revalidatePath("/suppliers");
+}
+
+export async function deleteSupplier(id: string) {
+  const supabase = createClient();
+  await supabase.from("suppliers").delete().eq("id", id);
+  revalidatePath("/suppliers");
+}
