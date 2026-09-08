@@ -19,7 +19,25 @@ type Project = {
   payment_type: string | null;
   notes: string | null;
   status: string | null;
+  materials_cost_pence: number | null;
+  labour_cost_pence: number | null;
+  subcontractor_cost_pence: number | null;
+  plant_cost_pence: number | null;
+  other_cost_pence: number | null;
 };
+
+// Null/0 both mean "nothing logged yet" here - actualCost is only ever 0
+// when every category is unset, which is the signal used to hide the
+// profitability readout until there's something real to show.
+function actualCostPence(p: Project) {
+  return (
+    (p.materials_cost_pence ?? 0) +
+    (p.labour_cost_pence ?? 0) +
+    (p.subcontractor_cost_pence ?? 0) +
+    (p.plant_cost_pence ?? 0) +
+    (p.other_cost_pence ?? 0)
+  );
+}
 
 const STATUS_LABEL: Record<string, string> = {
   on_track: "On track",
@@ -89,6 +107,40 @@ function NewProjectForm({ tenantId }: { tenantId: string }) {
   );
 }
 
+function Profitability({ project }: { project: Project }) {
+  const actualCost = actualCostPence(project);
+  if (actualCost === 0 || project.value_pence == null) return null;
+
+  const grossProfit = project.value_pence - actualCost;
+  const margin = (grossProfit / project.value_pence) * 100;
+  const healthy = margin >= 15;
+
+  return (
+    <div
+      className={`mb-3 grid grid-cols-3 gap-2 rounded-lg border p-3 text-center ${
+        healthy ? "border-[rgba(12,163,12,0.3)] bg-[rgba(12,163,12,0.08)]" : "border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)]"
+      }`}
+    >
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
+        <p className="mt-0.5 font-mono text-sm font-bold text-ink">{formatGBP(actualCost)}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Gross profit</p>
+        <p className={`mt-0.5 font-mono text-sm font-bold ${healthy ? "text-good" : "text-critical"}`}>
+          {formatGBP(grossProfit)}
+        </p>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+        <p className={`mt-0.5 font-mono text-sm font-bold ${healthy ? "text-good" : "text-critical"}`}>
+          {margin.toFixed(1)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ProjectCard({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
 
@@ -124,6 +176,7 @@ function ProjectCard({ project }: { project: Project }) {
 
       {open && (
         <div className="rounded-xl bg-surface-2/60 p-4">
+          <Profitability project={project} />
           <form
             action={async (formData) => {
               await updateProject(project.id, formData);
@@ -201,6 +254,63 @@ function ProjectCard({ project }: { project: Project }) {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className={`${label} sm:col-span-3`}>Costs</label>
+            <label className={label}>
+              Materials (&pound;)
+              <input
+                name="materialsCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.materials_cost_pence ? project.materials_cost_pence / 100 : ""}
+                className={field}
+              />
+            </label>
+            <label className={label}>
+              Labour (&pound;)
+              <input
+                name="labourCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.labour_cost_pence ? project.labour_cost_pence / 100 : ""}
+                className={field}
+              />
+            </label>
+            <label className={label}>
+              Subcontractors (&pound;)
+              <input
+                name="subcontractorCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.subcontractor_cost_pence ? project.subcontractor_cost_pence / 100 : ""}
+                className={field}
+              />
+            </label>
+            <label className={label}>
+              Plant (&pound;)
+              <input
+                name="plantCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.plant_cost_pence ? project.plant_cost_pence / 100 : ""}
+                className={field}
+              />
+            </label>
+            <label className={label}>
+              Other (&pound;)
+              <input
+                name="otherCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={project.other_cost_pence ? project.other_cost_pence / 100 : ""}
+                className={field}
+              />
             </label>
 
             <label className={`${label} sm:col-span-3`}>

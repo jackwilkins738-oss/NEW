@@ -125,7 +125,7 @@ export default async function DashboardPage() {
     supabase
       .from("projects")
       .select(
-        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, created_at"
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, materials_cost_pence, labour_cost_pence, subcontractor_cost_pence, plant_cost_pence, other_cost_pence, created_at"
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
@@ -177,6 +177,24 @@ export default async function DashboardPage() {
   const pipelineValue = projects
     .filter((p) => p.status === "on_track" || p.status === "at_risk")
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
+
+  function actualCostPence(p: (typeof projects)[number]) {
+    return (
+      (p.materials_cost_pence ?? 0) +
+      (p.labour_cost_pence ?? 0) +
+      (p.subcontractor_cost_pence ?? 0) +
+      (p.plant_cost_pence ?? 0) +
+      (p.other_cost_pence ?? 0)
+    );
+  }
+  // Only projects with both a value and at least one cost logged count -
+  // otherwise every un-costed job would drag this toward a meaningless 100%
+  // margin instead of just being left out of the average.
+  const costedProjects = projects.filter((p) => p.value_pence != null && actualCostPence(p) > 0);
+  const costedRevenue = costedProjects.reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
+  const costedActualCost = costedProjects.reduce((sum, p) => sum + actualCostPence(p), 0);
+  const grossProfitTracked = costedRevenue - costedActualCost;
+  const portfolioMargin = costedRevenue > 0 ? (grossProfitTracked / costedRevenue) * 100 : null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -260,6 +278,31 @@ export default async function DashboardPage() {
             </p>
           </div>
         </div>
+
+        {portfolioMargin !== null && (
+          <div className="mt-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+            <p className="text-sm font-semibold text-ink-2">Gross profit tracked</p>
+            <p className="mt-1 text-xs text-muted">
+              Across {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
+                <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedRevenue)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
+                <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedActualCost)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+                <p className={`mt-0.5 font-mono text-lg font-bold ${portfolioMargin >= 15 ? "text-good" : "text-critical"}`}>
+                  {portfolioMargin.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="lg:col-span-2">

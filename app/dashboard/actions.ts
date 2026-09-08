@@ -380,6 +380,22 @@ export async function updateProject(projectId: string, formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) update.value_pence = Math.round(pounds * 100);
   }
 
+  // Costs default to 0 rather than being left unset - an empty field means
+  // "nothing spent yet" here, not "unknown", so profitability can be
+  // computed as soon as a value is on the job even before every category
+  // has a real number in it.
+  const costFields: [string, string][] = [
+    ["materialsCost", "materials_cost_pence"],
+    ["labourCost", "labour_cost_pence"],
+    ["subcontractorCost", "subcontractor_cost_pence"],
+    ["plantCost", "plant_cost_pence"],
+    ["otherCost", "other_cost_pence"],
+  ];
+  for (const [field, column] of costFields) {
+    const pounds = Number(formData.get(field) ?? 0);
+    update[column] = Number.isFinite(pounds) && pounds >= 0 ? Math.round(pounds * 100) : 0;
+  }
+
   const nextVisitAt = nextVisitDate ? new Date(`${nextVisitDate}T${nextVisitTime || "09:00"}`).toISOString() : null;
   update.next_visit_at = nextVisitAt;
 
