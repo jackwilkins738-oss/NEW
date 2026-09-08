@@ -262,6 +262,17 @@ export default async function DashboardPage() {
   const leadSourceBreakdown = groupTopN(leads, (l) => l.source ?? "", () => 1, "Unknown");
   const leadSourceWinRate = winRateBySource(leads);
 
+  // Real revenue, not the "value won" proxy the trend chart uses - actual
+  // money that's actually been paid, all-time (there's no paid_at
+  // timestamp to window this by date, only a status).
+  const revenue = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount_pence, 0);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const wonThisMonth = projects
+    .filter((p) => new Date(p.created_at) >= monthStart)
+    .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);
+  const outstandingTotal = unpaidInvoices.reduce((sum, i) => sum + outstanding(i), 0);
+  const quotesAwaitingDecision = quotes.filter((q) => q.status === "sent").length;
+
   return (
     <main className="min-h-screen bg-page px-6 py-8">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
@@ -303,7 +314,28 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <p className="text-xs font-semibold text-ink-2">Revenue</p>
+            <p className="mt-1 font-mono text-xl font-bold text-ink">{formatGBP(revenue)}</p>
+          </div>
+          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <p className="text-xs font-semibold text-ink-2">Won this month</p>
+            <p className="mt-1 font-mono text-xl font-bold text-ink">{formatGBP(wonThisMonth)}</p>
+          </div>
+          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <p className="text-xs font-semibold text-ink-2">Outstanding</p>
+            <p className={`mt-1 font-mono text-xl font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
+              {formatGBP(outstandingTotal)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-black/10 bg-surface p-4 shadow-sm">
+            <p className="text-xs font-semibold text-ink-2">Quotes awaiting decision</p>
+            <p className="mt-1 font-mono text-xl font-bold text-ink">{quotesAwaitingDecision}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-5">
           <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:col-span-1">
             <p className="text-sm font-semibold text-ink-2">Leads &middot; last 30 days</p>
             <p className="mt-2 text-3xl font-bold text-ink">{leads.length}</p>
