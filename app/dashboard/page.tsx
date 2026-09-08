@@ -300,6 +300,12 @@ export default async function DashboardPage() {
               Customers
             </a>
             <a
+              href="/team"
+              className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
+            >
+              Team
+            </a>
+            <a
               href="/settings"
               className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
             >

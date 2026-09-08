@@ -978,3 +978,50 @@ export async function deleteSnag(projectId: string, snagId: string) {
   await supabase.from("snags").delete().eq("id", snagId);
   revalidatePath(`/projects/${projectId}`);
 }
+
+export async function addTeamMember(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!tenantId || !name) return;
+
+  const costPerHourPounds = formData.get("costPerHour");
+  const insert: Record<string, unknown> = {
+    tenant_id: tenantId,
+    name,
+    role: String(formData.get("role") ?? "").trim() || null,
+    phone: String(formData.get("phone") ?? "").trim() || null,
+    email: String(formData.get("email") ?? "").trim() || null,
+  };
+  if (costPerHourPounds !== null && String(costPerHourPounds).trim() !== "") {
+    const pounds = Number(costPerHourPounds);
+    if (Number.isFinite(pounds) && pounds >= 0) insert.cost_per_hour_pence = Math.round(pounds * 100);
+  }
+
+  await createClient().from("team_members").insert(insert);
+  revalidatePath("/team");
+}
+
+export async function deleteTeamMember(id: string) {
+  const supabase = createClient();
+  await supabase.from("team_members").delete().eq("id", id);
+  revalidatePath("/team");
+}
+
+// RLS on project_team_members (migration 025) is what actually stops
+// assigning someone to a project outside the caller's own tenant - it joins
+// through projects -> memberships rather than trusting the ids passed in.
+export async function assignTeamMemberToProject(projectId: string, teamMemberId: string) {
+  const supabase = createClient();
+  await supabase.from("project_team_members").upsert({ project_id: projectId, team_member_id: teamMemberId });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function unassignTeamMemberFromProject(projectId: string, teamMemberId: string) {
+  const supabase = createClient();
+  await supabase
+    .from("project_team_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("team_member_id", teamMemberId);
+  revalidatePath(`/projects/${projectId}`);
+}

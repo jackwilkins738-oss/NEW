@@ -8,6 +8,7 @@ import { ProjectCostLedger } from "@/components/ProjectCostLedger";
 import { VariationsPanel } from "@/components/VariationsPanel";
 import { DocumentsPanel } from "@/components/DocumentsPanel";
 import { SnagsPanel } from "@/components/SnagsPanel";
+import { AssignedTeamPanel } from "@/components/AssignedTeamPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes, snagsRes] = await Promise.all([
+  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes, snagsRes, teamRes, projectTeamRes] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -69,6 +70,8 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       .select("id, description, location, assigned_to, due_date, status")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false }),
+    supabase.from("team_members").select("id, name, role").eq("tenant_id", tenant.id).order("name", { ascending: true }),
+    supabase.from("project_team_members").select("team_member_id").eq("project_id", project.id),
   ]);
 
   const costItems = costItemsRes.data ?? [];
@@ -87,6 +90,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     })
   );
   const snags = snagsRes.data ?? [];
+  const team = teamRes.data ?? [];
+  const assignedIds = new Set((projectTeamRes.data ?? []).map((r) => r.team_member_id));
+  const assignedTeam = team.filter((t) => assignedIds.has(t.id));
 
   const budgetByCategory = new Map<string, number>();
   for (const item of quoteLineItems) {
@@ -242,6 +248,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               })}
             </div>
           )}
+        </div>
+
+        <div className="mt-5">
+          <AssignedTeamPanel projectId={project.id} assigned={assignedTeam} available={team} />
         </div>
 
         <div className="mt-5">
