@@ -639,3 +639,140 @@ export async function deleteProjectCostItem(projectId: string, itemId: string) {
   await supabase.from("project_cost_items").delete().eq("id", itemId);
   revalidatePath(`/projects/${projectId}`);
 }
+
+// Sequential per project ("Variation #003"), not a global counter - counted
+// at insert time rather than stored as a running number on the project,
+// since variations are rare enough that a duplicate-on-race is very
+// unlikely and not worth a second table to prevent.
+export async function addVariation(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  if (!tenantId || !projectId || !description) return;
+
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("variations")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId);
+  const number = `V-${String((count ?? 0) + 1).padStart(3, "0")}`;
+
+  const toPence = (field: string) => {
+    const pounds = Number(formData.get(field) ?? 0);
+    return Number.isFinite(pounds) && pounds >= 0 ? Math.round(pounds * 100) : 0;
+  };
+  const additionalDaysRaw = formData.get("additionalDays");
+  const additionalDays = additionalDaysRaw !== null && String(additionalDaysRaw).trim() !== "" ? Number(additionalDaysRaw) : null;
+
+  await supabase.from("variations").insert({
+    tenant_id: tenantId,
+    project_id: projectId,
+    number,
+    description,
+    materials_cost_pence: toPence("materialsCost"),
+    labour_cost_pence: toPence("labourCost"),
+    other_cost_pence: toPence("otherCost"),
+    customer_price_pence: toPence("customerPrice"),
+    additional_days: Number.isFinite(additionalDays) ? additionalDays : null,
+    status: "pending",
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// Approving does two things: adds the variation's customer_price_pence onto
+// the project's own value (this is what "the job is now worth more" means
+// in practice), and logs its cost breakdown into the same cost ledger every
+// other project cost goes through - a variation's materials/labour/other
+// costs are real committed costs like any other, just triggered by a
+// customer request instead of the original quote.
+export async function approveVariation(projectId: string, variationId: string) {
+  const supabase = createClient();
+
+  const { data: variation } = await supabase
+    .from("variations")
+    .select("id, tenant_id, project_id, number, description, materials_cost_pence, labour_cost_pence, other_cost_pence, customer_price_pence, status")
+    .eq("id", variationId)
+    .maybeSingle();
+  if (!variation || variation.status === "approved") return;
+
+  await supabase.from("variations").update({ status: "approved", approved_at: new Date().toISOString() }).eq("id", variationId);
+
+  const { data: project } = await supabase.from("projects").select("value_pence").eq("id", projectId).maybeSingle();
+  await supabase
+    .from("projects")
+    .update({ value_pence: (project?.value_pence ?? 0) + variation.customer_price_pence })
+    .eq("id", projectId);
+
+  const costLines: { category: string; amount: number }[] = [
+    { category: "materials", amount: variation.materials_cost_pence },
+    { category: "labour", amount: variation.labour_cost_pence },
+    { category: "other", amount: variation.other_cost_pence },
+  ].filter((l) => l.amount > 0);
+
+  if (costLines.length > 0) {
+    await supabase.from("project_cost_items").insert(
+      costLines.map((l) => ({
+        tenant_id: variation.tenant_id,
+        project_id: projectId,
+        category: l.category,
+        description: `${variation.number ?? "Variation"}: ${variation.description}`,
+        amount_pence: l.amount,
+        status: "committed",
+      }))
+    );
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function declineVariation(projectId: string, variationId: string) {
+  const supabase = createClient();
+  await supabase.from("variations").update({ status: "declined" }).eq("id", variationId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteVariation(projectId: string, variationId: string) {
+  const supabase = createClient();
+  await supabase.from("variations").delete().eq("id", variationId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// One-click, same shape as convertLeadToProject/convertQuoteToProject - an
+// approved variation's customer price becomes a standalone invoice against
+// the same project, so extra work doesn't just sit as a bigger project
+// value with nothing actually billed for it.
+export async function createInvoiceFromVariation(projectId: string, variationId: string) {
+  const supabase = createClient();
+
+  const { data: variation } = await supabase
+    .from("variations")
+    .select("id, tenant_id, number, description, customer_price_pence, status, invoice_id")
+    .eq("id", variationId)
+    .maybeSingle();
+  if (!variation || variation.status !== "approved" || variation.invoice_id || variation.customer_price_pence <= 0) return;
+
+  const { data: project } = await supabase.from("projects").select("client_name").eq("id", projectId).maybeSingle();
+  const dueDate = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .insert({
+      tenant_id: variation.tenant_id,
+      project_id: projectId,
+      client_name: project?.client_name ?? "Client",
+      reference: variation.number,
+      amount_pence: variation.customer_price_pence,
+      due_date: dueDate,
+      status: "unpaid",
+    })
+    .select("id")
+    .single();
+
+  if (invoice?.id) {
+    await supabase.from("variations").update({ invoice_id: invoice.id }).eq("id", variationId);
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+}

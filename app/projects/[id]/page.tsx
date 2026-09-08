@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { ProjectCostLedger } from "@/components/ProjectCostLedger";
+import { VariationsPanel } from "@/components/VariationsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes] = await Promise.all([
+  const [costItemsRes, quoteRes, variationsRes] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -46,9 +47,15 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     project.quote_id
       ? supabase.from("quotes").select("line_items").eq("id", project.quote_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("variations")
+      .select("id, number, description, materials_cost_pence, labour_cost_pence, other_cost_pence, customer_price_pence, additional_days, status, invoice_id")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: true }),
   ]);
 
   const costItems = costItemsRes.data ?? [];
+  const variations = variationsRes.data ?? [];
   const quoteLineItems: QuoteLineItem[] = (quoteRes.data?.line_items as QuoteLineItem[] | undefined) ?? [];
 
   const budgetByCategory = new Map<string, number>();
@@ -167,6 +174,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <VariationsPanel tenantId={tenant.id} projectId={project.id} variations={variations} />
         </div>
 
         <div className="mt-5">
