@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { brandThemeStyleTag } from "@/lib/theme";
-import { updateTenantSettings } from "@/app/dashboard/actions";
+import { updateTenantSettings, uploadTenantLogo } from "@/app/dashboard/actions";
 import { IconSettings } from "@/components/DashboardIcons";
 
 export const dynamic = "force-dynamic";
@@ -36,10 +36,59 @@ export default async function SettingsPage() {
           <p className="mt-1 text-sm text-muted">Defaults for {tenant.business_name} - override any of these per-quote.</p>
         </header>
 
+        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-ink">Logo</h2>
+          <p className="mt-1 text-xs text-muted">Shown on quote and invoice PDFs.</p>
+          <form action={uploadTenantLogo} className="mt-3 flex items-center gap-3">
+            <input type="hidden" name="tenantId" value={tenant.id} />
+            {tenant.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tenant.logo_url} alt="" className="h-12 w-12 rounded-lg border border-black/10 object-contain bg-white p-1" />
+            )}
+            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required className={field} />
+            <button type="submit" className="btn-primary flex-none rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+              Upload
+            </button>
+          </form>
+        </div>
+
         <form
           action={updateTenantSettings.bind(null, tenant.id)}
           className="mt-5 flex flex-col gap-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm"
         >
+          <h2 className="text-sm font-bold text-ink">Business profile</h2>
+          <label className={label}>
+            Company address
+            <textarea name="companyAddress" rows={2} defaultValue={tenant.company_address ?? ""} className={field} />
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className={label}>
+              VAT number
+              <input name="vatNumber" defaultValue={tenant.vat_number ?? ""} placeholder="GB123456789" className={field} />
+            </label>
+          </div>
+          <label className={label}>
+            Bank details
+            <textarea
+              name="bankDetails"
+              rows={2}
+              defaultValue={tenant.bank_details ?? ""}
+              placeholder="Account name, sort code, account number"
+              className={field}
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className={label}>
+              Quote number prefix
+              <input name="quoteNumberPrefix" defaultValue={tenant.quote_number_prefix} className={field} />
+            </label>
+            <label className={label}>
+              Invoice number prefix
+              <input name="invoiceNumberPrefix" defaultValue={tenant.invoice_number_prefix} className={field} />
+            </label>
+          </div>
+
+          <h2 className="mt-2 text-sm font-bold text-ink border-t border-black/10 pt-4">Quote &amp; invoice defaults</h2>
           <label className={label}>
             Default VAT rate (%)
             <input

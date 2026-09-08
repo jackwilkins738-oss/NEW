@@ -148,6 +148,7 @@ export async function addInvoice(formData: FormData) {
 
   await supabase.from("invoices").insert({
     tenant_id: tenantId,
+    invoice_number: await nextInvoiceNumber(tenantId),
     client_name: clientName,
     reference: reference || null,
     milestone: milestone || null,
@@ -199,6 +200,66 @@ export async function deleteInvoice(invoiceId: string) {
   const supabase = createClient();
   await supabase.from("invoices").delete().eq("id", invoiceId);
   revalidatePath("/dashboard");
+}
+
+// The "sendable at a click of a button" invoice: emails the customer a link
+// to the public invoice page (view + PDF download), same publishable-token
+// pattern as sendQuote. Recipient resolution falls back through
+// customer_id -> lead_id -> the linked project's own customer_id, since
+// older invoices (before addInvoice started copying customer_id at
+// creation) may only have the project link.
+export async function sendInvoice(invoiceId: string, tenantId: string) {
+  const supabase = createClient();
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, tenant_id, client_name, invoice_number, amount_pence, view_token, customer_id, lead_id, project_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (!invoice || invoice.tenant_id !== tenantId) return { ok: false as const, reason: "not_found" as const };
+
+  let recipient: string | null = null;
+  if (invoice.customer_id) {
+    const { data: customer } = await supabase.from("customers").select("email").eq("id", invoice.customer_id).maybeSingle();
+    recipient = customer?.email ?? null;
+  }
+  if (!recipient && invoice.lead_id) {
+    const { data: lead } = await supabase.from("leads").select("email").eq("id", invoice.lead_id).maybeSingle();
+    recipient = lead?.email ?? null;
+  }
+  if (!recipient && invoice.project_id) {
+    const { data: project } = await supabase.from("projects").select("customer_id").eq("id", invoice.project_id).maybeSingle();
+    if (project?.customer_id) {
+      const { data: customer } = await supabase.from("customers").select("email").eq("id", project.customer_id).maybeSingle();
+      recipient = customer?.email ?? null;
+    }
+  }
+  if (!recipient) return { ok: false as const, reason: "no_email" as const };
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("business_name, domain, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  const businessName = tenant?.business_name ?? "your contractor";
+  const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
+  const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
+
+  await sendEmail({
+    to: [recipient],
+    subject: `Invoice from ${businessName}${invoice.invoice_number ? ` (${invoice.invoice_number})` : ""}`,
+    html: `
+      <p>Hi ${invoice.client_name},</p>
+      <p>${businessName} has sent you an invoice for ${formatGBP(invoice.amount_pence)}.</p>
+      <p><a href="${viewUrl}">View and download your invoice</a></p>
+    `,
+    replyTo: tenant?.contact_email ?? undefined,
+  });
+
+  await supabase.from("invoices").update({ sent_at: new Date().toISOString() }).eq("id", invoiceId);
+  revalidatePath("/dashboard");
+  if (invoice.project_id) revalidatePath(`/projects/${invoice.project_id}`);
+  return { ok: true as const };
 }
 
 function generateRef() {
@@ -308,11 +369,24 @@ export async function convertLeadToProject(leadId: string, tenantId: string) {
 const VALID_QUOTE_STATUSES = ["draft", "sent", "accepted", "declined"];
 const QUOTE_LINE_CATEGORIES = ["materials", "labour", "subcontractors", "other"];
 
-function generateQuoteNumber() {
-  const now = new Date();
-  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `Q-${stamp}-${suffix}`;
+// Sequential (Q-0001, Q-0002...), not the old random Q-YYYYMM-XXXX - a real
+// business wants these in order. increment_quote_number (migration 032) is
+// an atomic update-and-return so two quotes created at once can't collide;
+// called through the admin client since tenants' own RLS update policy is
+// platform-admin-only (same reason every other tenant write in this file
+// goes through admin).
+async function nextQuoteNumber(tenantId: string): Promise<string> {
+  const admin = createAdminClient();
+  const { data: tenant } = await admin.from("tenants").select("quote_number_prefix").eq("id", tenantId).maybeSingle();
+  const { data: n } = await admin.rpc("increment_quote_number", { p_tenant_id: tenantId });
+  return `${tenant?.quote_number_prefix ?? "Q"}-${String(n ?? 1).padStart(4, "0")}`;
+}
+
+async function nextInvoiceNumber(tenantId: string): Promise<string> {
+  const admin = createAdminClient();
+  const { data: tenant } = await admin.from("tenants").select("invoice_number_prefix").eq("id", tenantId).maybeSingle();
+  const { data: n } = await admin.rpc("increment_invoice_number", { p_tenant_id: tenantId });
+  return `${tenant?.invoice_number_prefix ?? "INV"}-${String(n ?? 1).padStart(4, "0")}`;
 }
 
 type QuoteLineItem = { category: string; description: string; unit_price_pence: number };
@@ -367,7 +441,7 @@ export async function addQuote(formData: FormData) {
 
   const insert: Record<string, unknown> = {
     tenant_id: tenantId,
-    quote_number: generateQuoteNumber(),
+    quote_number: await nextQuoteNumber(tenantId),
     client_name: clientName,
     reference: reference || null,
     customer_email: customerEmail || null,
@@ -825,6 +899,7 @@ export async function createInvoiceFromVariation(projectId: string, variationId:
     .from("invoices")
     .insert({
       tenant_id: variation.tenant_id,
+      invoice_number: await nextInvoiceNumber(variation.tenant_id),
       project_id: projectId,
       client_name: project?.client_name ?? "Client",
       reference: variation.number,
@@ -888,6 +963,11 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
   const quoteTerms = String(formData.get("defaultQuoteTerms") ?? "").trim();
   const paymentTerms = String(formData.get("defaultPaymentTerms") ?? "").trim();
   const googleReviewUrl = String(formData.get("googleReviewUrl") ?? "").trim();
+  const companyAddress = String(formData.get("companyAddress") ?? "").trim();
+  const vatNumber = String(formData.get("vatNumber") ?? "").trim();
+  const bankDetails = String(formData.get("bankDetails") ?? "").trim();
+  const quoteNumberPrefix = String(formData.get("quoteNumberPrefix") ?? "Q").trim();
+  const invoiceNumberPrefix = String(formData.get("invoiceNumberPrefix") ?? "INV").trim();
 
   const admin = createAdminClient();
   await admin
@@ -897,8 +977,48 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
       default_quote_terms: quoteTerms || null,
       default_payment_terms: paymentTerms || null,
       google_review_url: googleReviewUrl || null,
+      company_address: companyAddress || null,
+      vat_number: vatNumber || null,
+      bank_details: bankDetails || null,
+      quote_number_prefix: quoteNumberPrefix || "Q",
+      invoice_number_prefix: invoiceNumberPrefix || "INV",
     })
     .eq("id", tenantId);
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+}
+
+const MAX_LOGO_BYTES = 3 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+
+export async function uploadTenantLogo(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const file = formData.get("logo");
+  if (!tenantId || !(file instanceof File) || file.size === 0) return;
+  if (file.size > MAX_LOGO_BYTES || !ALLOWED_LOGO_TYPES.includes(file.type)) return;
+
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/svg+xml" ? "svg" : "jpg";
+  const path = `${tenantId}/logo.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from("tenant-assets").upload(path, file, {
+    contentType: file.type,
+    upsert: true,
+  });
+  if (uploadError) return;
+
+  const { data: publicUrl } = supabase.storage.from("tenant-assets").getPublicUrl(path);
+
+  const admin = createAdminClient();
+  // Cache-bust with a timestamp query string - the storage path itself
+  // (fixed as logo.<ext>, upsert: true) never changes on re-upload, so
+  // without this every <img> pointing at the old URL would keep serving a
+  // browser-cached copy of the previous logo.
+  await admin.from("tenants").update({ logo_url: `${publicUrl.publicUrl}?v=${Date.now()}` }).eq("id", tenantId);
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");

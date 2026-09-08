@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { formatGBP } from "@/lib/format";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -10,7 +10,10 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
-  eyebrow: { fontSize: 9, color: "#666", textTransform: "uppercase", letterSpacing: 1 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  logo: { width: 48, height: 48, objectFit: "contain" },
+  businessMeta: { fontSize: 8, color: "#666", marginTop: 2, maxWidth: 220 },
+  eyebrow: { fontSize: 9, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginTop: 16 },
   title: { fontSize: 20, fontWeight: 700, marginTop: 4 },
   meta: { fontSize: 9, color: "#666", marginTop: 2 },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#eee" },
@@ -26,6 +29,9 @@ const styles = StyleSheet.create({
 
 export type QuotePdfData = {
   businessName: string;
+  companyAddress: string | null;
+  vatNumber: string | null;
+  logoUrl: string | null;
   quoteNumber: string | null;
   clientName: string;
   lineItems: { category: string; description: string; unit_price_pence: number }[];
@@ -46,6 +52,15 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View>
+            <Text style={{ fontSize: 13, fontWeight: 700 }}>{data.businessName}</Text>
+            {data.companyAddress && <Text style={styles.businessMeta}>{data.companyAddress}</Text>}
+            {data.vatNumber && <Text style={styles.businessMeta}>VAT: {data.vatNumber}</Text>}
+          </View>
+          {data.logoUrl && <Image src={data.logoUrl} style={styles.logo} />}
+        </View>
+
         <Text style={styles.eyebrow}>Quote from {data.businessName}</Text>
         <Text style={styles.title}>{data.clientName}</Text>
         {data.quoteNumber && <Text style={styles.meta}>{data.quoteNumber}</Text>}

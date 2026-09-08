@@ -32,10 +32,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const admin = createAdminClient();
-  const { data: tenant } = await admin.from("tenants").select("business_name").eq("id", quote.tenant_id).maybeSingle();
+  const { data: tenant } = await admin
+    .from("tenants")
+    .select("business_name, company_address, vat_number, logo_url")
+    .eq("id", quote.tenant_id)
+    .maybeSingle();
 
   const pdfData: QuotePdfData = {
     businessName: tenant?.business_name ?? "Your contractor",
+    companyAddress: tenant?.company_address ?? null,
+    vatNumber: tenant?.vat_number ?? null,
+    logoUrl: tenant?.logo_url ?? null,
     quoteNumber: quote.quote_number,
     clientName: quote.client_name,
     lineItems: quote.line_items,

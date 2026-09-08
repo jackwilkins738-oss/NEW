@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice } from "@/app/dashboard/actions";
+import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconBanknote } from "@/components/DashboardIcons";
 
 type Invoice = {
   id: string;
+  invoice_number: string | null;
   client_name: string;
   reference: string | null;
   milestone: string | null;
@@ -15,6 +16,8 @@ type Invoice = {
   paid_pence: number | null;
   due_date: string;
   status: string;
+  view_token: string;
+  sent_at: string | null;
 };
 
 type ProjectOption = { id: string; client_name: string };
@@ -95,6 +98,35 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
         Save
       </button>
     </div>
+  );
+}
+
+function SendInvoiceButton({ invoiceId, tenantId, alreadySent }: { invoiceId: string; tenantId: string; alreadySent: boolean }) {
+  const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<"sent" | "no_email" | null>(alreadySent ? "sent" : null);
+
+  if (result === "sent") {
+    return <span className="text-xs font-semibold text-good">Sent</span>;
+  }
+  if (result === "no_email") {
+    return <span className="text-xs font-semibold text-critical">No email on file</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={isPending}
+      onClick={() =>
+        startTransition(async () => {
+          const res = await sendInvoice(invoiceId, tenantId);
+          if (res.ok) setResult("sent");
+          else if (res.reason === "no_email") setResult("no_email");
+        })
+      }
+      className="btn-primary min-h-[32px] rounded-md bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+    >
+      Send invoice
+    </button>
   );
 }
 
@@ -247,7 +279,8 @@ export function InvoicesPanel({
                   {inv.milestone && <span className="font-normal text-muted"> &middot; {inv.milestone}</span>}
                 </p>
                 <p className="text-xs text-muted">
-                  {inv.reference ?? "no reference"} &middot; due{" "}
+                  {inv.invoice_number ?? "no number"}
+                  {inv.reference ? ` · ${inv.reference}` : ""} &middot; due{" "}
                   {new Date(inv.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                   {state === "part_paid" && ` · ${formatGBP(outstanding)} outstanding`}
                 </p>
@@ -257,6 +290,15 @@ export function InvoicesPanel({
                 <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATE_CLASS[state]}`}>
                   {STATE_LABEL[state]}
                 </span>
+                <a
+                  href={`/api/invoices/${inv.id}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-[32px] items-center rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
+                >
+                  PDF
+                </a>
+                <SendInvoiceButton invoiceId={inv.id} tenantId={tenantId} alreadySent={!!inv.sent_at} />
                 {inv.status !== "paid" && (
                   <>
                     <RecordPaymentButton invoiceId={inv.id} outstanding={outstanding} />

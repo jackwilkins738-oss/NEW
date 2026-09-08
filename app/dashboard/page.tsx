@@ -166,7 +166,7 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("invoices")
-      .select("id, client_name, reference, milestone, amount_pence, paid_pence, due_date, status")
+      .select("id, invoice_number, client_name, reference, milestone, amount_pence, paid_pence, due_date, status, view_token, sent_at")
       .eq("tenant_id", tenant.id)
       .order("due_date", { ascending: true }),
     supabase
