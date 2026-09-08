@@ -1,19 +1,35 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addQuote, updateQuoteStatus, deleteQuote, convertQuoteToProject } from "@/app/dashboard/actions";
+import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, convertQuoteToProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 
-type LineItem = { description: string; unit_price_pence: number };
+type LineItem = { category: string; description: string; unit_price_pence: number };
 
 type Quote = {
   id: string;
+  quote_number: string | null;
   client_name: string;
   reference: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
   line_items: LineItem[];
+  cost_subtotal_pence: number;
+  markup_percent: number;
+  vat_rate: number;
+  vat_amount_pence: number;
   total_pence: number;
   status: string;
+  expires_at: string | null;
+  deposit_pence: number | null;
+  payment_terms: string | null;
+  exclusions: string | null;
+  terms: string | null;
+  accept_token: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  declined_at: string | null;
   created_at: string;
 };
 
@@ -31,22 +47,41 @@ const STATUS_CLASS: Record<string, string> = {
   declined: "bg-[rgba(208,59,59,0.15)] text-critical",
 };
 
+const CATEGORY_OPTIONS = [
+  { value: "materials", label: "Materials" },
+  { value: "labour", label: "Labour" },
+  { value: "subcontractors", label: "Subcontractors" },
+  { value: "other", label: "Other" },
+];
+
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
-// 16px on focus - matches the field size already used in InvoicesPanel.
+// 16px on focus - matches the field size already used elsewhere.
 const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+const label = "text-xs font-semibold text-ink-2";
 
-type DraftLine = { description: string; amountPounds: string };
+type DraftLine = { category: string; description: string; amountPounds: string };
+
+function computeTotals(lines: DraftLine[], markupPercent: number, vatRate: number) {
+  const costSubtotal = lines.reduce((sum, l) => sum + (Number(l.amountPounds) || 0), 0);
+  const saleSubtotal = costSubtotal * (1 + markupPercent / 100);
+  const vatAmount = saleSubtotal * (vatRate / 100);
+  const total = saleSubtotal + vatAmount;
+  return { costSubtotal, saleSubtotal, vatAmount, total };
+}
 
 function NewQuoteForm({ tenantId }: { tenantId: string }) {
-  const [lines, setLines] = useState<DraftLine[]>([{ description: "", amountPounds: "" }]);
-  const total = lines.reduce((sum, l) => sum + (Number(l.amountPounds) || 0), 0);
+  const [lines, setLines] = useState<DraftLine[]>([{ category: "materials", description: "", amountPounds: "" }]);
+  const [markupPercent, setMarkupPercent] = useState("0");
+  const [vatRate, setVatRate] = useState("20");
+  const totals = computeTotals(lines, Number(markupPercent) || 0, Number(vatRate) || 0);
 
   const updateLine = (i: number, patch: Partial<DraftLine>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
 
   const lineItemsJson = JSON.stringify(
     lines.map((l) => ({
+      category: l.category,
       description: l.description,
       unit_price_pence: Math.round((Number(l.amountPounds) || 0) * 100),
     }))
@@ -59,27 +94,56 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
       onSubmit={() => {
         // The hidden field's value is read by the browser before this fires,
         // so clearing state here is safe - it only resets what's shown next.
-        setTimeout(() => setLines([{ description: "", amountPounds: "" }]), 0);
+        setTimeout(() => {
+          setLines([{ category: "materials", description: "", amountPounds: "" }]);
+          setMarkupPercent("0");
+          setVatRate("20");
+        }, 0);
       }}
     >
       <input type="hidden" name="tenantId" value={tenantId} />
       <input type="hidden" name="lineItems" value={lineItemsJson} />
+      <input type="hidden" name="markupPercent" value={markupPercent} />
+      <input type="hidden" name="vatRate" value={vatRate} />
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <label className="text-xs font-semibold text-ink-2">
+        <label className={label}>
           Client
           <input name="clientName" required className={field} />
         </label>
-        <label className="text-xs font-semibold text-ink-2">
+        <label className={label}>
           Reference
           <input name="reference" className={field} />
+        </label>
+        <label className={label}>
+          Customer email
+          <input name="customerEmail" type="email" className={field} placeholder="for sending the quote" />
+        </label>
+        <label className={label}>
+          Customer phone
+          <input name="customerPhone" className={field} />
         </label>
       </div>
 
       <div className="flex flex-col gap-2">
         {lines.map((line, i) => (
-          <div key={i} className="grid grid-cols-[1fr_100px_auto] items-end gap-2">
-            <label className="text-xs font-semibold text-ink-2">
-              {i === 0 ? "Line item" : ""}
+          <div key={i} className="grid grid-cols-[120px_1fr_90px_auto] items-end gap-2">
+            <label className={label}>
+              {i === 0 ? "Category" : ""}
+              <select
+                value={line.category}
+                onChange={(e) => updateLine(i, { category: e.target.value })}
+                className={field}
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={label}>
+              {i === 0 ? "Description" : ""}
               <input
                 value={line.description}
                 onChange={(e) => updateLine(i, { description: e.target.value })}
@@ -87,8 +151,8 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
                 className={field}
               />
             </label>
-            <label className="text-xs font-semibold text-ink-2">
-              {i === 0 ? "£" : ""}
+            <label className={label}>
+              {i === 0 ? "Cost £" : ""}
               <input
                 type="number"
                 min="0"
@@ -109,23 +173,77 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
         ))}
         <button
           type="button"
-          onClick={() => setLines((prev) => [...prev, { description: "", amountPounds: "" }])}
+          onClick={() => setLines((prev) => [...prev, { category: "materials", description: "", amountPounds: "" }])}
           className="self-start text-xs font-semibold text-brand hover:underline"
         >
           + Add line
         </button>
       </div>
 
-      <div className="flex items-center justify-between border-t border-black/10 pt-2">
-        <span className="text-xs font-semibold text-ink-2">
-          Total: <span className="font-mono text-sm text-ink">{formatGBP(Math.round(total * 100))}</span>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <label className={label}>
+          Markup %
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={markupPercent}
+            onChange={(e) => setMarkupPercent(e.target.value)}
+            className={field}
+          />
+        </label>
+        <label className={label}>
+          VAT %
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={vatRate}
+            onChange={(e) => setVatRate(e.target.value)}
+            className={field}
+          />
+        </label>
+        <label className={label}>
+          Expires
+          <input name="expiresAt" type="date" className={field} />
+        </label>
+        <label className={label}>
+          Deposit (&pound;)
+          <input name="deposit" type="number" min="0" step="0.01" className={field} />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className={label}>
+          Payment terms
+          <input name="paymentTerms" className={field} placeholder="e.g. 50% deposit, balance on completion" />
+        </label>
+        <label className={label}>
+          Exclusions
+          <input name="exclusions" className={field} placeholder="What's not included" />
+        </label>
+        <label className={`${label} sm:col-span-2`}>
+          Terms &amp; conditions
+          <textarea name="terms" rows={2} className={field} />
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-black/10 pt-2 text-xs text-ink-2 sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Cost {formatGBP(Math.round(totals.costSubtotal * 100))} &middot; Sale{" "}
+          {formatGBP(Math.round(totals.saleSubtotal * 100))} &middot; VAT {formatGBP(Math.round(totals.vatAmount * 100))}
         </span>
-        <button
-          type="submit"
-          className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
-        >
-          Save quote
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-ink-2">
+            Total: <span className="font-mono text-sm text-ink">{formatGBP(Math.round(totals.total * 100))}</span>
+          </span>
+          <button
+            type="submit"
+            className="rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+          >
+            Save quote
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -134,6 +252,7 @@ function NewQuoteForm({ tenantId }: { tenantId: string }) {
 function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: string; converted: boolean }) {
   const [status, setStatus] = useState(quote.status);
   const [isPending, startTransition] = useTransition();
+  const expired = quote.expires_at ? new Date(quote.expires_at + "T00:00:00") < new Date() : false;
 
   return (
     <div className="border-b border-black/10 pb-3 last:border-none last:pb-0">
@@ -141,14 +260,22 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
         <div>
           <p className="text-sm font-semibold text-ink">{quote.client_name}</p>
           <p className="text-xs text-muted">
-            {quote.reference ?? "no reference"} &middot; {quote.line_items.length} line item
+            {quote.quote_number ?? "no number"} &middot; {quote.line_items.length} line item
             {quote.line_items.length === 1 ? "" : "s"}
+            {quote.expires_at && (
+              <>
+                {" "}
+                &middot; {expired ? "expired" : "expires"}{" "}
+                {new Date(quote.expires_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+              </>
+            )}
           </p>
         </div>
         <span className="whitespace-nowrap font-mono text-sm font-semibold text-ink">
           {formatGBP(quote.total_pence)}
         </span>
       </div>
+
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={status}
@@ -170,6 +297,40 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             </option>
           ))}
         </select>
+
+        {status === "draft" && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => startTransition(() => sendQuote(quote.id, tenantId))}
+            className={`min-h-[32px] whitespace-nowrap rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface ${
+              isPending ? "opacity-60" : ""
+            }`}
+          >
+            Send to customer
+          </button>
+        )}
+
+        <a
+          href={`/api/quotes/${quote.id}/pdf?token=${quote.accept_token}`}
+          target="_blank"
+          rel="noreferrer"
+          className="min-h-[32px] rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+        >
+          PDF
+        </a>
+
+        {(status === "sent" || status === "accepted" || status === "declined") && (
+          <a
+            href={`/quote/${quote.id}/${quote.accept_token}`}
+            target="_blank"
+            rel="noreferrer"
+            className="min-h-[32px] rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+          >
+            Customer link
+          </a>
+        )}
+
         {status === "accepted" && !converted && (
           <button
             type="button"

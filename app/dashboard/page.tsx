@@ -146,7 +146,9 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("quotes")
-      .select("id, client_name, reference, line_items, total_pence, status, created_at")
+      .select(
+        "id, quote_number, client_name, reference, customer_email, customer_phone, line_items, cost_subtotal_pence, markup_percent, vat_rate, vat_amount_pence, total_pence, status, expires_at, deposit_pence, payment_terms, exclusions, terms, accept_token, sent_at, accepted_at, declined_at, created_at"
+      )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
   ]);

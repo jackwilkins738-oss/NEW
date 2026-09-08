@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnection";
 import { upsertEvent, deleteEvent } from "@/lib/googleCalendar";
+import { sendEmail } from "@/lib/email";
+import { formatGBP } from "@/lib/format";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -246,6 +248,42 @@ export async function convertLeadToProject(leadId: string, tenantId: string) {
 }
 
 const VALID_QUOTE_STATUSES = ["draft", "sent", "accepted", "declined"];
+const QUOTE_LINE_CATEGORIES = ["materials", "labour", "subcontractors", "other"];
+
+function generateQuoteNumber() {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `Q-${stamp}-${suffix}`;
+}
+
+type QuoteLineItem = { category: string; description: string; unit_price_pence: number };
+
+function parseLineItems(raw: string): QuoteLineItem[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((l) => ({
+        category: QUOTE_LINE_CATEGORIES.includes(l?.category) ? l.category : "other",
+        description: String(l?.description ?? "").trim(),
+        unit_price_pence: Number.isFinite(l?.unit_price_pence) ? Math.round(l.unit_price_pence) : 0,
+      }))
+      .filter((l) => l.description || l.unit_price_pence > 0);
+  } catch {
+    return [];
+  }
+}
+
+// Cost -> markup -> VAT -> total, matching how a trade quote is actually
+// built up rather than one flat sale price entered by hand.
+function computeQuoteTotals(lineItems: QuoteLineItem[], markupPercent: number, vatRate: number) {
+  const costSubtotalPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
+  const saleSubtotalPence = Math.round(costSubtotalPence * (1 + markupPercent / 100));
+  const vatAmountPence = Math.round(saleSubtotalPence * (vatRate / 100));
+  const totalPence = saleSubtotalPence + vatAmountPence;
+  return { costSubtotalPence, vatAmountPence, totalPence };
+}
 
 // Line items are stored as-typed (owner controls both sides), so this only
 // guards shape/type, not authenticity - RLS is still what stops a cross-tenant
@@ -253,49 +291,118 @@ const VALID_QUOTE_STATUSES = ["draft", "sent", "accepted", "declined"];
 export async function addQuote(formData: FormData) {
   const tenantId = String(formData.get("tenantId") ?? "");
   const clientName = String(formData.get("clientName") ?? "").trim();
-  const reference = String(formData.get("reference") ?? "").trim();
-  const lineItemsRaw = String(formData.get("lineItems") ?? "[]");
   if (!tenantId || !clientName) return;
 
-  let lineItems: { description: string; unit_price_pence: number }[] = [];
-  try {
-    const parsed = JSON.parse(lineItemsRaw);
-    if (Array.isArray(parsed)) {
-      lineItems = parsed
-        .map((l) => ({
-          description: String(l?.description ?? "").trim(),
-          unit_price_pence: Number.isFinite(l?.unit_price_pence) ? Math.round(l.unit_price_pence) : 0,
-        }))
-        .filter((l) => l.description || l.unit_price_pence > 0);
-    }
-  } catch {
-    lineItems = [];
-  }
-  const totalPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
+  const reference = String(formData.get("reference") ?? "").trim();
+  const customerEmail = String(formData.get("customerEmail") ?? "").trim();
+  const customerPhone = String(formData.get("customerPhone") ?? "").trim();
+  const expiresAt = String(formData.get("expiresAt") ?? "").trim();
+  const paymentTerms = String(formData.get("paymentTerms") ?? "").trim();
+  const exclusions = String(formData.get("exclusions") ?? "").trim();
+  const terms = String(formData.get("terms") ?? "").trim();
+  const markupPercent = Number(formData.get("markupPercent") ?? 0) || 0;
+  const vatRate = Number(formData.get("vatRate") ?? 20) || 0;
+  const depositPounds = formData.get("deposit");
 
-  const supabase = createClient();
-  await supabase.from("quotes").insert({
+  const lineItems = parseLineItems(String(formData.get("lineItems") ?? "[]"));
+  const { costSubtotalPence, vatAmountPence, totalPence } = computeQuoteTotals(lineItems, markupPercent, vatRate);
+
+  const insert: Record<string, unknown> = {
     tenant_id: tenantId,
+    quote_number: generateQuoteNumber(),
     client_name: clientName,
     reference: reference || null,
+    customer_email: customerEmail || null,
+    customer_phone: customerPhone || null,
+    expires_at: expiresAt || null,
+    payment_terms: paymentTerms || null,
+    exclusions: exclusions || null,
+    terms: terms || null,
+    markup_percent: markupPercent,
+    vat_rate: vatRate,
     line_items: lineItems,
+    cost_subtotal_pence: costSubtotalPence,
+    vat_amount_pence: vatAmountPence,
     total_pence: totalPence,
     status: "draft",
-  });
+  };
+  if (depositPounds !== null && String(depositPounds).trim() !== "") {
+    const pounds = Number(depositPounds);
+    if (Number.isFinite(pounds) && pounds >= 0) insert.deposit_pence = Math.round(pounds * 100);
+  }
+
+  const supabase = createClient();
+  await supabase.from("quotes").insert(insert);
 
   revalidatePath("/dashboard");
 }
 
+// updated_at plus a status-specific timestamp (sent_at/accepted_at/
+// declined_at) - each is set once, the first time a quote reaches that
+// status, so re-sending a quote doesn't silently move an earlier
+// acceptance's timestamp.
 export async function updateQuoteStatus(quoteId: string, status: string) {
   if (!VALID_QUOTE_STATUSES.includes(status)) return;
+  const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  if (status === "sent") update.sent_at = new Date().toISOString();
+  if (status === "accepted") update.accepted_at = new Date().toISOString();
+  if (status === "declined") update.declined_at = new Date().toISOString();
+
   const supabase = createClient();
-  await supabase.from("quotes").update({ status, updated_at: new Date().toISOString() }).eq("id", quoteId);
+  await supabase.from("quotes").update(update).eq("id", quoteId);
   revalidatePath("/dashboard");
 }
 
 export async function deleteQuote(quoteId: string) {
   const supabase = createClient();
   await supabase.from("quotes").delete().eq("id", quoteId);
+  revalidatePath("/dashboard");
+}
+
+// Emails the customer a link to the public accept/decline page
+// (app/quote/[id]/[token]) - the token itself is what gates access there,
+// not auth, so this is safe to send to anyone. Falls back through
+// quote.customer_email -> the originating lead's email -> the linked
+// customer's email, since a quote built straight from a lead often never
+// had its own email typed in separately.
+export async function sendQuote(quoteId: string, tenantId: string) {
+  const supabase = createClient();
+
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, tenant_id, client_name, quote_number, total_pence, accept_token, customer_email, lead_id, customer_id")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote || quote.tenant_id !== tenantId) return;
+
+  let recipient = quote.customer_email;
+  if (!recipient && quote.lead_id) {
+    const { data: lead } = await supabase.from("leads").select("email").eq("id", quote.lead_id).maybeSingle();
+    recipient = lead?.email ?? null;
+  }
+  if (!recipient && quote.customer_id) {
+    const { data: customer } = await supabase.from("customers").select("email").eq("id", quote.customer_id).maybeSingle();
+    recipient = customer?.email ?? null;
+  }
+
+  const { data: tenant } = await supabase.from("tenants").select("business_name, domain").eq("id", tenantId).maybeSingle();
+  const businessName = tenant?.business_name ?? "your contractor";
+  const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
+  const acceptUrl = `${origin}/quote/${quote.id}/${quote.accept_token}`;
+
+  if (recipient) {
+    await sendEmail({
+      to: [recipient],
+      subject: `Your quote from ${businessName}${quote.quote_number ? ` (${quote.quote_number})` : ""}`,
+      html: `
+        <p>Hi ${quote.client_name},</p>
+        <p>${businessName} has sent you a quote${quote.total_pence ? ` for ${formatGBP(quote.total_pence)}` : ""}.</p>
+        <p><a href="${acceptUrl}">View and respond to your quote</a></p>
+      `,
+    });
+  }
+
+  await supabase.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", quoteId);
   revalidatePath("/dashboard");
 }
 
@@ -307,14 +414,14 @@ export async function convertQuoteToProject(quoteId: string, tenantId: string) {
 
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, client_name, total_pence, lead_id, tenant_id")
+    .select("id, client_name, total_pence, lead_id, customer_email, customer_phone, tenant_id")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote || quote.tenant_id !== tenantId) return;
 
-  let leadEmail: string | null = null;
-  let leadPhone: string | null = null;
-  if (quote.lead_id) {
+  let leadEmail: string | null = quote.customer_email;
+  let leadPhone: string | null = quote.customer_phone;
+  if (!leadEmail && quote.lead_id) {
     const { data: lead } = await supabase
       .from("leads")
       .select("email, phone")
