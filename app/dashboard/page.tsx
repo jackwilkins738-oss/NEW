@@ -239,6 +239,12 @@ export default async function DashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <a
+              href="/cashflow"
+              className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
+            >
+              Cashflow
+            </a>
+            <a
               href="/customers"
               className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
             >
