@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   const { data: tenant } = await admin
     .from("tenants")
-    .select("id, business_name, site_key, domain, slug, brand_theme")
+    .select("id, business_name, site_key, domain, slug, brand_theme, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
 
@@ -90,8 +90,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save lead" }, { status: 500, headers: CORS_HEADERS });
   }
 
-  // Notification is best-effort: a failure here shouldn't make the lead
-  // capture itself look like it failed to whoever's site just submitted it.
+  // Both best-effort: a failure here shouldn't make the lead capture itself
+  // look like it failed to whoever's site just submitted it.
   notifyNewLead(admin, tenant, {
     name: body.name ? String(body.name) : null,
     email: body.email ? String(body.email) : null,
@@ -101,7 +101,40 @@ export async function POST(request: Request) {
     Sentry.captureException(err);
   });
 
+  if (body.email) {
+    sendLeadAutoReply(tenant, String(body.name ?? ""), String(body.email)).catch((err) => {
+      console.error("Lead auto-reply failed:", err);
+      Sentry.captureException(err);
+    });
+  }
+
   return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+}
+
+// Missed-lead protection: the enquirer gets an immediate, real reply the
+// moment they submit - not left wondering if the form even worked, and not
+// waiting for whoever runs the business to notice the notification email.
+// The site itself already tells visitors "the average business takes 42
+// hours to reply... every site I build gets your enquiries to you within
+// 2 hours" - this is what actually makes that true from the enquirer's side,
+// not just faster on the owner's side.
+async function sendLeadAutoReply(
+  tenant: { business_name: string; contact_email?: string | null },
+  name: string,
+  email: string
+) {
+  const firstName = name.trim().split(/\s+/)[0] || null;
+
+  await sendEmail({
+    to: [email],
+    subject: `Thanks for getting in touch with ${tenant.business_name}`,
+    html: `
+      <p>Hi${firstName ? ` ${firstName}` : ""},</p>
+      <p>Thanks for reaching out to ${tenant.business_name} - we've received your enquiry and someone will be in touch shortly.</p>
+      <p>If it's urgent, feel free to reply directly to this email.</p>
+    `,
+    replyTo: tenant.contact_email ?? undefined,
+  });
 }
 
 async function notifyNewLead(
