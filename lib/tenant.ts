@@ -18,6 +18,7 @@ export type Tenant = {
   logo_url: string | null;
   quote_number_prefix: string;
   invoice_number_prefix: string;
+  stripe_account_id: string | null;
 };
 
 // Figures out which customer this request is for, purely from the hostname
@@ -30,7 +31,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
 
   const byDomain = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix")
+    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix, stripe_account_id")
     .eq("domain", host)
     .maybeSingle();
 
@@ -39,7 +40,7 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
   const subdomain = host.split(".")[0];
   const bySlug = await supabase
     .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix")
+    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix, stripe_account_id")
     .eq("slug", subdomain)
     .maybeSingle();
 

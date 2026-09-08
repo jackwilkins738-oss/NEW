@@ -12,7 +12,7 @@ const field =
   "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: { stripe?: string } }) {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
@@ -50,6 +50,35 @@ export default async function SettingsPage() {
               Upload
             </button>
           </form>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-ink">Online payment</h2>
+          {searchParams.stripe === "error" && (
+            <p className="mt-1 text-xs font-semibold text-critical">Something went wrong connecting Stripe - try again.</p>
+          )}
+          {tenant.stripe_account_id ? (
+            <>
+              <p className="mt-1 text-xs text-muted">
+                Connected. Customers see a "Pay now" button on their invoice page - payments go straight to your own
+                Stripe account, not through Scalar Digital.
+              </p>
+              <p className="mt-2 font-mono text-xs text-muted">{tenant.stripe_account_id}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-xs text-muted">
+                Connect Stripe to let customers pay an invoice online. Payments go directly to your own bank account
+                via your own Stripe account.
+              </p>
+              <a
+                href="/api/stripe/connect"
+                className="btn-primary mt-3 inline-block rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
+              >
+                Connect Stripe
+              </a>
+            </>
+          )}
         </div>
 
         <form

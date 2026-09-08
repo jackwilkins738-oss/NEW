@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { PayInvoiceButton } from "@/app/invoice/PayInvoiceButton";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,13 @@ const STATUS_LABEL: Record<string, string> = {
 // tenants.site_key / quotes.accept_token) is what proves the visitor is
 // the intended recipient. Wrong id/token -> 404, same as a non-existent
 // invoice, so this doesn't leak whether an invoice id is real.
-export default async function PublicInvoicePage({ params }: { params: { id: string; token: string } }) {
+export default async function PublicInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: { id: string; token: string };
+  searchParams: { paid?: string };
+}) {
   const admin = createAdminClient();
   const { data: invoice } = await admin
     .from("invoices")
@@ -27,7 +34,7 @@ export default async function PublicInvoicePage({ params }: { params: { id: stri
 
   const { data: tenant } = await admin
     .from("tenants")
-    .select("business_name, brand_theme, bank_details, contact_email")
+    .select("business_name, brand_theme, bank_details, contact_email, stripe_account_id")
     .eq("id", invoice.tenant_id)
     .maybeSingle();
 
@@ -89,6 +96,18 @@ export default async function PublicInvoicePage({ params }: { params: { id: stri
             </div>
           )}
         </div>
+
+        {searchParams.paid === "1" && invoice.status !== "paid" && (
+          <p className="mt-4 rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">
+            Thanks - we're confirming your payment now. This page will show as paid shortly.
+          </p>
+        )}
+
+        {invoice.status !== "paid" && outstanding > 0 && tenant?.stripe_account_id && (
+          <div className="mt-4">
+            <PayInvoiceButton invoiceId={invoice.id} token={invoice.view_token} />
+          </div>
+        )}
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <a
