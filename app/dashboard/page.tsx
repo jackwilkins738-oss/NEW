@@ -160,7 +160,7 @@ export default async function DashboardPage() {
     supabase
       .from("projects")
       .select(
-        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, next_visit_at, payment_type, notes, status, lead_id, quote_id, created_at"
+        "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, completed_at, next_visit_at, payment_type, notes, status, lead_id, quote_id, created_at"
       )
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false }),
@@ -293,6 +293,56 @@ export default async function DashboardPage() {
   );
   const leadSourceBreakdown = groupTopN(leads, (l) => l.source ?? "", () => 1, "Unknown");
   const leadSourceWinRate = winRateBySource(leads);
+
+  // Overall business analytics - averages/rates Jack asked for by name
+  // ("we're making 41% margin on landscaping but only 24% on extensions"),
+  // separate from the by-source breakdowns above.
+  const pricedProjects = projects.filter((p) => p.value_pence != null);
+  const avgProjectValue = pricedProjects.length
+    ? pricedProjects.reduce((sum, p) => sum + (p.value_pence ?? 0), 0) / pricedProjects.length
+    : 0;
+
+  const decidedLeads = leads.filter((l) => l.status === "won" || l.status === "lost");
+  const overallWinRate = decidedLeads.length
+    ? (decidedLeads.filter((l) => l.status === "won").length / decidedLeads.length) * 100
+    : null;
+
+  const avgQuoteValue = quotes.length ? quotes.reduce((sum, q) => sum + q.total_pence, 0) / quotes.length : 0;
+
+  const timedProjects = projects.filter((p) => p.start_date && (p.completed_at || p.target_date));
+  const avgProjectDurationDays = timedProjects.length
+    ? timedProjects.reduce((sum, p) => {
+        const start = new Date(p.start_date!).getTime();
+        const end = new Date(p.completed_at ?? p.target_date!).getTime();
+        return sum + Math.max(0, (end - start) / 86_400_000);
+      }, 0) / timedProjects.length
+    : null;
+
+  // Margin by project type - actual cost (paid items only, same convention
+  // as the portfolio profitability tile) against revenue, grouped by type.
+  const actualCostByProjectForMargin = new Map<string, number>();
+  for (const item of costItems) {
+    if (item.status !== "paid") continue;
+    actualCostByProjectForMargin.set(item.project_id, (actualCostByProjectForMargin.get(item.project_id) ?? 0) + item.amount_pence);
+  }
+  const marginByTypeMap = new Map<string, { revenue: number; cost: number }>();
+  for (const p of projects) {
+    const cost = actualCostByProjectForMargin.get(p.id);
+    if (cost == null || cost === 0 || p.value_pence == null) continue;
+    const key = p.project_type || "Unspecified";
+    const entry = marginByTypeMap.get(key) ?? { revenue: 0, cost: 0 };
+    entry.revenue += p.value_pence;
+    entry.cost += cost;
+    marginByTypeMap.set(key, entry);
+  }
+  const marginByType = [...marginByTypeMap.entries()]
+    .map(([label, { revenue, cost }]) => ({
+      label,
+      value: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
+      detail: `${formatGBP(revenue - cost)} gross profit on ${formatGBP(revenue)} revenue`,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
 
   // Real revenue, not the "value won" proxy the trend chart uses - actual
   // money that's actually been paid, all-time (there's no paid_at
@@ -494,6 +544,59 @@ export default async function DashboardPage() {
             format="percent"
             colorMode="categorical"
           />
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+            <IconTrendUp className="h-4 w-4 text-brand" />
+            Business analytics
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-surface-2 p-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project value</p>
+              <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgProjectValue)}</p>
+            </div>
+            <div className="rounded-xl bg-surface-2 p-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Win rate</p>
+              <p className="mt-1 font-mono text-lg font-bold text-ink">
+                {overallWinRate != null ? `${overallWinRate.toFixed(0)}%` : "—"}
+              </p>
+            </div>
+            <div className="rounded-xl bg-surface-2 p-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg quote value</p>
+              <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgQuoteValue)}</p>
+            </div>
+            <div className="rounded-xl bg-surface-2 p-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project duration</p>
+              <p className="mt-1 font-mono text-lg font-bold text-ink">
+                {avgProjectDurationDays != null ? `${Math.round(avgProjectDurationDays)}d` : "—"}
+              </p>
+            </div>
+          </div>
+          {marginByType.length > 0 && (
+            <div className="mt-4 border-t border-black/10 pt-4">
+              <p className="text-xs font-semibold text-ink-2">Gross margin by project type</p>
+              <div className="mt-3 flex flex-col gap-2">
+                {marginByType.map((row) => (
+                  <div key={row.label}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-ink-2">{row.label}</span>
+                      <span className="font-mono text-xs font-semibold text-ink">{row.value.toFixed(1)}%</span>
+                    </div>
+                    <div className="h-[14px] w-full overflow-hidden rounded-[4px] bg-surface-2">
+                      <div
+                        className="h-full rounded-[4px]"
+                        style={{
+                          width: `${Math.max(2, Math.min(100, row.value))}%`,
+                          background: row.value >= 15 ? "var(--status-good)" : "var(--status-critical)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
