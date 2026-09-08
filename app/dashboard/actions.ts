@@ -8,6 +8,7 @@ import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnec
 import { upsertEvent, deleteEvent } from "@/lib/googleCalendar";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
+import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -367,7 +368,6 @@ export async function convertLeadToProject(leadId: string, tenantId: string) {
 }
 
 const VALID_QUOTE_STATUSES = ["draft", "sent", "accepted", "declined"];
-const QUOTE_LINE_CATEGORIES = ["materials", "labour", "subcontractors", "other"];
 
 // Sequential (Q-0001, Q-0002...), not the old random Q-YYYYMM-XXXX - a real
 // business wants these in order. increment_quote_number (migration 032) is
@@ -387,34 +387,6 @@ async function nextInvoiceNumber(tenantId: string): Promise<string> {
   const { data: tenant } = await admin.from("tenants").select("invoice_number_prefix").eq("id", tenantId).maybeSingle();
   const { data: n } = await admin.rpc("increment_invoice_number", { p_tenant_id: tenantId });
   return `${tenant?.invoice_number_prefix ?? "INV"}-${String(n ?? 1).padStart(4, "0")}`;
-}
-
-type QuoteLineItem = { category: string; description: string; unit_price_pence: number };
-
-function parseLineItems(raw: string): QuoteLineItem[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((l) => ({
-        category: QUOTE_LINE_CATEGORIES.includes(l?.category) ? l.category : "other",
-        description: String(l?.description ?? "").trim(),
-        unit_price_pence: Number.isFinite(l?.unit_price_pence) ? Math.round(l.unit_price_pence) : 0,
-      }))
-      .filter((l) => l.description || l.unit_price_pence > 0);
-  } catch {
-    return [];
-  }
-}
-
-// Cost -> markup -> VAT -> total, matching how a trade quote is actually
-// built up rather than one flat sale price entered by hand.
-function computeQuoteTotals(lineItems: QuoteLineItem[], markupPercent: number, vatRate: number) {
-  const costSubtotalPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
-  const saleSubtotalPence = Math.round(costSubtotalPence * (1 + markupPercent / 100));
-  const vatAmountPence = Math.round(saleSubtotalPence * (vatRate / 100));
-  const totalPence = saleSubtotalPence + vatAmountPence;
-  return { costSubtotalPence, vatAmountPence, totalPence };
 }
 
 // Line items are stored as-typed (owner controls both sides), so this only
