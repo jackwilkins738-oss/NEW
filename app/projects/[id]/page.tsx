@@ -10,6 +10,7 @@ import { DocumentsPanel } from "@/components/DocumentsPanel";
 import { SnagsPanel } from "@/components/SnagsPanel";
 import { AssignedTeamPanel } from "@/components/AssignedTeamPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
+import { ReviewsPanel } from "@/components/ReviewsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +43,18 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes, snagsRes, teamRes, projectTeamRes, communicationsRes] =
-    await Promise.all([
+  const [
+    costItemsRes,
+    quoteRes,
+    variationsRes,
+    invoicesRes,
+    documentsRes,
+    snagsRes,
+    teamRes,
+    projectTeamRes,
+    communicationsRes,
+    reviewsRes,
+  ] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -79,6 +90,11 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       .select("id, type, summary, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("reviews")
+      .select("id, customer_name, rating, review_text, status, published")
+      .eq("project_id", project.id)
+      .order("requested_at", { ascending: false }),
   ]);
 
   const costItems = costItemsRes.data ?? [];
@@ -101,6 +117,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const assignedIds = new Set((projectTeamRes.data ?? []).map((r) => r.team_member_id));
   const assignedTeam = team.filter((t) => assignedIds.has(t.id));
   const communications = communicationsRes.data ?? [];
+  const reviews = reviewsRes.data ?? [];
 
   const budgetByCategory = new Map<string, number>();
   for (const item of quoteLineItems) {
@@ -280,6 +297,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
         <div className="mt-5">
           <CommunicationsPanel tenantId={tenant.id} projectId={project.id} communications={communications} />
+        </div>
+
+        <div className="mt-5">
+          <ReviewsPanel tenantId={tenant.id} projectId={project.id} reviews={reviews} />
         </div>
       </div>
     </main>

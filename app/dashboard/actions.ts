@@ -1078,3 +1078,49 @@ export async function deleteCommunication(projectId: string, id: string) {
   await supabase.from("communications").delete().eq("id", id);
   revalidatePath(`/projects/${projectId}`);
 }
+
+export async function requestReview(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "");
+  const customerName = String(formData.get("customerName") ?? "").trim();
+  if (!tenantId || !projectId || !customerName) return;
+
+  await createClient()
+    .from("reviews")
+    .insert({ tenant_id: tenantId, project_id: projectId, customer_name: customerName, status: "requested" });
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// Records what the customer actually said, once they've said it -
+// separate from requesting, since a request can sit unanswered for a
+// while.
+export async function recordReview(projectId: string, reviewId: string, formData: FormData) {
+  const rating = Number(formData.get("rating") ?? 0);
+  const reviewText = String(formData.get("reviewText") ?? "").trim();
+
+  const supabase = createClient();
+  await supabase
+    .from("reviews")
+    .update({
+      status: "received",
+      received_at: new Date().toISOString(),
+      rating: Number.isFinite(rating) && rating >= 1 && rating <= 5 ? rating : null,
+      review_text: reviewText || null,
+    })
+    .eq("id", reviewId);
+
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function togglePublishReview(projectId: string, reviewId: string, published: boolean) {
+  const supabase = createClient();
+  await supabase.from("reviews").update({ published }).eq("id", reviewId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteReview(projectId: string, reviewId: string) {
+  const supabase = createClient();
+  await supabase.from("reviews").delete().eq("id", reviewId);
+  revalidatePath(`/projects/${projectId}`);
+}
