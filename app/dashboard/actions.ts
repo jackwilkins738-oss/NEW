@@ -887,3 +887,56 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 }
+
+const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
+const DOCUMENT_CATEGORIES = [
+  "contract",
+  "drawings",
+  "plans",
+  "rams",
+  "certificate",
+  "insurance",
+  "purchase_order",
+  "other",
+];
+
+// Storage RLS ("member can upload own tenant documents", migration 023) is
+// the real security boundary - it only allows a write under a path whose
+// first segment matches a tenant_id the signed-in user has a membership
+// for. Unlike project photos, no MIME allowlist - a RAMS document or
+// insurance certificate is as likely to be a Word doc as a PDF.
+export async function uploadProjectDocument(formData: FormData) {
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const category = String(formData.get("category") ?? "other");
+  const file = formData.get("document");
+
+  if (!tenantId || !(file instanceof File) || file.size === 0) return;
+  if (file.size > MAX_DOCUMENT_BYTES) return;
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${tenantId}/${crypto.randomUUID()}-${safeName}`;
+
+  const supabase = createClient();
+  const { error: uploadError } = await supabase.storage.from("project-documents").upload(path, file, {
+    contentType: file.type || "application/octet-stream",
+  });
+  if (uploadError) return;
+
+  await supabase.from("project_documents").insert({
+    tenant_id: tenantId,
+    project_id: projectId || null,
+    storage_path: path,
+    filename: file.name,
+    category: DOCUMENT_CATEGORIES.includes(category) ? category : "other",
+  });
+
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteProjectDocument(projectId: string, documentId: string, storagePath: string) {
+  const supabase = createClient();
+  await supabase.storage.from("project-documents").remove([storagePath]);
+  await supabase.from("project_documents").delete().eq("id", documentId);
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}

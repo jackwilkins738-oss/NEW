@@ -6,6 +6,7 @@ import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { ProjectCostLedger } from "@/components/ProjectCostLedger";
 import { VariationsPanel } from "@/components/VariationsPanel";
+import { DocumentsPanel } from "@/components/DocumentsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .maybeSingle();
   if (!project) notFound();
 
-  const [costItemsRes, quoteRes, variationsRes, invoicesRes] = await Promise.all([
+  const [costItemsRes, quoteRes, variationsRes, invoicesRes, documentsRes] = await Promise.all([
     supabase
       .from("project_cost_items")
       .select("id, category, description, supplier, amount_pence, status, cost_date, notes")
@@ -57,12 +58,28 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       .select("id, milestone, reference, amount_pence, paid_pence, due_date, status")
       .eq("project_id", project.id)
       .order("due_date", { ascending: true }),
+    supabase
+      .from("project_documents")
+      .select("id, storage_path, filename, category, created_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const costItems = costItemsRes.data ?? [];
   const variations = variationsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
   const quoteLineItems: QuoteLineItem[] = (quoteRes.data?.line_items as QuoteLineItem[] | undefined) ?? [];
+
+  // project-documents is a private bucket (unlike project-photos) - a
+  // signed URL, generated through this member's own session so RLS still
+  // applies, is what makes each document downloadable rather than a
+  // permanent public link.
+  const documents = await Promise.all(
+    (documentsRes.data ?? []).map(async (doc) => {
+      const { data: signed } = await supabase.storage.from("project-documents").createSignedUrl(doc.storage_path, 3600);
+      return { ...doc, url: signed?.signedUrl ?? null };
+    })
+  );
 
   const budgetByCategory = new Map<string, number>();
   for (const item of quoteLineItems) {
@@ -226,6 +243,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
         <div className="mt-5">
           <ProjectCostLedger tenantId={tenant.id} projectId={project.id} items={costItems} />
+        </div>
+
+        <div className="mt-5">
+          <DocumentsPanel tenantId={tenant.id} projectId={project.id} documents={documents} />
         </div>
       </div>
     </main>
