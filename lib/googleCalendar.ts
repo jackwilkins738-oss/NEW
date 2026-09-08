@@ -153,6 +153,26 @@ export async function upsertEvent(
   return data.id;
 }
 
+// The other half of two-way sync: fetch one event by id to see whether its
+// start time (or existence) has changed on Google's side since we last
+// pushed to it - a project's own next_visit_at is only ever the source of
+// truth until the owner edits the event directly in Google Calendar,
+// at which point Google's copy wins.
+export async function getEvent(
+  accessToken: string,
+  calendarId: string,
+  eventId: string
+): Promise<{ start: string; status: string } | null> {
+  const res = await fetch(`${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw new Error(`Google Calendar get failed: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as { status: string; start?: { dateTime?: string; date?: string } };
+  if (!data.start) return null;
+  return { start: (data.start.dateTime ?? data.start.date)!, status: data.status };
+}
+
 export async function deleteEvent(accessToken: string, calendarId: string, eventId: string) {
   const res = await fetch(`${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`, {
     method: "DELETE",
