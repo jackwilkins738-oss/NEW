@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
+import { PortalVariationActions } from "@/app/portal/PortalVariationActions";
 
 export const dynamic = "force-dynamic";
 
@@ -235,6 +236,9 @@ export default async function ProjectPortalPage({ params }: { params: { id: stri
                   >
                     {VARIATION_STATUS_LABEL[v.status] ?? v.status}
                   </span>
+                  {v.status === "pending" && (
+                    <PortalVariationActions projectId={project.id} token={project.portal_token} variationId={v.id} />
+                  )}
                 </div>
               ))}
             </div>
