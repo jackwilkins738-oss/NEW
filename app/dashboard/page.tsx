@@ -484,7 +484,7 @@ export default async function DashboardPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
-                <p className="mt-1 font-display text-4xl font-extrabold tracking-tight text-ink [font-feature-settings:'tnum'] sm:text-5xl">
+                <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
                   {formatGBP(pipelineValue)}
                 </p>
                 <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
@@ -502,7 +502,7 @@ export default async function DashboardPage() {
               </div>
               <IconBanknote className="h-6 w-6 flex-none text-muted" />
             </div>
-            <Sparkline values={revenueSparkline} color="var(--series-3)" />
+            <Sparkline values={revenueSparkline} color="var(--brand)" />
           </div>
         </div>
 
@@ -654,7 +654,6 @@ export default async function DashboardPage() {
             note="Trailing 12 months"
             rows={projectTypeBreakdown}
             format="gbp"
-            colorMode="categorical"
           />
         </div>
 
@@ -666,7 +665,6 @@ export default async function DashboardPage() {
             }${backlog.noTargetDatePence > 0 ? ` · ${formatGBP(backlog.noTargetDatePence)} has no target date, not shown below` : ""}`}
             rows={backlog.buckets}
             format="gbp"
-            colorMode="single"
           />
         </div>
 
@@ -676,14 +674,12 @@ export default async function DashboardPage() {
             note="Last 30 days &middot; by volume"
             rows={leadSourceBreakdown}
             format="count"
-            colorMode="single"
           />
           <BarChart
             title="Win rate by source"
             note="Won vs. lost - leads still in progress aren't counted yet"
             rows={leadSourceWinRate}
             format="percent"
-            colorMode="categorical"
           />
         </div>
 
@@ -726,7 +722,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="h-[14px] w-full overflow-hidden rounded-[4px] bg-surface-2">
                       <div
-                        className="h-full rounded-[4px]"
+                        className="h-full rounded-r-[4px]"
                         style={{
                           width: `${Math.max(2, Math.min(100, row.value))}%`,
                           background: row.value >= 15 ? "var(--status-good)" : "var(--status-critical)",

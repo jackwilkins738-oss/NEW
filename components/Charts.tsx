@@ -21,74 +21,74 @@ function formatValue(format: Format, value: number) {
   return `${value}`;
 }
 
-// Shared horizontal bar chart used for both "revenue by project type" and
-// "lead source" - same mark spec (thin bars, rounded ends, direct labels,
-// hover tooltip) as the original design, just fed different data.
+// Shared horizontal bar chart used for "revenue by project type", "lead
+// source", "win rate by source" and "backlog by month". Every row already
+// carries its own text label right next to the bar, so a rotating
+// categorical hue per row would just burn the identity channel on
+// information the label already gives - one consistent brand-tinted hue
+// for every bar reads calmer and lets the lengths do the talking, and it
+// ties the chart into whichever of the 8 palette colours this tenant
+// picked instead of an unrelated fixed chart-blue.
 export function BarChart({
   title,
   note,
   rows,
   format,
-  colorMode,
 }: {
   title: string;
   note?: string;
   rows: { label: string; value: number; detail?: string }[];
   format: Format;
-  colorMode: "categorical" | "single";
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...rows.map((r) => r.value));
-  const seriesColors = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">{title}</h2>
       {note && <p className="text-xs text-muted">{note}</p>}
-      <div className="mt-4 flex flex-col gap-3">
+      <div className="mt-4 flex flex-col gap-3.5">
         {rows.length === 0 && (
           <div className="rounded-xl border border-dashed border-black/15 py-6 text-center">
             <p className="text-sm text-muted">Nothing to show yet - this fills in as data comes through.</p>
           </div>
         )}
-        {rows.map((r, i) => {
-          const color =
-            colorMode === "categorical"
-              ? i < 4
-                ? seriesColors[i]
-                : "var(--series-other)"
-              : "var(--brand)";
-          return (
-            <div
-              key={r.label}
-              onMouseEnter={() => setHover(i)}
-              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
-              className="cursor-default"
-            >
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="font-semibold text-ink-2">{r.label}</span>
-                <span className="font-mono text-xs font-semibold text-ink">{formatValue(format, r.value)}</span>
-              </div>
-              <div className="h-[18px] w-full overflow-hidden rounded-[4px] bg-surface-2">
-                <div
-                  className="h-full rounded-[4px] transition-opacity"
-                  style={{
-                    width: `${Math.max(3, (r.value / max) * 100)}%`,
-                    background: color,
-                    opacity: hover === null || hover === i ? 1 : 0.55,
-                  }}
-                />
-              </div>
-              {hover === i && r.detail && <p className="mt-1 text-xs text-muted">{r.detail}</p>}
+        {rows.map((r, i) => (
+          <div
+            key={r.label}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+            className="cursor-default"
+          >
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="font-semibold text-ink-2">{r.label}</span>
+              <span className="font-mono text-xs font-semibold text-ink">{formatValue(format, r.value)}</span>
             </div>
-          );
-        })}
+            <div className="h-5 w-full overflow-hidden rounded-[4px] bg-surface-2">
+              <div
+                // Square at the baseline (left edge, where the bar starts),
+                // rounded only at the data-end (right, the tip) - a bar
+                // never floats free of the axis it grows from.
+                className="h-full rounded-r-[4px] transition-opacity"
+                style={{
+                  width: `${Math.max(3, (r.value / max) * 100)}%`,
+                  background: "linear-gradient(90deg, var(--brand), var(--brand-strong))",
+                  opacity: hover === null || hover === i ? 1 : 0.5,
+                }}
+              />
+            </div>
+            {hover === i && r.detail && <p className="mt-1 text-xs text-muted">{r.detail}</p>}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// Monthly value trend as a line + area chart, trailing 12 months.
+// Monthly value trend as a line + area chart, trailing 12 months. Single
+// series throughout (no legend needed - the title names it), drawn in the
+// tenant's own brand colour rather than a fixed chart-blue, with a hover
+// crosshair + tooltip and a persistent value label at the line's end.
 export function RevenueTrend({
   title,
   note,
@@ -104,7 +104,7 @@ export function RevenueTrend({
   const W = 620;
   const H = 180;
   const padL = 4;
-  const padR = 4;
+  const padR = 46;
   const top = 14;
   const bottom = 176;
 
@@ -140,6 +140,8 @@ export function RevenueTrend({
   const areaPath = `${linePath} L${coords[coords.length - 1]?.x ?? 0},${bottom} L${coords[0]?.x ?? 0},${bottom} Z`;
   const total = values.reduce((a, b) => a + b, 0);
   const gradientId = `revenue-trend-fill-${title.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const last = coords[coords.length - 1];
+  const gridLines = [0.25, 0.5, 0.75].map((f) => top + (bottom - top) * f);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -158,21 +160,36 @@ export function RevenueTrend({
           <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible">
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--series-1)" stopOpacity={0.28} />
-                <stop offset="100%" stopColor="var(--series-1)" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.24} />
+                <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <line x1={padL} y1={top} x2={W - padR} y2={top} stroke="var(--chart-grid)" strokeWidth={1} />
+            {gridLines.map((y) => (
+              <line key={y} x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--chart-grid)" strokeWidth={1} opacity={0.5} />
+            ))}
             <line x1={padL} y1={bottom} x2={W - padR} y2={bottom} stroke="var(--chart-grid)" strokeWidth={1} />
+            {hover !== null && coords[hover] && (
+              <line
+                x1={coords[hover].x}
+                y1={top}
+                x2={coords[hover].x}
+                y2={bottom}
+                stroke="var(--brand)"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                opacity={0.5}
+              />
+            )}
             <path d={areaPath} fill={`url(#${gradientId})`} />
-            <path d={linePath} fill="none" stroke="var(--series-1)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <path d={linePath} fill="none" stroke="var(--brand)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             {coords.map((c, i) => (
               <g key={i}>
-                <circle cx={c.x} cy={c.y} r={hover === i ? 5 : 3.5} fill="var(--series-1)" stroke="var(--chart-surface)" strokeWidth={2} />
+                <circle cx={c.x} cy={c.y} r={hover === i ? 6 : 4} fill="var(--brand)" stroke="var(--chart-surface)" strokeWidth={2} />
                 <circle
                   cx={c.x}
                   cy={c.y}
-                  r={12}
+                  r={14}
                   fill="transparent"
                   className="cursor-pointer"
                   onMouseEnter={() => setHover(i)}
@@ -180,11 +197,16 @@ export function RevenueTrend({
                 />
               </g>
             ))}
+            {last && (
+              <text x={last.x + 10} y={last.y} dominantBaseline="middle" className="font-mono text-[11px] font-semibold" fill="var(--ink)">
+                {formatValue(format, last.value)}
+              </text>
+            )}
           </svg>
           {/* Real HTML text, not SVG - SVG text scales down with the viewBox on a
               narrow phone screen and becomes unreadably small; this stays a fixed,
               legible size at any container width. */}
-          <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
+          <div className="mt-1 flex justify-between font-mono text-[10px] text-muted" style={{ paddingRight: `${(padR / W) * 100}%` }}>
             {coords
               .filter((_, i) => i % 2 === 0)
               .map((c) => (

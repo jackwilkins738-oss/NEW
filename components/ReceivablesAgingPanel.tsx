@@ -26,7 +26,7 @@ export function ReceivablesAgingPanel({ aging }: { aging: ReceivablesAging }) {
           <div key={b.label} className="flex flex-col items-center gap-1.5">
             <div className="flex h-16 w-full items-end overflow-hidden rounded-[4px] bg-surface-2">
               <div
-                className="w-full rounded-[4px]"
+                className="w-full rounded-t-[4px]"
                 style={{
                   height: `${b.totalPence > 0 ? Math.max(6, (b.totalPence / max) * 100) : 0}%`,
                   background: b.label === "Not yet due" ? "var(--status-good)" : "var(--status-critical)",
