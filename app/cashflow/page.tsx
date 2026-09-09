@@ -6,6 +6,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { signOut } from "@/app/login/actions";
 import { IconWallet } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function CashflowPage() {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const [invoicesRes, costItemsRes] = await Promise.all([
     supabase
@@ -68,7 +70,7 @@ export default async function CashflowPage() {
   return (
     <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
       <div className="mx-auto max-w-4xl px-6 py-8">
         <header className="rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">

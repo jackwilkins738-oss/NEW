@@ -6,6 +6,7 @@ import { updateTenantSettings, uploadTenantLogo } from "@/app/dashboard/actions"
 import { signOut } from "@/app/login/actions";
 import { IconSettings } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
+  // Settings holds bank details, VAT, the Stripe connection - the one page
+  // a 'member' shouldn't reach, even though they can see everything else.
+  if (role === "member") redirect("/dashboard");
 
   return (
     <main className="min-h-screen bg-page sm:pl-64">

@@ -27,6 +27,7 @@ import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { Sparkline } from "@/components/Sparkline";
 import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const membership = await supabase
     .from("memberships")
@@ -448,7 +450,7 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
       <div className="mx-auto max-w-6xl px-6 py-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -8,6 +8,7 @@ import {
   updateTenantDomain,
   updateTenantBrandTheme,
   removeMembership,
+  updateMembershipRole,
   deleteTenant,
 } from "@/app/admin/actions";
 import { CopyButton } from "@/components/CopyButton";
@@ -24,7 +25,7 @@ type Tenant = {
   created_at: string;
 };
 
-type Member = { membershipId: string; email: string };
+type Member = { membershipId: string; email: string; role: "owner" | "member" };
 
 function SwatchPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
   return (
@@ -196,9 +197,16 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
             ))}
           </select>
         </label>
-        <label className={`${label} sm:col-span-2`}>
+        <label className={label}>
           Email
           <input name="email" type="email" required className={field} placeholder="owner@theirbusiness.co.uk" />
+        </label>
+        <label className={label}>
+          Access level
+          <select name="role" defaultValue="owner" className={field}>
+            <option value="owner">Owner - full access</option>
+            <option value="member">Member - everything except Settings</option>
+          </select>
         </label>
         <div className="sm:col-span-3">
           <button
@@ -329,6 +337,42 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
   );
 }
 
+function MemberRow({ member }: { member: Member }) {
+  const router = useRouter();
+  const [role, setRole] = useState(member.role);
+  const [pending, setPending] = useState(false);
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-2">
+      <span className="truncate text-xs text-ink-2">{member.email}</span>
+      <div className="flex flex-none items-center gap-1.5">
+        <select
+          value={role}
+          disabled={pending}
+          onChange={async (e) => {
+            const next = e.target.value as "owner" | "member";
+            setRole(next);
+            setPending(true);
+            await updateMembershipRole(member.membershipId, next);
+            setPending(false);
+            router.refresh();
+          }}
+          className="min-h-[32px] rounded-lg border border-black/8 bg-surface px-1.5 py-1 text-[11px] font-semibold text-ink-2"
+        >
+          <option value="owner">Owner</option>
+          <option value="member">Member</option>
+        </select>
+        <DeleteButton
+          action={removeMembership}
+          id={member.membershipId}
+          confirmText={`Remove ${member.email}'s access to this business? They'll no longer be able to sign in to it.`}
+          className="min-h-[32px] flex-none rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+        />
+      </div>
+    </div>
+  );
+}
+
 function MembersEditor({ members }: { members: Member[] }) {
   if (members.length === 0) {
     return <p className="mt-1 text-xs text-muted">No logins yet - invite one above.</p>;
@@ -336,15 +380,7 @@ function MembersEditor({ members }: { members: Member[] }) {
   return (
     <div className="mt-1 flex flex-col gap-1.5">
       {members.map((m) => (
-        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-2">
-          <span className="truncate text-xs text-ink-2">{m.email}</span>
-          <DeleteButton
-            action={removeMembership}
-            id={m.membershipId}
-            confirmText={`Remove ${m.email}'s access to this business? They'll no longer be able to sign in to it.`}
-            className="min-h-[32px] flex-none rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
-          />
-        </div>
+        <MemberRow key={m.membershipId} member={m} />
       ))}
     </div>
   );

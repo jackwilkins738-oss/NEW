@@ -12,6 +12,7 @@ import { deleteReview } from "@/app/dashboard/actions";
 import { signOut } from "@/app/login/actions";
 import { IconStar } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const [reviewsRes, projectsRes] = await Promise.all([
     supabase
@@ -55,7 +57,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
   return (
     <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
       <div className="mx-auto max-w-4xl px-6 py-8">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <div>

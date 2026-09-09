@@ -27,13 +27,17 @@ export default async function AdminPage() {
   // the /admin actions (and the isPlatformAdmin check above, for this page
   // itself) is the actual authorization gate, not RLS, for anything in here.
   const admin = createAdminClient();
-  const { data: memberships } = await admin.from("memberships").select("id, tenant_id, user_id");
+  const { data: memberships } = await admin.from("memberships").select("id, tenant_id, user_id, role");
   const { data: usersPage } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const emailById = new Map(usersPage?.users.map((u) => [u.id, u.email ?? "(no email)"]) ?? []);
 
-  const membersByTenant: Record<string, { membershipId: string; email: string }[]> = {};
+  const membersByTenant: Record<string, { membershipId: string; email: string; role: "owner" | "member" }[]> = {};
   for (const m of memberships ?? []) {
-    (membersByTenant[m.tenant_id] ??= []).push({ membershipId: m.id, email: emailById.get(m.user_id) ?? m.user_id });
+    (membersByTenant[m.tenant_id] ??= []).push({
+      membershipId: m.id,
+      email: emailById.get(m.user_id) ?? m.user_id,
+      role: (m.role as "owner" | "member" | null) ?? "owner",
+    });
   }
 
   return (

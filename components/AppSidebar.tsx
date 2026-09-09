@@ -31,13 +31,22 @@ export function AppSidebar({
   businessName,
   logoUrl,
   signOutAction,
+  role = "owner",
 }: {
   businessName: string;
   logoUrl: string | null;
   signOutAction: () => void;
+  // Defaults to "owner" (full nav) rather than making every call site pass
+  // it - a page that hasn't been updated to fetch the real role shows the
+  // Settings link same as always, matching pre-roles behaviour exactly.
+  // Settings itself still enforces the real restriction server-side
+  // regardless of what this prop says, so a stale default is a cosmetic
+  // gap at worst, never a security one.
+  role?: "owner" | "member";
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const links = role === "member" ? LINKS.filter((l) => l.href !== "/settings") : LINKS;
 
   const brandMark = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -62,7 +71,7 @@ export function AppSidebar({
       </div>
 
       <nav className="mt-7 flex flex-1 flex-col gap-0.5 px-2">
-        {LINKS.map(({ href, label, Icon }) => {
+        {links.map(({ href, label, Icon }) => {
           const active = pathname === href || (href === "/dashboard" && pathname === "/");
           return (
             <Link

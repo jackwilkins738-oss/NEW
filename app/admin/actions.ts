@@ -57,6 +57,8 @@ export async function inviteTeammate(formData: FormData) {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
+  const roleInput = String(formData.get("role") ?? "owner");
+  const role = roleInput === "member" ? "member" : "owner";
   if (!tenantId || !email) return { error: "Pick a business and enter an email." };
 
   const { data: tenant } = await supabase.from("tenants").select("domain, slug").eq("id", tenantId).single();
@@ -108,7 +110,7 @@ export async function inviteTeammate(formData: FormData) {
   // when there's no actual conflict), and there's deliberately no UPDATE
   // policy on memberships. A duplicate here just means they're already
   // linked to this business, which is fine - not a real error.
-  const { error: membershipError } = await supabase.from("memberships").insert({ tenant_id: tenantId, user_id: userId });
+  const { error: membershipError } = await supabase.from("memberships").insert({ tenant_id: tenantId, user_id: userId, role });
 
   if (membershipError && membershipError.code !== "23505") {
     return { error: membershipError.message };
@@ -116,6 +118,19 @@ export async function inviteTeammate(formData: FormData) {
 
   revalidatePath("/admin");
   return { link, email };
+}
+
+// Admin client, not the session-scoped one: memberships deliberately has
+// no UPDATE RLS policy (see the insert above), so requireAdmin() is the
+// real authorisation gate here, same pattern as removeMembership/
+// deleteTenant already use for the operations RLS doesn't cover.
+export async function updateMembershipRole(membershipId: string, role: "owner" | "member") {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin.from("memberships").update({ role }).eq("id", membershipId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { ok: true as const };
 }
 
 export async function updateTenantDomain(formData: FormData) {

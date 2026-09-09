@@ -13,6 +13,7 @@ import { ReviewsPanel } from "@/components/ReviewsPanel";
 import { markProjectComplete } from "@/app/dashboard/actions";
 import { signOut } from "@/app/login/actions";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { CopyButton } from "@/components/CopyButton";
 import { isPastUK } from "@/lib/ukDate";
 
@@ -36,6 +37,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const { data: project } = await supabase
     .from("projects")
@@ -149,7 +151,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   return (
     <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
       <div className="mx-auto max-w-4xl px-6 py-8">
         <header className="rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">

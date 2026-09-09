@@ -7,6 +7,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { signOut } from "@/app/login/actions";
 import { CustomerHeader } from "@/components/CustomerHeader";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
+  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const { data: customer } = await supabase
     .from("customers")
@@ -74,7 +76,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
   return (
     <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
       <div className="mx-auto max-w-3xl px-6 py-8">
         <Link href="/customers" className="text-xs font-semibold text-muted hover:text-brand hover:underline">
           &larr; Back to customers
