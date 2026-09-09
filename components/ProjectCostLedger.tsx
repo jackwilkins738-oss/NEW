@@ -27,7 +27,7 @@ const CATEGORY_OPTIONS = [
 const CATEGORY_LABEL = Object.fromEntries(CATEGORY_OPTIONS.map((c) => [c.value, c.label]));
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function CostItemRow({ item, projectId }: { item: CostItem; projectId: string }) {
@@ -59,7 +59,7 @@ function CostItemRow({ item, projectId }: { item: CostItem; projectId: string })
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => markCostItemPaid(projectId, item.id))}
-            className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+            className="min-h-[32px] rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
           >
             Mark paid
           </button>
@@ -68,7 +68,7 @@ function CostItemRow({ item, projectId }: { item: CostItem; projectId: string })
           action={deleteProjectCostItem.bind(null, projectId)}
           id={item.id}
           confirmText="Delete this cost item? This can't be undone."
-          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
         />
       </div>
     </div>
@@ -126,7 +126,7 @@ export function ProjectCostLedger({
         </label>
         <button
           type="submit"
-          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Log cost
         </button>

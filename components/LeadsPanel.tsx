@@ -38,7 +38,7 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function needsFollowUp(lead: Lead) {
@@ -71,7 +71,7 @@ function LeadValueInput({ leadId, valuePence }: { leadId: string; valuePence: nu
       onBlur={commit}
       placeholder="Value £"
       aria-label="Lead value in pounds"
-      className={`min-h-[32px] w-[84px] rounded-md border border-black/8 bg-surface px-2 py-1.5 text-xs font-semibold text-ink ${
+      className={`min-h-[32px] w-[84px] rounded-lg border border-black/8 bg-surface px-2 py-1.5 text-xs font-semibold text-ink ${
         isPending ? "opacity-60" : ""
       }`}
     />
@@ -85,7 +85,7 @@ function ConvertButton({ leadId, tenantId }: { leadId: string; tenantId: string 
       type="button"
       disabled={isPending}
       onClick={() => startTransition(() => convertLeadToProject(leadId, tenantId))}
-      className={`min-h-[32px] whitespace-nowrap rounded-md border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80 ${
+      className={`min-h-[32px] whitespace-nowrap rounded-lg border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80 ${
         isPending ? "opacity-60" : ""
       }`}
     >
@@ -126,10 +126,10 @@ function LeadDetails({ lead }: { lead: Lead }) {
         <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} className={field} />
       </label>
       <div className="flex gap-2">
-        <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
+        <button type="submit" className="btn-primary rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
           Save
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-black/8 px-3 py-1.5 text-xs font-semibold text-ink-2">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-black/8 px-3 py-1.5 text-xs font-semibold text-ink-2">
           Cancel
         </button>
       </div>
@@ -183,7 +183,7 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
               updateLeadStatus(lead.id, next);
             });
           }}
-          className={`min-h-[32px] rounded-md border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status] ?? "bg-surface-2 text-ink-2"} ${
+          className={`min-h-[32px] rounded-lg border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status] ?? "bg-surface-2 text-ink-2"} ${
             isPending ? "opacity-60" : ""
           }`}
         >
@@ -199,7 +199,7 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
           action={deleteLead}
           id={lead.id}
           confirmText={`Delete this lead (${lead.name ?? lead.email ?? "unnamed"})? This can't be undone.`}
-          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
         />
       </div>
     </div>

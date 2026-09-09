@@ -16,7 +16,7 @@ const TYPE_OPTIONS = [
 const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map((t) => [t.value, t.label]));
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export function CommunicationsPanel({
@@ -55,7 +55,7 @@ export function CommunicationsPanel({
         </label>
         <button
           type="submit"
-          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Log
         </button>
@@ -77,7 +77,7 @@ export function CommunicationsPanel({
                 action={deleteCommunication.bind(null, projectId)}
                 id={c.id}
                 confirmText="Delete this entry?"
-                className="min-h-[28px] flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                className="min-h-[28px] flex-none rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
               />
             </div>
           ))

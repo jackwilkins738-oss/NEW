@@ -12,7 +12,7 @@ import { DeleteButton } from "@/components/DeleteButton";
 export const dynamic = "force-dynamic";
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export default async function TeamPage() {
@@ -69,7 +69,7 @@ export default async function TeamPage() {
           </label>
           <button
             type="submit"
-            className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-5 sm:w-auto sm:justify-self-start sm:py-1.5"
+            className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-5 sm:w-auto sm:justify-self-start sm:py-1.5"
           >
             Add team member
           </button>
@@ -96,7 +96,7 @@ export default async function TeamPage() {
                     action={deleteTeamMember}
                     id={t.id}
                     confirmText={`Remove ${t.name} from your team?`}
-                    className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                    className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
                   />
                 </div>
               ))}

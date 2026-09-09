@@ -52,7 +52,7 @@ function MonthGroup({ label, projects, total }: { label: string; projects: Proje
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-md px-1 py-3 text-left hover:bg-surface-2"
+        className="flex w-full items-center justify-between rounded-lg px-1 py-3 text-left hover:bg-surface-2"
       >
         <div>
           <p className="text-sm font-semibold text-ink">{label}</p>

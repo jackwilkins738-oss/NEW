@@ -26,7 +26,7 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
@@ -52,7 +52,7 @@ function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
             setStatus(next);
             startTransition(() => updateSnagStatus(projectId, snag.id, next));
           }}
-          className={`min-h-[32px] rounded-md border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status]} ${
+          className={`min-h-[32px] rounded-lg border-0 px-2.5 py-1.5 text-xs font-bold ${STATUS_CLASS[status]} ${
             isPending ? "opacity-60" : ""
           }`}
         >
@@ -66,7 +66,7 @@ function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
           action={deleteSnag.bind(null, projectId)}
           id={snag.id}
           confirmText="Delete this snag? This can't be undone."
-          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
         />
       </div>
     </div>
@@ -108,7 +108,7 @@ export function SnagsPanel({ tenantId, projectId, snags }: { tenantId: string; p
         </label>
         <button
           type="submit"
-          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-4 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Add snag
         </button>

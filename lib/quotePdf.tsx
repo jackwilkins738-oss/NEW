@@ -8,20 +8,26 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+// Same Times-Roman heading / Helvetica body pairing as invoicePdf.tsx -
+// echoes the web version's Fraunces/Public Sans split without an external
+// font fetch during PDF render.
 const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
+  page: { padding: 0, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
+  accentBar: { height: 6 },
+  body: { padding: 40 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   logo: { width: 48, height: 48, objectFit: "contain" },
+  businessName: { fontSize: 14, fontFamily: "Times-Roman", fontWeight: 700 },
   businessMeta: { fontSize: 8, color: "#666", marginTop: 2, maxWidth: 220 },
-  eyebrow: { fontSize: 9, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginTop: 16 },
-  title: { fontSize: 20, fontWeight: 700, marginTop: 4 },
+  eyebrow: { fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginTop: 18, fontWeight: 700 },
+  title: { fontSize: 22, fontFamily: "Times-Roman", fontWeight: 700, marginTop: 4 },
   meta: { fontSize: 9, color: "#666", marginTop: 2 },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#eee" },
   category: { fontSize: 8, color: "#888", textTransform: "uppercase" },
   totalsRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
   totalsLabel: { fontSize: 10, color: "#444" },
-  grandTotalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderTopWidth: 1, borderTopColor: "#1a1a1a", marginTop: 4 },
-  grandTotalLabel: { fontSize: 13, fontWeight: 700 },
+  grandTotalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderTopWidth: 1.5, marginTop: 6 },
+  grandTotalLabel: { fontSize: 15, fontFamily: "Times-Roman", fontWeight: 700 },
   section: { marginTop: 18 },
   sectionLabel: { fontSize: 9, fontWeight: 700, marginBottom: 3 },
   sectionText: { fontSize: 9, color: "#444" },
@@ -32,6 +38,7 @@ export type QuotePdfData = {
   companyAddress: string | null;
   vatNumber: string | null;
   logoUrl: string | null;
+  brandColor: string;
   quoteNumber: string | null;
   clientName: string;
   lineItems: { category: string; description: string; unit_price_pence: number }[];
@@ -52,76 +59,79 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: 700 }}>{data.businessName}</Text>
-            {data.companyAddress && <Text style={styles.businessMeta}>{data.companyAddress}</Text>}
-            {data.vatNumber && <Text style={styles.businessMeta}>VAT: {data.vatNumber}</Text>}
-          </View>
-          {data.logoUrl && <Image src={data.logoUrl} style={styles.logo} />}
-        </View>
-
-        <Text style={styles.eyebrow}>Quote from {data.businessName}</Text>
-        <Text style={styles.title}>{data.clientName}</Text>
-        {data.quoteNumber && <Text style={styles.meta}>{data.quoteNumber}</Text>}
-
-        <View style={{ marginTop: 20 }}>
-          {data.lineItems.map((item, i) => (
-            <View key={i} style={styles.row}>
-              <View>
-                <Text style={styles.category}>{CATEGORY_LABEL[item.category] ?? "Other"}</Text>
-                <Text>{item.description || "-"}</Text>
-              </View>
-              <Text>{formatGBP(item.unit_price_pence)}</Text>
+        <View style={[styles.accentBar, { backgroundColor: data.brandColor }]} />
+        <View style={styles.body}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.businessName}>{data.businessName}</Text>
+              {data.companyAddress && <Text style={styles.businessMeta}>{data.companyAddress}</Text>}
+              {data.vatNumber && <Text style={styles.businessMeta}>VAT: {data.vatNumber}</Text>}
             </View>
-          ))}
-        </View>
+            {data.logoUrl && <Image src={data.logoUrl} style={styles.logo} />}
+          </View>
 
-        <View style={{ marginTop: 8 }}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Subtotal</Text>
-            <Text>{formatGBP(saleSubtotal)}</Text>
+          <Text style={[styles.eyebrow, { color: data.brandColor }]}>Quote from {data.businessName}</Text>
+          <Text style={styles.title}>{data.clientName}</Text>
+          {data.quoteNumber && <Text style={styles.meta}>{data.quoteNumber}</Text>}
+
+          <View style={{ marginTop: 20 }}>
+            {data.lineItems.map((item, i) => (
+              <View key={i} style={styles.row}>
+                <View>
+                  <Text style={styles.category}>{CATEGORY_LABEL[item.category] ?? "Other"}</Text>
+                  <Text>{item.description || "-"}</Text>
+                </View>
+                <Text>{formatGBP(item.unit_price_pence)}</Text>
+              </View>
+            ))}
           </View>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>VAT ({data.vatRate}%)</Text>
-            <Text>{formatGBP(data.vatAmountPence)}</Text>
-          </View>
-          <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>Total</Text>
-            <Text style={styles.grandTotalLabel}>{formatGBP(data.totalPence)}</Text>
-          </View>
-          {data.depositPence != null && (
+
+          <View style={{ marginTop: 8 }}>
             <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Deposit required</Text>
-              <Text>{formatGBP(data.depositPence)}</Text>
+              <Text style={styles.totalsLabel}>Subtotal</Text>
+              <Text>{formatGBP(saleSubtotal)}</Text>
+            </View>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>VAT ({data.vatRate}%)</Text>
+              <Text>{formatGBP(data.vatAmountPence)}</Text>
+            </View>
+            <View style={[styles.grandTotalRow, { borderTopColor: data.brandColor }]}>
+              <Text style={styles.grandTotalLabel}>Total</Text>
+              <Text style={styles.grandTotalLabel}>{formatGBP(data.totalPence)}</Text>
+            </View>
+            {data.depositPence != null && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Deposit required</Text>
+                <Text>{formatGBP(data.depositPence)}</Text>
+              </View>
+            )}
+          </View>
+
+          {data.expiresAt && (
+            <Text style={{ ...styles.meta, marginTop: 12 }}>
+              Valid until {new Date(data.expiresAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+            </Text>
+          )}
+
+          {data.paymentTerms && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Payment terms</Text>
+              <Text style={styles.sectionText}>{data.paymentTerms}</Text>
+            </View>
+          )}
+          {data.exclusions && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Exclusions</Text>
+              <Text style={styles.sectionText}>{data.exclusions}</Text>
+            </View>
+          )}
+          {data.terms && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Terms &amp; conditions</Text>
+              <Text style={styles.sectionText}>{data.terms}</Text>
             </View>
           )}
         </View>
-
-        {data.expiresAt && (
-          <Text style={{ ...styles.meta, marginTop: 12 }}>
-            Valid until {new Date(data.expiresAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
-          </Text>
-        )}
-
-        {data.paymentTerms && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Payment terms</Text>
-            <Text style={styles.sectionText}>{data.paymentTerms}</Text>
-          </View>
-        )}
-        {data.exclusions && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Exclusions</Text>
-            <Text style={styles.sectionText}>{data.exclusions}</Text>
-          </View>
-        )}
-        {data.terms && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Terms &amp; conditions</Text>
-            <Text style={styles.sectionText}>{data.terms}</Text>
-          </View>
-        )}
       </Page>
     </Document>
   );

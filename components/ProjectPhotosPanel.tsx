@@ -20,7 +20,7 @@ function publicPhotoUrl(storagePath: string) {
 }
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export function ProjectPhotosPanel({
@@ -77,7 +77,7 @@ export function ProjectPhotosPanel({
         <button
           type="submit"
           disabled={isPending}
-          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:col-span-4 sm:py-1.5"
+          className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:col-span-4 sm:py-1.5"
         >
           {isPending ? "Uploading…" : "Add photo"}
         </button>
@@ -116,14 +116,14 @@ function PhotoCard({ photo }: { photo: Photo }) {
             <button
               type="button"
               onClick={() => deleteProjectPhoto(photo.id, photo.storage_path)}
-              className="rounded-md bg-critical px-2.5 py-1 text-xs font-bold text-white"
+              className="rounded-lg bg-critical px-2.5 py-1 text-xs font-bold text-white"
             >
               Delete
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="rounded-md border border-white/40 px-2.5 py-1 text-xs font-semibold text-white"
+              className="rounded-lg border border-white/40 px-2.5 py-1 text-xs font-semibold text-white"
             >
               Cancel
             </button>
@@ -133,7 +133,7 @@ function PhotoCard({ photo }: { photo: Photo }) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="absolute right-1.5 top-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100"
         >
           Delete
         </button>

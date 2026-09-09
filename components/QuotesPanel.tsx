@@ -58,7 +58,7 @@ const CATEGORY_OPTIONS = [
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
 // 16px on focus - matches the field size already used elsewhere.
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 type DraftLine = { category: string; description: string; amountPounds: string };
@@ -176,7 +176,7 @@ function NewQuoteForm({
             <button
               type="button"
               onClick={() => setLines((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
-              className="min-h-[36px] rounded-md border border-black/8 px-2 text-xs font-semibold text-ink-2 hover:bg-surface"
+              className="min-h-[36px] rounded-lg border border-black/8 px-2 text-xs font-semibold text-ink-2 hover:bg-surface"
             >
               Remove
             </button>
@@ -255,7 +255,7 @@ function NewQuoteForm({
           </span>
           <button
             type="submit"
-            className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+            className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
           >
             Save quote
           </button>
@@ -303,7 +303,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
               updateQuoteStatus(quote.id, next);
             });
           }}
-          className={`min-h-[32px] rounded-md border-0 px-2.5 py-1.5 text-xs font-bold ${
+          className={`min-h-[32px] rounded-lg border-0 px-2.5 py-1.5 text-xs font-bold ${
             STATUS_CLASS[status] ?? "bg-surface-2 text-ink-2"
           } ${isPending ? "opacity-60" : ""}`}
         >
@@ -319,7 +319,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => sendQuote(quote.id, tenantId))}
-            className={`min-h-[32px] whitespace-nowrap rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface ${
+            className={`min-h-[32px] whitespace-nowrap rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface ${
               isPending ? "opacity-60" : ""
             }`}
           >
@@ -331,7 +331,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
           href={`/api/quotes/${quote.id}/pdf?token=${quote.accept_token}`}
           target="_blank"
           rel="noreferrer"
-          className="min-h-[32px] rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+          className="min-h-[32px] rounded-lg border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
         >
           PDF
         </a>
@@ -341,7 +341,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             href={`/quote/${quote.id}/${quote.accept_token}`}
             target="_blank"
             rel="noreferrer"
-            className="min-h-[32px] rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+            className="min-h-[32px] rounded-lg border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
           >
             Customer link
           </a>
@@ -352,7 +352,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => convertQuoteToProject(quote.id, tenantId))}
-            className={`min-h-[32px] whitespace-nowrap rounded-md border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80 ${
+            className={`min-h-[32px] whitespace-nowrap rounded-lg border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80 ${
               isPending ? "opacity-60" : ""
             }`}
           >
@@ -363,7 +363,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
           action={deleteQuote}
           id={quote.id}
           confirmText={`Delete the quote for ${quote.client_name}? This can't be undone.`}
-          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
         />
       </div>
     </div>

@@ -7,7 +7,7 @@ import { DeleteButton } from "@/components/DeleteButton";
 type Trade = { id: string; trade_name: string; percent_booked: number };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function meterColor(percent: number) {
@@ -67,7 +67,7 @@ function AddTradeForm({ tenantId }: { tenantId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:py-1.5"
+        className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60 sm:py-1.5"
       >
         {pending ? "Saving…" : "Set"}
       </button>

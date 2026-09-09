@@ -14,7 +14,7 @@ type Customer = {
 };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export function CustomerHeader({ customer }: { customer: Customer }) {
@@ -47,7 +47,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex-none rounded-md border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+            className="flex-none rounded-lg border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
           >
             Edit
           </button>
@@ -85,13 +85,13 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
         <textarea name="notes" rows={2} defaultValue={customer.notes ?? ""} className={field} />
       </label>
       <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" className="btn-primary rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+        <button type="submit" className="btn-primary rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
           Save
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="rounded-md border border-black/8 bg-surface-2 px-4 py-2.5 text-sm font-semibold text-ink-2"
+          className="rounded-lg border border-black/8 bg-surface-2 px-4 py-2.5 text-sm font-semibold text-ink-2"
         >
           Cancel
         </button>

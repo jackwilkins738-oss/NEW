@@ -52,7 +52,7 @@ function SwatchPicker({ value, onChange }: { value: string; onChange: (key: stri
 }
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 // admin.scalardigital.co.uk is the stable, permanent home for this app -
@@ -125,7 +125,7 @@ function CreateTenantForm() {
           <button
             type="submit"
             disabled={pending}
-            className="btn-primary rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+            className="btn-primary rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
           >
             {pending ? "Creating…" : "Create customer"}
           </button>
@@ -204,7 +204,7 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
           <button
             type="submit"
             disabled={pending || tenants.length === 0}
-            className="btn-primary rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+            className="btn-primary rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
           >
             {pending ? "Generating…" : "Generate invite link"}
           </button>
@@ -261,12 +261,12 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
         placeholder="dashboard.theirdomain.co.uk"
         // text-base (16px), not text-xs: below 16px, iOS Safari auto-zooms
         // into the field on focus.
-        className="w-full max-w-[280px] rounded-md border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink outline-none focus:border-brand sm:text-xs"
+        className="w-full max-w-[280px] rounded-lg border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink outline-none focus:border-brand sm:text-xs"
       />
       <button
         type="submit"
         disabled={pending || !changed}
-        className="min-h-[38px] rounded-md border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+        className="min-h-[38px] rounded-lg border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save"}
       </button>
@@ -319,7 +319,7 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
           type="button"
           onClick={handleSave}
           disabled={pending}
-          className="min-h-[38px] rounded-md border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
+          className="min-h-[38px] rounded-lg border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -336,13 +336,13 @@ function MembersEditor({ members }: { members: Member[] }) {
   return (
     <div className="mt-1 flex flex-col gap-1.5">
       {members.map((m) => (
-        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-md bg-surface-2 px-2.5 py-2">
+        <div key={m.membershipId} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-2">
           <span className="truncate text-xs text-ink-2">{m.email}</span>
           <DeleteButton
             action={removeMembership}
             id={m.membershipId}
             confirmText={`Remove ${m.email}'s access to this business? They'll no longer be able to sign in to it.`}
-            className="min-h-[32px] flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+            className="min-h-[32px] flex-none rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
           />
         </div>
       ))}

@@ -17,7 +17,7 @@ type Review = {
 };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export function Stars({ rating }: { rating: number | null }) {
@@ -50,7 +50,7 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
             action={deleteReview.bind(null, projectId)}
             id={review.id}
             confirmText={`Delete the review request for ${review.customer_name}?`}
-            className="min-h-[28px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+            className="min-h-[28px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
           />
         </div>
       </div>
@@ -79,7 +79,7 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
                 Review text
                 <textarea name="reviewText" rows={2} className={field} />
               </label>
-              <button type="submit" className="btn-primary self-start rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
+              <button type="submit" className="btn-primary self-start rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
                 Save review
               </button>
             </form>
@@ -125,7 +125,7 @@ export function ReviewsPanel({
           Customer name
           <input name="customerName" required className={field} />
         </label>
-        <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+        <button type="submit" className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
           Request review
         </button>
       </form>

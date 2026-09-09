@@ -34,7 +34,7 @@ export function CalendarPanel({
         </p>
         <a
           href="/api/calendar/google/connect"
-          className="mt-3 inline-block rounded-md bg-brand px-3 py-2 text-sm font-bold text-white hover:bg-brand-strong"
+          className="mt-3 inline-block rounded-lg bg-brand px-3 py-2 text-sm font-bold text-white hover:bg-brand-strong"
         >
           Connect Google Calendar
         </a>

@@ -19,7 +19,7 @@ export function ReviewsSortSelect({ current }: { current: string }) {
       <select
         defaultValue={current}
         onChange={(e) => router.push(`/reviews?sort=${e.target.value}`)}
-        className="ml-2 mt-0 rounded-md border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink"
+        className="ml-2 mt-0 rounded-lg border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink"
       >
         {SORT_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>

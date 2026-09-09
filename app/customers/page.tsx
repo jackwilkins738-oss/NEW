@@ -10,7 +10,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { addCustomer } from "@/app/dashboard/actions";
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +77,7 @@ export default async function CustomersPage() {
             Phone
             <input name="phone" className={field} />
           </label>
-          <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5">
+          <button type="submit" className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5">
             Add customer
           </button>
         </form>

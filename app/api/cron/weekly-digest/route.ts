@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildAlerts, type Alert } from "@/lib/alerts";
+import { computeProjectRisks } from "@/lib/projectRisk";
+import { computePortfolioForecast } from "@/lib/portfolioForecast";
+import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { sendEmail } from "@/lib/email";
+import { formatGBP } from "@/lib/format";
 import { deriveBrandTheme } from "@/lib/theme";
 
 const SEVERITY_COLOR: Record<Alert["severity"], string> = {
@@ -48,10 +52,13 @@ async function sendDigestForTenant(
 ): Promise<boolean> {
   const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes] = await Promise.all([
     admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
-    admin.from("invoices").select("id, client_name, amount_pence, due_date, status").eq("tenant_id", tenant.id),
+    admin
+      .from("invoices")
+      .select("id, client_name, amount_pence, paid_pence, due_date, status, project_id")
+      .eq("tenant_id", tenant.id),
     admin
       .from("projects")
-      .select("id, client_name, target_date, next_visit_at, status, quote_id")
+      .select("id, client_name, target_date, next_visit_at, status, quote_id, value_pence, completed_at")
       .eq("tenant_id", tenant.id),
     admin
       .from("quotes")
@@ -59,7 +66,7 @@ async function sendDigestForTenant(
       .eq("tenant_id", tenant.id),
     admin
       .from("variations")
-      .select("id, number, project_id, status")
+      .select("id, number, project_id, status, customer_price_pence")
       .eq("tenant_id", tenant.id)
       .eq("status", "pending"),
     admin.from("project_cost_items").select("project_id, amount_pence").eq("tenant_id", tenant.id),
@@ -84,7 +91,12 @@ async function sendDigestForTenant(
       const quote = quoteById.get(p.quote_id!);
       const lineItems = (quote?.line_items ?? []) as { unit_price_pence: number }[];
       const budgetPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
-      return { client_name: p.client_name, budget_pence: budgetPence, committed_pence: committedByProject.get(p.id) ?? 0 };
+      return {
+        project_id: p.id,
+        client_name: p.client_name,
+        budget_pence: budgetPence,
+        committed_pence: committedByProject.get(p.id) ?? 0,
+      };
     });
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
@@ -115,6 +127,24 @@ async function sendDigestForTenant(
   // send when there's actually something worth a tenant's attention.
   if (alerts.length === 0) return false;
 
+  // Same pure functions the dashboard's own "Projects at risk", forecast
+  // margin and receivables ageing cards use - a compact snapshot instead
+  // of duplicating that logic, so the email can never say something
+  // different from what the dashboard itself shows.
+  const invoices = invoicesRes.data ?? [];
+  const jobRisks = computeProjectRisks(
+    projects.map((p) => ({ id: p.id, client_name: p.client_name, status: p.status, target_date: p.target_date, completed_at: p.completed_at })),
+    invoices,
+    (variationsRes.data ?? []).map((v) => ({ project_id: v.project_id, customer_price_pence: v.customer_price_pence, status: v.status, number: v.number })),
+    projectBudgets
+  );
+  const forecast = computePortfolioForecast(
+    projects.map((p) => ({ id: p.id, value_pence: p.value_pence, completed_at: p.completed_at })),
+    costItemsRes.data ?? []
+  );
+  const aging = computeReceivablesAging(invoices);
+  const totalRiskExposure = jobRisks.reduce((sum, r) => sum + r.financialImpactPence, 0);
+
   const { data: memberships } = await admin.from("memberships").select("user_id").eq("tenant_id", tenant.id);
   if (!memberships || memberships.length === 0) return false;
 
@@ -135,12 +165,23 @@ async function sendDigestForTenant(
     )
     .join("");
 
+  const snapshotCells = [
+    jobRisks.length > 0 ? `<strong>${jobRisks.length}</strong> project${jobRisks.length === 1 ? "" : "s"} at risk (${formatGBP(totalRiskExposure)} exposed)` : null,
+    forecast.forecastMarginPercent != null ? `<strong>${forecast.forecastMarginPercent.toFixed(1)}%</strong> forecast margin` : null,
+    aging.totalOutstandingPence > 0 ? `<strong>${formatGBP(aging.totalOutstandingPence)}</strong> outstanding` : null,
+  ].filter((c): c is string => c != null);
+  const snapshot =
+    snapshotCells.length > 0
+      ? `<p style="margin:14px 0;padding:12px 14px;background:#f4f1ea;border-radius:8px;font-size:14px;">${snapshotCells.join(" &middot; ")}</p>`
+      : "";
+
   await sendEmail({
     to: emails,
     subject: `This week: ${alerts.length} thing${alerts.length === 1 ? "" : "s"} need${alerts.length === 1 ? "s" : ""} attention`,
     html: `
       <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
         <p style="font-size:16px;">Your Monday check-in for <strong>${tenant.business_name}</strong>:</p>
+        ${snapshot}
         <ul style="padding-left:18px;">${rows}</ul>
         <p style="margin-top:20px;">
           <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">Open your dashboard</a>

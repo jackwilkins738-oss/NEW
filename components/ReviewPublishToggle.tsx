@@ -19,7 +19,7 @@ export function ReviewPublishToggle({
       type="button"
       disabled={isPending}
       onClick={() => startTransition(() => togglePublishReview(projectId, reviewId, !published))}
-      className={`min-h-[28px] rounded-md px-2 py-1 text-xs font-semibold ${
+      className={`min-h-[28px] rounded-lg px-2 py-1 text-xs font-semibold ${
         published ? "bg-[rgba(12,163,12,0.15)] text-good" : "border border-black/8 bg-surface-2 text-ink-2"
       } ${isPending ? "opacity-60" : ""}`}
     >

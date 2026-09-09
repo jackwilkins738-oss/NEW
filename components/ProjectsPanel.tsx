@@ -55,7 +55,7 @@ function localTimeInput(iso: string | null) {
 // iOS Safari auto-zooms into the field on focus - a 14px input on a phone
 // form is a real usability problem there, not just a style nit.
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function NewProjectForm({ tenantId }: { tenantId: string }) {
@@ -83,7 +83,7 @@ function NewProjectForm({ tenantId }: { tenantId: string }) {
       </label>
       <button
         type="submit"
-        className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+        className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
       >
         Add project
       </button>
@@ -99,7 +99,7 @@ function ProjectCard({ project }: { project: Project }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md px-1 py-3 text-left hover:bg-surface-2"
+        className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg px-1 py-3 text-left hover:bg-surface-2"
       >
         <div className="min-w-0">
           <div className="font-mono text-xs text-muted">{project.ref}</div>
@@ -219,14 +219,14 @@ function ProjectCard({ project }: { project: Project }) {
             <div className="flex gap-2 sm:col-span-3">
               <button
                 type="submit"
-                className="btn-primary flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:flex-none"
+                className="btn-primary flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:flex-none"
               >
                 Save changes
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex-1 rounded-md border border-black/8 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
+                className="flex-1 rounded-lg border border-black/8 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
               >
                 Close
               </button>
@@ -237,7 +237,7 @@ function ProjectCard({ project }: { project: Project }) {
                     deleteProject(project.id);
                   }
                 }}
-                className="ml-auto rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-4 py-2.5 text-sm font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                className="ml-auto rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-4 py-2.5 text-sm font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
               >
                 Delete
               </button>

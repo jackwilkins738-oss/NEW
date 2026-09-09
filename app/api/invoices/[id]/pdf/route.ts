@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoicePdfDocument, type InvoicePdfData } from "@/lib/invoicePdf";
+import { deriveBrandTheme } from "@/lib/theme";
 
 const SELECT = "id, tenant_id, invoice_number, reference, milestone, client_name, amount_pence, paid_pence, due_date, status, view_token";
 
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: tenant } = await admin
     .from("tenants")
-    .select("business_name, company_address, vat_number, bank_details, logo_url")
+    .select("business_name, company_address, vat_number, bank_details, logo_url, brand_theme")
     .eq("id", invoice.tenant_id)
     .maybeSingle();
 
@@ -42,6 +43,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     vatNumber: tenant?.vat_number ?? null,
     bankDetails: tenant?.bank_details ?? null,
     logoUrl: tenant?.logo_url ?? null,
+    brandColor: deriveBrandTheme(tenant?.brand_theme ?? "rust").light.brand,
     invoiceNumber: invoice.invoice_number,
     reference: invoice.reference,
     milestone: invoice.milestone,

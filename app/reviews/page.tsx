@@ -110,7 +110,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
                           action={deleteReview.bind(null, r.project_id)}
                           id={r.id}
                           confirmText={`Delete the review request for ${r.customer_name}?`}
-                          className="min-h-[28px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                          className="min-h-[28px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2 py-1 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
                         />
                       </div>
                     )}

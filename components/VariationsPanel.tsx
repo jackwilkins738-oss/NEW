@@ -31,7 +31,7 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function VariationRow({ variation, projectId }: { variation: Variation; projectId: string }) {
@@ -64,7 +64,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
               type="button"
               disabled={isPending}
               onClick={() => startTransition(() => approveVariation(projectId, variation.id))}
-              className="min-h-[32px] rounded-md border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80"
+              className="min-h-[32px] rounded-lg border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80"
             >
               Approve
             </button>
@@ -72,7 +72,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
               type="button"
               disabled={isPending}
               onClick={() => startTransition(() => declineVariation(projectId, variation.id))}
-              className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+              className="min-h-[32px] rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
             >
               Decline
             </button>
@@ -83,7 +83,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => createInvoiceFromVariation(projectId, variation.id))}
-            className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+            className="min-h-[32px] rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
           >
             Create invoice
           </button>
@@ -95,7 +95,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
           action={deleteVariation.bind(null, projectId)}
           id={variation.id}
           confirmText={`Delete ${variation.number ?? "this variation"}? This can't be undone.`}
-          className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+          className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
         />
       </div>
     </div>
@@ -148,7 +148,7 @@ export function VariationsPanel({
         </label>
         <button
           type="submit"
-          className="btn-primary self-end rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
+          className="btn-primary self-end rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:py-1.5"
         >
           Log variation
         </button>

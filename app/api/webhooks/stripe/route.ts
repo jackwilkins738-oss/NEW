@@ -32,10 +32,14 @@ export async function POST(request: Request) {
         const admin = createAdminClient();
         const { data: invoice } = await admin
           .from("invoices")
-          .select("amount_pence, project_id, tenant_id")
+          .select("amount_pence, project_id, tenant_id, status")
           .eq("id", invoiceId)
           .maybeSingle();
-        if (invoice) {
+        // Stripe can redeliver the same event (their documented at-least-
+        // once guarantee) - skip work entirely once this invoice is
+        // already marked paid, so a replay can't leave a second identical
+        // "Invoice paid" note in the project's communications log.
+        if (invoice && invoice.status !== "paid") {
           await admin.from("invoices").update({ status: "paid", paid_pence: invoice.amount_pence }).eq("id", invoiceId);
           if (invoice.project_id) {
             await admin.from("communications").insert({

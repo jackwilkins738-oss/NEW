@@ -26,7 +26,7 @@ const CATEGORY_OPTIONS = [
 const CATEGORY_LABEL = Object.fromEntries(CATEGORY_OPTIONS.map((c) => [c.value, c.label]));
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 function DocumentRowItem({ doc, projectId }: { doc: DocumentRow; projectId: string }) {
@@ -54,7 +54,7 @@ function DocumentRowItem({ doc, projectId }: { doc: DocumentRow; projectId: stri
           if (!confirm(`Delete ${doc.filename}?`)) return;
           startTransition(() => deleteProjectDocument(projectId, doc.id, doc.storage_path));
         }}
-        className="min-h-[32px] flex-none rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+        className="min-h-[32px] flex-none rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
       >
         Delete
       </button>
@@ -95,7 +95,7 @@ export function DocumentsPanel({
         </label>
         <button
           type="submit"
-          className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
+          className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-3 sm:w-auto sm:justify-self-start sm:py-1.5"
         >
           Upload
         </button>

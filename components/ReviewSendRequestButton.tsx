@@ -37,7 +37,7 @@ export function ReviewSendRequestButton({
           else if (res.reason === "no_email") setResult("no_email");
         })
       }
-      className="min-h-[28px] rounded-md border border-black/8 bg-surface-2 px-2 py-1 text-xs font-semibold text-ink-2 hover:bg-surface disabled:opacity-60"
+      className="min-h-[28px] rounded-lg border border-black/8 bg-surface-2 px-2 py-1 text-xs font-semibold text-ink-2 hover:bg-surface disabled:opacity-60"
     >
       Send request
     </button>

@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConnection";
 import { getEvent } from "@/lib/googleCalendar";
+import { sendPaymentReminders } from "@/lib/paymentReminders";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
 // Google already happens instantly (syncNextVisitToCalendar in
@@ -91,5 +92,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, checked, updated });
+  const reminders = await sendPaymentReminders();
+
+  return NextResponse.json({ ok: true, checked, updated, reminders });
 }

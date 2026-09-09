@@ -55,7 +55,7 @@ const SORT_RANK: Record<string, number> = { overdue: 0, due_soon: 1, part_paid: 
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
 // 16px on focus, which is a real usability problem on a form meant for a phone.
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 
 function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; outstanding: number }) {
   const [open, setOpen] = useState(false);
@@ -67,7 +67,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+        className="min-h-[32px] rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
       >
         Record payment
       </button>
@@ -82,7 +82,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
         step="0.01"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        className="min-h-[32px] w-20 rounded-md border border-black/15 bg-surface px-2 py-1 text-xs text-ink"
+        className="min-h-[32px] w-20 rounded-lg border border-black/15 bg-surface px-2 py-1 text-xs text-ink"
       />
       <button
         type="button"
@@ -93,7 +93,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
             setOpen(false);
           })
         }
-        className="min-h-[32px] rounded-md bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
+        className="min-h-[32px] rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
       >
         Save
       </button>
@@ -123,7 +123,7 @@ function SendInvoiceButton({ invoiceId, tenantId, alreadySent }: { invoiceId: st
           else if (res.reason === "no_email") setResult("no_email");
         })
       }
-      className="btn-primary min-h-[32px] rounded-md bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+      className="btn-primary min-h-[32px] rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-60"
     >
       Send invoice
     </button>
@@ -216,7 +216,7 @@ function NewInvoiceForm({
       </label>
       <button
         type="submit"
-        className="btn-primary rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
+        className="btn-primary rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong sm:col-span-6 sm:w-auto sm:justify-self-start sm:py-1.5"
       >
         Add
       </button>
@@ -294,7 +294,7 @@ export function InvoicesPanel({
                   href={`/api/invoices/${inv.id}/pdf`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex min-h-[32px] items-center rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
+                  className="flex min-h-[32px] items-center rounded-lg border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
                 >
                   PDF
                 </a>
@@ -305,7 +305,7 @@ export function InvoicesPanel({
                     <form action={markInvoicePaid.bind(null, inv.id)}>
                       <button
                         type="submit"
-                        className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                        className="min-h-[32px] rounded-lg border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
                       >
                         Mark fully paid
                       </button>
@@ -316,7 +316,7 @@ export function InvoicesPanel({
                   action={deleteInvoice}
                   id={inv.id}
                   confirmText={`Delete the invoice for ${inv.client_name}? This can't be undone.`}
-                  className="min-h-[32px] rounded-md border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
+                  className="min-h-[32px] rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)]"
                 />
               </div>
             </div>

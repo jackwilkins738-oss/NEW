@@ -49,7 +49,7 @@ export function AssignedTeamPanel({
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="min-h-[36px] rounded-md border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink"
+            className="min-h-[36px] rounded-lg border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink"
           >
             <option value="">Add team member...</option>
             {unassignedOptions.map((t) => (
@@ -65,7 +65,7 @@ export function AssignedTeamPanel({
               startTransition(() => assignTeamMemberToProject(projectId, selected));
               setSelected("");
             }}
-            className="min-h-[36px] rounded-md bg-brand px-3 py-1.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-50"
+            className="min-h-[36px] rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-50"
           >
             Add
           </button>

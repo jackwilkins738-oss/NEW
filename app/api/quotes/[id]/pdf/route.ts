@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QuotePdfDocument, type QuotePdfData } from "@/lib/quotePdf";
+import { deriveBrandTheme } from "@/lib/theme";
 
 const SELECT =
   "id, tenant_id, quote_number, client_name, line_items, markup_percent, vat_rate, vat_amount_pence, total_pence, expires_at, deposit_pence, payment_terms, exclusions, terms, accept_token";
@@ -34,7 +35,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: tenant } = await admin
     .from("tenants")
-    .select("business_name, company_address, vat_number, logo_url")
+    .select("business_name, company_address, vat_number, logo_url, brand_theme")
     .eq("id", quote.tenant_id)
     .maybeSingle();
 
@@ -43,6 +44,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     companyAddress: tenant?.company_address ?? null,
     vatNumber: tenant?.vat_number ?? null,
     logoUrl: tenant?.logo_url ?? null,
+    brandColor: deriveBrandTheme(tenant?.brand_theme ?? "rust").light.brand,
     quoteNumber: quote.quote_number,
     clientName: quote.client_name,
     lineItems: quote.line_items,
