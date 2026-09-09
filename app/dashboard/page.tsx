@@ -26,7 +26,7 @@ import { computeBacklogByMonth } from "@/lib/backlog";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
-import { NavMenu } from "@/components/NavMenu";
+import { AppSidebar } from "@/components/AppSidebar";
 import { Sparkline } from "@/components/Sparkline";
 import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
@@ -446,34 +446,16 @@ export default async function DashboardPage() {
   const quotesAwaitingDecision = quotes.filter((q) => q.status === "sent").length;
 
   return (
-    <main className="min-h-screen bg-page px-6 py-8">
+    <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <div className="mx-auto max-w-6xl">
-        <header className="flex flex-col gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className="h-9 w-1 flex-none rounded-full"
-              style={{ background: "linear-gradient(180deg, var(--brand), var(--brand-strong))" }}
-            />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                Operations &amp; Sales Dashboard
-              </p>
-              <h1 className="font-display text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
-                {tenant.business_name}
-              </h1>
-            </div>
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Operations &amp; Sales Dashboard</p>
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{tenant.business_name}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <NavMenu />
-            <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
-            <form action={signOut}>
-              <button className="w-full rounded-lg border border-black/8 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
-                Sign out
-              </button>
-            </form>
-          </div>
+          <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
         </header>
 
         {/* One unified overview card instead of seven separate tiles - the

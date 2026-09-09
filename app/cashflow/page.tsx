@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { signOut } from "@/app/login/actions";
 import { IconWallet } from "@/components/DashboardIcons";
+import { AppSidebar } from "@/components/AppSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -70,14 +71,11 @@ export default async function CashflowPage() {
   const netPosition = totalIn - totalOut;
 
   return (
-    <main className="min-h-screen bg-page px-6 py-8">
+    <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <div className="mx-auto max-w-4xl">
-        <Link href="/dashboard" className="text-xs font-semibold text-muted hover:text-brand hover:underline">
-          &larr; Back to dashboard
-        </Link>
-
-        <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <header className="rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
             <IconWallet className="h-5 w-5 text-brand" />
             Cashflow

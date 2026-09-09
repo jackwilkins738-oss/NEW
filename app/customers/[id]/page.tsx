@@ -4,7 +4,9 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { signOut } from "@/app/login/actions";
 import { CustomerHeader } from "@/components/CustomerHeader";
+import { AppSidebar } from "@/components/AppSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -70,9 +72,10 @@ export default async function CustomerPage({ params }: { params: { id: string } 
     `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/project-photos/${storagePath}`;
 
   return (
-    <main className="min-h-screen bg-page px-6 py-8">
+    <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <div className="mx-auto max-w-3xl">
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <div className="mx-auto max-w-3xl px-6 py-8">
         <Link href="/customers" className="text-xs font-semibold text-muted hover:text-brand hover:underline">
           &larr; Back to customers
         </Link>

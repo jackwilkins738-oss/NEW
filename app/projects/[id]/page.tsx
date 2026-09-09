@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +11,8 @@ import { AssignedTeamPanel } from "@/components/AssignedTeamPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { ReviewsPanel } from "@/components/ReviewsPanel";
 import { markProjectComplete } from "@/app/dashboard/actions";
+import { signOut } from "@/app/login/actions";
+import { AppSidebar } from "@/components/AppSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -144,14 +145,11 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const actualMargin = revenue > 0 ? (actualProfit / revenue) * 100 : null;
 
   return (
-    <main className="min-h-screen bg-page px-6 py-8">
+    <main className="min-h-screen bg-page sm:pl-64">
       <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <div className="mx-auto max-w-4xl">
-        <Link href="/dashboard" className="text-xs font-semibold text-muted hover:text-brand hover:underline">
-          &larr; Back to dashboard
-        </Link>
-
-        <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
+      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} />
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <header className="rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-mono text-xs text-muted">{project.ref}</p>
