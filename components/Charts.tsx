@@ -34,17 +34,22 @@ export function BarChart({
   note,
   rows,
   format,
+  bare = false,
 }: {
   title: string;
   note?: string;
   rows: { label: string; value: number; detail?: string }[];
   format: Format;
+  // Skips the card's own border/shadow/padding when two or more of these
+  // sit inside a shared wrapper card instead of each carrying its own -
+  // see "Lead source" / "Win rate by source" on the dashboard.
+  bare?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...rows.map((r) => r.value));
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div className={bare ? "" : "rounded-2xl border border-black/8 bg-surface p-5 shadow-sm"}>
       <h2 className="text-sm font-bold text-ink">{title}</h2>
       {note && <p className="text-xs text-muted">{note}</p>}
       <div className="mt-4 flex flex-col gap-3.5">

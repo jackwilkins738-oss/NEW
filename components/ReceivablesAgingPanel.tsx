@@ -9,17 +9,35 @@ const BUCKET_TONE: Record<string, string> = {
   "90+ days": "text-critical",
 };
 
-export function ReceivablesAgingPanel({ aging }: { aging: ReceivablesAging }) {
+export function ReceivablesAgingPanel({
+  aging,
+  dueSoonPence,
+  dueSoonCount,
+}: {
+  aging: ReceivablesAging;
+  dueSoonPence?: number;
+  dueSoonCount?: number;
+}) {
   const buckets = [aging.current, aging.days1to30, aging.days31to60, aging.days61to90, aging.over90];
   const max = Math.max(1, ...buckets.map((b) => b.totalPence));
 
   return (
     <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold text-ink-2">Receivables ageing</p>
-        <p className="font-mono text-sm font-bold text-ink">{formatGBP(aging.totalOutstandingPence)}</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div>
+          <p className="text-sm font-semibold text-ink-2">Receivables ageing</p>
+          <p className="text-xs text-muted">Every unpaid or part-paid invoice, by how overdue it is</p>
+        </div>
+        <div className="flex items-baseline gap-4">
+          {dueSoonPence != null && dueSoonPence > 0 && (
+            <p className="text-right text-xs text-[#8a5a00]">
+              <span className="font-mono font-bold">{formatGBP(dueSoonPence)}</span> due in 7 days
+              <span className="text-muted"> ({dueSoonCount})</span>
+            </p>
+          )}
+          <p className="font-mono text-sm font-bold text-ink">{formatGBP(aging.totalOutstandingPence)} total</p>
+        </div>
       </div>
-      <p className="text-xs text-muted">Every unpaid or part-paid invoice, by how overdue it is</p>
 
       <div className="mt-4 grid grid-cols-5 gap-2">
         {buckets.map((b) => (

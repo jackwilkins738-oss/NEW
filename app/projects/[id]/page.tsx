@@ -177,7 +177,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
                 <form action={markProjectComplete.bind(null, project.id, tenant.id)} className="mt-2">
                   <button
                     type="submit"
-                    className="rounded-md border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                    className="rounded-lg border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
                   >
                     Mark complete
                   </button>
@@ -187,7 +187,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           </div>
         </header>
 
-        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Financial</p>
+
+        <div className="mt-2 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Budget vs. actual</h2>
           {!project.quote_id && (
             <p className="mt-1 text-xs text-muted">
@@ -206,7 +208,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               </thead>
               <tbody>
                 {CATEGORIES.map((cat) => (
-                  <tr key={cat} className="border-b border-black/5 last:border-none">
+                  <tr key={cat} className="row-hover border-b border-black/5 last:border-none">
                     <td className="py-2 text-ink-2">{CATEGORY_LABEL[cat]}</td>
                     <td className="py-2 text-right font-mono text-ink">{formatGBP(budgetByCategory.get(cat) ?? 0)}</td>
                     <td className="py-2 text-right font-mono text-ink">{formatGBP(committedByCategory.get(cat) ?? 0)}</td>
@@ -291,15 +293,17 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </div>
 
         <div className="mt-5">
-          <AssignedTeamPanel projectId={project.id} assigned={assignedTeam} available={team} />
-        </div>
-
-        <div className="mt-5">
           <VariationsPanel tenantId={tenant.id} projectId={project.id} variations={variations} />
         </div>
 
         <div className="mt-5">
           <ProjectCostLedger tenantId={tenant.id} projectId={project.id} items={costItems} />
+        </div>
+
+        <p className="mt-7 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Team &amp; site</p>
+
+        <div className="mt-2">
+          <AssignedTeamPanel projectId={project.id} assigned={assignedTeam} available={team} />
         </div>
 
         <div className="mt-5">
@@ -310,7 +314,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           <SnagsPanel tenantId={tenant.id} projectId={project.id} snags={snags} />
         </div>
 
-        <div className="mt-5">
+        <p className="mt-7 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Client</p>
+
+        <div className="mt-2">
           <CommunicationsPanel tenantId={tenant.id} projectId={project.id} communications={communications} />
         </div>
 

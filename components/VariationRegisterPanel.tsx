@@ -6,7 +6,7 @@ export function VariationRegisterPanel({ summary }: { summary: VariationRegister
   const hasAnything = summary.pendingCount > 0 || summary.approvedCount > 0 || summary.declinedCount > 0;
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div>
       <h2 className="text-sm font-bold text-ink">Variation register</h2>
       <p className="text-xs text-muted">Extra work requested across every project - what's pending, approved, or declined</p>
 

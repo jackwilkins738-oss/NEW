@@ -476,63 +476,67 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        {/* Hero row: the two numbers actually worth a glance before anything
-            else, each with a trailing-12-month trend line so a number reads
-            as a trajectory, not just a snapshot. */}
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-5">
-          <div className="hero-tile kpi-tile rounded-2xl p-5 sm:col-span-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
-                <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-                  {formatGBP(pipelineValue)}
-                </p>
-                <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
+        {/* One unified overview card instead of seven separate tiles - the
+            two numbers worth a real glance (with trend lines) up top, the
+            five secondary stats as a divided strip below, sharing a single
+            border/shadow instead of each competing for attention on their
+            own. */}
+        <div className="hero-tile kpi-tile mt-5 rounded-2xl p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
+            <div className="sm:col-span-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
+                  <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
+                    {formatGBP(pipelineValue)}
+                  </p>
+                  <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
+                </div>
+                <IconTrendUp className="h-8 w-8 flex-none text-brand-strong opacity-70" />
               </div>
-              <IconTrendUp className="h-8 w-8 flex-none text-brand-strong opacity-70" />
+              <Sparkline values={pipelineSparkline} color="var(--brand-strong)" />
             </div>
-            <Sparkline values={pipelineSparkline} color="var(--brand-strong)" />
-          </div>
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:col-span-2">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-ink-2">Revenue</p>
-                <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
-                <p className="mt-1 text-xs text-muted">All paid invoices</p>
+            <div className="sm:col-span-2 sm:border-l sm:border-black/8 sm:pl-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink-2">Revenue</p>
+                  <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
+                  <p className="mt-1 text-xs text-muted">All paid invoices</p>
+                </div>
+                <IconBanknote className="h-6 w-6 flex-none text-muted" />
               </div>
-              <IconBanknote className="h-6 w-6 flex-none text-muted" />
+              <Sparkline values={revenueSparkline} color="var(--brand)" />
             </div>
-            <Sparkline values={revenueSparkline} color="var(--brand)" />
           </div>
-        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-4 shadow-sm">
-            <IconTrophy className="h-5 w-5 text-muted" />
-            <p className="mt-2 text-xs font-semibold text-ink-2">Won this month</p>
-            <p className="mt-1 font-mono text-xl font-bold text-ink">{formatGBP(wonThisMonth)}</p>
-          </div>
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-4 shadow-sm">
-            <IconClock className={`h-5 w-5 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
-            <p className="mt-2 text-xs font-semibold text-ink-2">Outstanding</p>
-            <p className={`mt-1 font-mono text-xl font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
-              {formatGBP(outstandingTotal)}
-            </p>
-          </div>
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-4 shadow-sm">
-            <IconDocument className="h-5 w-5 text-muted" />
-            <p className="mt-2 text-xs font-semibold text-ink-2">Quotes awaiting</p>
-            <p className="mt-1 font-mono text-xl font-bold text-ink">{quotesAwaitingDecision}</p>
-          </div>
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-4 shadow-sm">
-            <IconUsers className="h-5 w-5 text-muted" />
-            <p className="mt-2 text-xs font-semibold text-ink-2">Leads &middot; 30d</p>
-            <p className="mt-1 font-mono text-xl font-bold text-ink">{leads.length}</p>
-          </div>
-          <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-4 shadow-sm">
-            <IconEye className="h-5 w-5 text-muted" />
-            <p className="mt-2 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
-            <p className="mt-1 font-mono text-xl font-bold text-ink">{pageviewCount}</p>
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-black/8 pt-4 sm:grid-cols-5 sm:divide-x sm:divide-black/8">
+            <div className="sm:pr-4">
+              <IconTrophy className="h-4 w-4 text-muted" />
+              <p className="mt-1.5 text-xs font-semibold text-ink-2">Won this month</p>
+              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(wonThisMonth)}</p>
+            </div>
+            <div className="sm:px-4">
+              <IconClock className={`h-4 w-4 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
+              <p className="mt-1.5 text-xs font-semibold text-ink-2">Outstanding</p>
+              <p className={`mt-0.5 font-mono text-lg font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
+                {formatGBP(outstandingTotal)}
+              </p>
+            </div>
+            <div className="sm:px-4">
+              <IconDocument className="h-4 w-4 text-muted" />
+              <p className="mt-1.5 text-xs font-semibold text-ink-2">Quotes awaiting</p>
+              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{quotesAwaitingDecision}</p>
+            </div>
+            <div className="sm:px-4">
+              <IconUsers className="h-4 w-4 text-muted" />
+              <p className="mt-1.5 text-xs font-semibold text-ink-2">Leads &middot; 30d</p>
+              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{leads.length}</p>
+            </div>
+            <div className="sm:pl-4">
+              <IconEye className="h-4 w-4 text-muted" />
+              <p className="mt-1.5 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
+              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{pageviewCount}</p>
+            </div>
           </div>
         </div>
 
@@ -565,20 +569,15 @@ export default async function DashboardPage() {
           </Suspense>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <ReceivablesAgingPanel aging={receivablesAging} />
-          <div className="kpi-tile rounded-2xl border border-[rgba(250,178,25,0.4)] bg-[rgba(250,178,25,0.1)] p-5 shadow-sm">
-            <p className="text-sm font-semibold text-[#8a5a00]">Due in next 7 days</p>
-            <p className="mt-2 text-3xl font-bold text-ink [font-feature-settings:'tnum']">{formatGBP(dueSoonTotal)}</p>
-            <p className="mt-1 text-xs text-muted">
-              {dueSoonInvoices.length} invoice{dueSoonInvoices.length === 1 ? "" : "s"}
-            </p>
-          </div>
+        <div className="mt-4">
+          <ReceivablesAgingPanel aging={receivablesAging} dueSoonPence={dueSoonTotal} dueSoonCount={dueSoonInvoices.length} />
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
           <VariationRegisterPanel summary={variationRegister} />
-          <SnagRegisterPanel summary={snagRegister} />
+          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+            <SnagRegisterPanel summary={snagRegister} />
+          </div>
         </div>
 
         {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
@@ -668,19 +667,17 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <BarChart
-            title="Lead source"
-            note="Last 30 days &middot; by volume"
-            rows={leadSourceBreakdown}
-            format="count"
-          />
-          <BarChart
-            title="Win rate by source"
-            note="Won vs. lost - leads still in progress aren't counted yet"
-            rows={leadSourceWinRate}
-            format="percent"
-          />
+        <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-black/8">
+          <BarChart title="Lead source" note="Last 30 days &middot; by volume" rows={leadSourceBreakdown} format="count" bare />
+          <div className="border-t border-black/8 pt-5 sm:border-none sm:pl-6 sm:pt-0">
+            <BarChart
+              title="Win rate by source"
+              note="Won vs. lost - leads still in progress aren't counted yet"
+              rows={leadSourceWinRate}
+              format="percent"
+              bare
+            />
+          </div>
         </div>
 
         <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">

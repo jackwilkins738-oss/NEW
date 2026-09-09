@@ -5,7 +5,7 @@ export function SnagRegisterPanel({ summary }: { summary: SnagRegisterSummary })
   const hasAnything = summary.openCount > 0 || summary.completeCount > 0;
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div>
       <h2 className="text-sm font-bold text-ink">Defect register</h2>
       <p className="text-xs text-muted">Open snags across every project, oldest and overdue first</p>
 
