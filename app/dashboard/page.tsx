@@ -13,6 +13,7 @@ import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { JobsAtRiskPanel } from "@/components/JobsAtRiskPanel";
 import { computeProjectRisks } from "@/lib/projectRisk";
+import { computePortfolioForecast } from "@/lib/portfolioForecast";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -266,6 +267,11 @@ export default async function DashboardPage() {
       number: v.number,
     })),
     projectBudgets
+  );
+
+  const portfolioForecast = computePortfolioForecast(
+    projects.map((p) => ({ id: p.id, value_pence: p.value_pence, completed_at: p.completed_at })),
+    costItems
   );
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
@@ -523,28 +529,62 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {portfolioMargin !== null && (
+        {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
           <div className="kpi-tile mt-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
-            <p className="text-sm font-semibold text-ink-2">Gross profit tracked</p>
-            <p className="mt-1 text-xs text-muted">
-              Across {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
-                <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedRevenue)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
-                <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedActualCost)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
-                <p className={`mt-0.5 font-mono text-lg font-bold ${portfolioMargin >= 15 ? "text-good" : "text-critical"}`}>
-                  {portfolioMargin.toFixed(1)}%
+            <p className="text-sm font-semibold text-ink-2">Portfolio margin</p>
+            <p className="mt-1 text-xs text-muted">Forecast (committed cost, active jobs) vs. actual (paid cost only)</p>
+
+            {portfolioForecast.forecastMarginPercent !== null && (
+              <div className="mt-3 border-t border-black/10 pt-3 first:mt-0 first:border-none first:pt-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Forecast &middot; {portfolioForecast.projectCount} active project{portfolioForecast.projectCount === 1 ? "" : "s"}
                 </p>
+                <div className="mt-1 grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
+                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastRevenuePence)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Committed cost</p>
+                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastCostPence)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+                    <p
+                      className={`mt-0.5 font-mono text-lg font-bold ${
+                        portfolioForecast.forecastMarginPercent >= 15 ? "text-good" : "text-critical"
+                      }`}
+                    >
+                      {portfolioForecast.forecastMarginPercent.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {portfolioMargin !== null && (
+              <div className="mt-3 border-t border-black/10 pt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Actual &middot; {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged
+                </p>
+                <div className="mt-1 grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
+                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedRevenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
+                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedActualCost)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+                    <p className={`mt-0.5 font-mono text-lg font-bold ${portfolioMargin >= 15 ? "text-good" : "text-critical"}`}>
+                      {portfolioMargin.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
