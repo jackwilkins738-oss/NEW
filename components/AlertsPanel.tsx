@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   buildAlerts,
   type Alert,
@@ -19,6 +20,11 @@ const SEVERITY_CLASS: Record<Alert["severity"], string> = {
   warning: "bg-[rgba(250,178,25,0.2)] text-[#8a5a00]",
   info: "bg-surface-2 text-ink-2",
 };
+
+function formatAlertDate(isoDate: string) {
+  const d = new Date(isoDate.length <= 10 ? `${isoDate}T00:00:00` : isoDate);
+  return `Due ${d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
+}
 
 function AlertIcon({ severity }: { severity: Alert["severity"] }) {
   const shared = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -64,22 +70,40 @@ export function AlertsPanel({
     // genuine problem list shouldn't have to compete for space with
     // Capacity/Calendar the way it does when it's empty.
     <div className={`rounded-2xl border border-black/10 bg-surface p-5 shadow-sm ${alerts.length > 0 ? "lg:col-span-3" : ""}`}>
-      <h2 className="text-sm font-bold text-ink">Needs attention</h2>
-      <p className="text-xs text-muted">Pulled automatically from your leads, invoices and projects</p>
+      <h2 className="text-sm font-bold text-ink">Action centre</h2>
+      <p className="text-xs text-muted">Ranked by urgency - the owner and date shown are pulled from the linked project</p>
       <div className="mt-3 flex flex-col gap-2">
         {alerts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-black/15 py-6 text-center">
             <p className="text-sm text-muted">Nothing needs attention right now.</p>
           </div>
         ) : (
-          alerts.map((a, i) => (
-            <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2 text-sm ${SEVERITY_CLASS[a.severity]}`}>
-              <span aria-hidden className="mt-0.5">
-                <AlertIcon severity={a.severity} />
-              </span>
-              <span>{a.text}</span>
-            </div>
-          ))
+          alerts.map((a, i) => {
+            const meta = [a.ownerName ? `Owner: ${a.ownerName}` : null, a.dueDate ? formatAlertDate(a.dueDate) : null]
+              .filter(Boolean)
+              .join(" · ");
+            const content = (
+              <>
+                <span aria-hidden className="mt-0.5">
+                  <AlertIcon severity={a.severity} />
+                </span>
+                <span className="flex-1">
+                  <span>{a.text}</span>
+                  {meta && <span className="mt-0.5 block text-xs opacity-70">{meta}</span>}
+                </span>
+              </>
+            );
+            const className = `flex items-start gap-2.5 rounded-lg px-3 py-2 text-sm ${SEVERITY_CLASS[a.severity]}`;
+            return a.projectId ? (
+              <Link key={i} href={`/projects/${a.projectId}`} className={`${className} hover:opacity-80`}>
+                {content}
+              </Link>
+            ) : (
+              <div key={i} className={className}>
+                {content}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

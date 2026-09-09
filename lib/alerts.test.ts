@@ -192,4 +192,38 @@ describe("buildAlerts - ordering", () => {
     );
     expect(alerts.map((a) => a.severity)).toEqual(["critical", "warning", "info"]);
   });
+
+  it("sorts same-severity alerts by nearest due date first", () => {
+    const alerts = buildAlerts(
+      [],
+      [
+        { id: "1", client_name: "Later", amount_pence: 100, due_date: dateDaysAgo(1), status: "unpaid" },
+        { id: "2", client_name: "Sooner", amount_pence: 100, due_date: dateDaysAgo(10), status: "unpaid" },
+      ],
+      []
+    );
+    expect(alerts.map((a) => a.text)).toEqual([expect.stringContaining("Sooner"), expect.stringContaining("Later")]);
+  });
+});
+
+describe("buildAlerts - owner and drill-down", () => {
+  it("attaches the project's pm and id to an overdue invoice alert", () => {
+    const alerts = buildAlerts(
+      [],
+      [{ id: "1", client_name: "Ridgeview", amount_pence: 100, due_date: dateDaysAgo(1), status: "unpaid", project_id: "proj-1" }],
+      [{ id: "proj-1", client_name: "Ridgeview", target_date: null, next_visit_at: null, status: "on_track", pm: "Dave" }]
+    );
+    expect(alerts[0].projectId).toBe("proj-1");
+    expect(alerts[0].ownerName).toBe("Dave");
+  });
+
+  it("leaves owner and projectId null when an invoice has no linked project", () => {
+    const alerts = buildAlerts(
+      [],
+      [{ id: "1", client_name: "Ridgeview", amount_pence: 100, due_date: dateDaysAgo(1), status: "unpaid" }],
+      []
+    );
+    expect(alerts[0].projectId).toBeNull();
+    expect(alerts[0].ownerName).toBeNull();
+  });
 });

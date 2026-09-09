@@ -284,12 +284,14 @@ export default async function DashboardPage() {
     number: v.number,
     project_client_name: projectNameById.get(v.project_id) ?? "a project",
     status: v.status,
+    project_id: v.project_id,
   }));
   const reviewAlerts = pendingReviews.map((r) => ({
     id: r.id,
     customer_name: r.customer_name,
     project_client_name: r.project_id ? projectNameById.get(r.project_id) ?? "a project" : "a project",
     status: r.status,
+    project_id: r.project_id,
   }));
 
   // "Actual" cost is paid cost items only (see migration 017) - committed-

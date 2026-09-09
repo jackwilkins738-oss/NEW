@@ -1,13 +1,21 @@
 import { formatGBP } from "@/lib/format";
 
 export type AlertLead = { id: string; name: string | null; email: string | null; status: string; created_at: string };
-export type AlertInvoice = { id: string; client_name: string; amount_pence: number; due_date: string; status: string };
+export type AlertInvoice = {
+  id: string;
+  client_name: string;
+  amount_pence: number;
+  due_date: string;
+  status: string;
+  project_id?: string | null;
+};
 export type AlertProject = {
   id: string;
   client_name: string;
   target_date: string | null;
   next_visit_at: string | null;
   status: string | null;
+  pm?: string | null;
 };
 
 export type AlertQuote = {
@@ -22,11 +30,29 @@ export type AlertVariation = {
   number: string | null;
   project_client_name: string;
   status: string;
+  project_id?: string | null;
 };
 export type AlertProjectBudget = { client_name: string; budget_pence: number; committed_pence: number };
-export type AlertReview = { id: string; customer_name: string; project_client_name: string; status: string };
+export type AlertReview = {
+  id: string;
+  customer_name: string;
+  project_client_name: string;
+  status: string;
+  project_id?: string | null;
+};
 
-export type Alert = { severity: "critical" | "warning" | "info"; text: string };
+// dueDate/ownerName/projectId are filled in wherever the source record
+// actually has them (an invoice's due date, a project's assigned pm) - an
+// Action Centre item without a date or owner just leaves those blank
+// rather than inventing one, same "don't show unowned metrics" rule the
+// ranked risk table follows.
+export type Alert = {
+  severity: "critical" | "warning" | "info";
+  text: string;
+  dueDate?: string | null;
+  ownerName?: string | null;
+  projectId?: string | null;
+};
 
 export const SEVERITY_RANK = { critical: 0, warning: 1, info: 2 };
 
@@ -48,6 +74,7 @@ export function buildAlerts(
   const now = Date.now();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const pmByProjectId = new Map(projects.map((p) => [p.id, p.pm ?? null]));
 
   for (const l of leads) {
     if (l.status !== "new") continue;
@@ -64,7 +91,13 @@ export function buildAlerts(
     if (inv.status === "paid") continue;
     const due = new Date(inv.due_date + "T00:00:00");
     if (due < today) {
-      alerts.push({ severity: "critical", text: `${inv.client_name}'s invoice is overdue (${formatGBP(inv.amount_pence)})` });
+      alerts.push({
+        severity: "critical",
+        text: `${inv.client_name}'s invoice is overdue (${formatGBP(inv.amount_pence)})`,
+        dueDate: inv.due_date,
+        projectId: inv.project_id ?? null,
+        ownerName: inv.project_id ? (pmByProjectId.get(inv.project_id) ?? null) : null,
+      });
     }
   }
 
@@ -74,7 +107,13 @@ export function buildAlerts(
     if (p.target_date && p.status === "on_track") {
       const target = new Date(p.target_date + "T00:00:00");
       if (target < today) {
-        alerts.push({ severity: "warning", text: `${p.client_name}'s target date has passed but it's still marked on track` });
+        alerts.push({
+          severity: "warning",
+          text: `${p.client_name}'s target date has passed but it's still marked on track`,
+          dueDate: p.target_date,
+          projectId: p.id,
+          ownerName: p.pm ?? null,
+        });
       }
     }
     if (p.next_visit_at) {
@@ -104,7 +143,12 @@ export function buildAlerts(
 
   for (const v of variations) {
     if (v.status !== "pending") continue;
-    alerts.push({ severity: "info", text: `${v.number ?? "A variation"} for ${v.project_client_name} awaiting approval` });
+    alerts.push({
+      severity: "info",
+      text: `${v.number ?? "A variation"} for ${v.project_client_name} awaiting approval`,
+      projectId: v.project_id ?? null,
+      ownerName: v.project_id ? (pmByProjectId.get(v.project_id) ?? null) : null,
+    });
   }
 
   for (const b of projectBudgets) {
@@ -122,8 +166,23 @@ export function buildAlerts(
   // customer's response is recorded, which flips status to "received").
   for (const r of pendingReviews) {
     if (r.status !== "requested") continue;
-    alerts.push({ severity: "info", text: `Review request pending for ${r.customer_name} (${r.project_client_name})` });
+    alerts.push({
+      severity: "info",
+      text: `Review request pending for ${r.customer_name} (${r.project_client_name})`,
+      projectId: r.project_id ?? null,
+      ownerName: r.project_id ? (pmByProjectId.get(r.project_id) ?? null) : null,
+    });
   }
 
-  return alerts.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
+  return alerts.sort((a, b) => {
+    const severityDiff = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+    if (severityDiff !== 0) return severityDiff;
+    // Within the same severity, the item with the nearest (or most overdue)
+    // date leads - an undated item (a stale lead, a pending review) falls
+    // to the end of its severity band rather than jumping the queue.
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate) return -1;
+    if (b.dueDate) return 1;
+    return 0;
+  });
 }
