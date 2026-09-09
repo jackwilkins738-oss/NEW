@@ -11,6 +11,8 @@ import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { ProjectPhotosPanel } from "@/components/ProjectPhotosPanel";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
+import { JobsAtRiskPanel } from "@/components/JobsAtRiskPanel";
+import { computeProjectRisks } from "@/lib/projectRisk";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -166,7 +168,9 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("invoices")
-      .select("id, invoice_number, client_name, reference, milestone, amount_pence, paid_pence, due_date, status, view_token, sent_at")
+      .select(
+        "id, invoice_number, client_name, reference, milestone, amount_pence, paid_pence, due_date, status, view_token, sent_at, project_id"
+      )
       .eq("tenant_id", tenant.id)
       .order("due_date", { ascending: true }),
     supabase
@@ -192,7 +196,7 @@ export default async function DashboardPage() {
       .eq("tenant_id", tenant.id),
     supabase
       .from("variations")
-      .select("id, number, description, project_id, status")
+      .select("id, number, description, project_id, status, customer_price_pence")
       .eq("tenant_id", tenant.id)
       .eq("status", "pending"),
     supabase
@@ -232,8 +236,37 @@ export default async function DashboardPage() {
       const quote = quoteById.get(p.quote_id!);
       const lineItems = (quote?.line_items ?? []) as { unit_price_pence: number }[];
       const budgetPence = lineItems.reduce((sum, l) => sum + l.unit_price_pence, 0);
-      return { client_name: p.client_name, budget_pence: budgetPence, committed_pence: committedByProject.get(p.id) ?? 0 };
+      return {
+        project_id: p.id,
+        client_name: p.client_name,
+        budget_pence: budgetPence,
+        committed_pence: committedByProject.get(p.id) ?? 0,
+      };
     });
+
+  const jobRisks = computeProjectRisks(
+    projects.map((p) => ({
+      id: p.id,
+      client_name: p.client_name,
+      status: p.status,
+      target_date: p.target_date,
+      completed_at: p.completed_at,
+    })),
+    invoices.map((i) => ({
+      project_id: i.project_id,
+      amount_pence: i.amount_pence,
+      paid_pence: i.paid_pence,
+      due_date: i.due_date,
+      status: i.status,
+    })),
+    pendingVariations.map((v) => ({
+      project_id: v.project_id,
+      customer_price_pence: v.customer_price_pence,
+      status: v.status,
+      number: v.number,
+    })),
+    projectBudgets
+  );
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
   const variationAlerts = pendingVariations.map((v) => ({
@@ -444,6 +477,10 @@ export default async function DashboardPage() {
             <p className="mt-2 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
             <p className="mt-1 font-mono text-xl font-bold text-ink">{pageviewCount}</p>
           </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <JobsAtRiskPanel risks={jobRisks} />
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
