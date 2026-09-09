@@ -229,9 +229,15 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
     const { data: lead } = await supabase.from("leads").select("email").eq("id", invoice.lead_id).maybeSingle();
     recipient = lead?.email ?? null;
   }
-  if (!recipient && invoice.project_id) {
-    const { data: project } = await supabase.from("projects").select("customer_id").eq("id", invoice.project_id).maybeSingle();
-    if (project?.customer_id) {
+  let portalToken: string | null = null;
+  if (invoice.project_id) {
+    const { data: project } = await supabase
+      .from("projects")
+      .select("customer_id, portal_token")
+      .eq("id", invoice.project_id)
+      .maybeSingle();
+    portalToken = project?.portal_token ?? null;
+    if (!recipient && project?.customer_id) {
       const { data: customer } = await supabase.from("customers").select("email").eq("id", project.customer_id).maybeSingle();
       recipient = customer?.email ?? null;
     }
@@ -246,6 +252,7 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
   const businessName = tenant?.business_name ?? "your contractor";
   const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
   const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
+  const portalUrl = invoice.project_id && portalToken ? `${origin}/portal/${invoice.project_id}/${portalToken}` : null;
 
   await sendEmail({
     to: [recipient],
@@ -254,6 +261,7 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
       <p>Hi ${invoice.client_name},</p>
       <p>${businessName} has sent you an invoice for ${formatGBP(invoice.amount_pence)}.</p>
       <p><a href="${viewUrl}">View and download your invoice</a></p>
+      ${portalUrl ? `<p><a href="${portalUrl}">View your full project</a></p>` : ""}
     `,
     replyTo: tenant?.contact_email ?? undefined,
   });

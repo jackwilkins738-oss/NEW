@@ -13,6 +13,7 @@ import { ReviewsPanel } from "@/components/ReviewsPanel";
 import { markProjectComplete } from "@/app/dashboard/actions";
 import { signOut } from "@/app/login/actions";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CopyButton } from "@/components/CopyButton";
 import { isPastUK } from "@/lib/ukDate";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, completed_at, created_at"
+      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, completed_at, created_at, portal_token"
     )
     .eq("id", params.id)
     .eq("tenant_id", tenant.id)
@@ -185,6 +186,17 @@ export default async function ProjectPage({ params }: { params: { id: string } }
             </div>
           </div>
         </header>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
+          <div>
+            <p className="text-sm font-bold text-ink">Customer portal</p>
+            <p className="text-xs text-muted">One link with progress photos, quote, invoices and any changes to scope - share it however you like.</p>
+          </div>
+          <CopyButton
+            text={`https://${tenant.domain || `${tenant.slug}.scalardigital.co.uk`}/portal/${project.id}/${project.portal_token}`}
+            label="Copy portal link"
+          />
+        </div>
 
         <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Financial</p>
 
