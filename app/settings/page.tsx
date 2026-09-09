@@ -9,7 +9,7 @@ import { IconSettings } from "@/components/DashboardIcons";
 export const dynamic = "force-dynamic";
 
 const field =
-  "mt-1 w-full rounded-md border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
+  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
 export default async function SettingsPage({ searchParams }: { searchParams: { stripe?: string } }) {
@@ -46,7 +46,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
               <img src={tenant.logo_url} alt="" className="h-12 w-12 rounded-lg border border-black/8 object-contain bg-white p-1" />
             )}
             <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required className={field} />
-            <button type="submit" className="btn-primary flex-none rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+            <button type="submit" className="btn-primary flex-none rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
               Upload
             </button>
           </form>
@@ -73,7 +73,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
               </p>
               <a
                 href="/api/stripe/connect"
-                className="btn-primary mt-3 inline-block rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
+                className="btn-primary mt-3 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
               >
                 Connect Stripe
               </a>
@@ -164,7 +164,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
           </label>
           <button
             type="submit"
-            className="btn-primary self-start rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
+            className="btn-primary self-start rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
           >
             Save settings
           </button>

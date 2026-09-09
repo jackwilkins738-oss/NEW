@@ -25,7 +25,7 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
             if (res.ok) setResult("accepted");
           })
         }
-        className="flex-1 rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+        className="btn-primary flex-1 rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
       >
         Accept quote
       </button>
