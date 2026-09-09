@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, convertQuoteToProject } from "@/app/dashboard/actions";
+import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, bulkDeleteQuotes, convertQuoteToProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
+import { BulkActionBar } from "@/components/BulkActionBar";
 import { isPastUK } from "@/lib/ukDate";
 
 const PAGE_SIZE = 20;
@@ -270,7 +271,19 @@ function NewQuoteForm({
   );
 }
 
-function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: string; converted: boolean }) {
+function QuoteRow({
+  quote,
+  tenantId,
+  converted,
+  selected,
+  onToggleSelect,
+}: {
+  quote: Quote;
+  tenantId: string;
+  converted: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+}) {
   const [status, setStatus] = useState(quote.status);
   const [isPending, startTransition] = useTransition();
   const expired = quote.expires_at ? isPastUK(quote.expires_at) : false;
@@ -278,7 +291,15 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
   return (
     <div className="row-hover border-b border-black/8 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`Select ${quote.client_name}`}
+            className="mt-1 h-4 w-4 flex-none accent-[var(--brand)]"
+          />
+          <div>
           <p className="text-sm font-semibold text-ink">{quote.client_name}</p>
           <p className="text-xs text-muted">
             {quote.quote_number ?? "no number"} &middot; {quote.line_items.length} line item
@@ -291,6 +312,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
               </>
             )}
           </p>
+          </div>
         </div>
         <span className="whitespace-nowrap font-mono text-sm font-semibold text-ink">
           {formatGBP(quote.total_pence)}
@@ -393,6 +415,8 @@ export function QuotesPanel({
   const converted = new Set(convertedQuoteIds);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, startBulkTransition] = useTransition();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return quotes;
@@ -428,6 +452,23 @@ export function QuotesPanel({
         defaultQuoteTerms={defaultQuoteTerms}
         defaultPaymentTerms={defaultPaymentTerms}
       />
+      <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+        <button
+          type="button"
+          disabled={bulkPending}
+          onClick={() => {
+            if (!confirm(`Delete ${selected.size} quote${selected.size === 1 ? "" : "s"}? This can't be undone.`)) return;
+            const ids = [...selected];
+            startBulkTransition(async () => {
+              await bulkDeleteQuotes(ids, tenantId);
+              setSelected(new Set());
+            });
+          }}
+          className="rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)] disabled:opacity-60"
+        >
+          {bulkPending ? "Deleting…" : "Delete selected"}
+        </button>
+      </BulkActionBar>
       <div className="mt-4 flex flex-col gap-3">
         {quotes.length === 0 ? (
           <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
@@ -437,7 +478,23 @@ export function QuotesPanel({
         ) : filtered.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No quotes match &ldquo;{query}&rdquo;.</p>
         ) : (
-          pageItems.map((q) => <QuoteRow key={q.id} quote={q} tenantId={tenantId} converted={converted.has(q.id)} />)
+          pageItems.map((q) => (
+            <QuoteRow
+              key={q.id}
+              quote={q}
+              tenantId={tenantId}
+              converted={converted.has(q.id)}
+              selected={selected.has(q.id)}
+              onToggleSelect={() =>
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(q.id)) next.delete(q.id);
+                  else next.add(q.id);
+                  return next;
+                })
+              }
+            />
+          ))
         )}
       </div>
       <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />

@@ -1,11 +1,19 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { updateLeadStatus, updateLeadValue, updateLeadDetails, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
+import {
+  updateLeadStatus,
+  updateLeadValue,
+  updateLeadDetails,
+  convertLeadToProject,
+  deleteLead,
+  bulkDeleteLeads,
+} from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
+import { BulkActionBar } from "@/components/BulkActionBar";
 
 const PAGE_SIZE = 20;
 
@@ -141,7 +149,19 @@ function LeadDetails({ lead }: { lead: Lead }) {
   );
 }
 
-function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; converted: boolean }) {
+function LeadRow({
+  lead,
+  tenantId,
+  converted,
+  selected,
+  onToggleSelect,
+}: {
+  lead: Lead;
+  tenantId: string;
+  converted: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+}) {
   const [status, setStatus] = useState(lead.status);
   const [isPending, startTransition] = useTransition();
   const flagged = needsFollowUp({ ...lead, status });
@@ -149,7 +169,15 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
   return (
     <div className="row-hover border-b border-black/8 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`Select ${lead.name ?? lead.email ?? "lead"}`}
+            className="mt-1 h-4 w-4 flex-none accent-[var(--brand)]"
+          />
+          <div>
           <p className="text-sm font-semibold text-ink">{lead.name ?? lead.email ?? "Unnamed lead"}</p>
           <p className="text-xs text-muted">
             {lead.source ?? "unknown source"}
@@ -169,6 +197,7 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
           )}
           {lead.notes && <p className="mt-1 text-xs text-ink-2">{lead.notes}</p>}
           <LeadDetails lead={lead} />
+          </div>
         </div>
         {flagged && (
           <span className="whitespace-nowrap rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-critical">
@@ -223,6 +252,8 @@ export function LeadsPanel({
   const converted = new Set(convertedLeadIds);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, startBulkTransition] = useTransition();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return leads;
@@ -265,6 +296,23 @@ export function LeadsPanel({
           />
         )}
       </div>
+      <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+        <button
+          type="button"
+          disabled={bulkPending}
+          onClick={() => {
+            if (!confirm(`Delete ${selected.size} lead${selected.size === 1 ? "" : "s"}? This can't be undone.`)) return;
+            const ids = [...selected];
+            startBulkTransition(async () => {
+              await bulkDeleteLeads(ids, tenantId);
+              setSelected(new Set());
+            });
+          }}
+          className="rounded-lg border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] px-2.5 py-1.5 text-xs font-semibold text-critical hover:bg-[rgba(208,59,59,0.15)] disabled:opacity-60"
+        >
+          {bulkPending ? "Deleting…" : "Delete selected"}
+        </button>
+      </BulkActionBar>
       <div className="mt-3 flex flex-col gap-3">
         {leads.length === 0 ? (
           <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
@@ -276,7 +324,23 @@ export function LeadsPanel({
         ) : filtered.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No leads match &ldquo;{query}&rdquo;.</p>
         ) : (
-          pageItems.map((l) => <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />)
+          pageItems.map((l) => (
+            <LeadRow
+              key={l.id}
+              lead={l}
+              tenantId={tenantId}
+              converted={converted.has(l.id)}
+              selected={selected.has(l.id)}
+              onToggleSelect={() =>
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(l.id)) next.delete(l.id);
+                  else next.add(l.id);
+                  return next;
+                })
+              }
+            />
+          ))
         )}
       </div>
       <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />

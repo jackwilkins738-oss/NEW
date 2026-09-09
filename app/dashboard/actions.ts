@@ -103,6 +103,21 @@ export async function deleteLead(leadId: string) {
   }
 }
 
+export async function bulkDeleteLeads(leadIds: string[], tenantId: string) {
+  if (leadIds.length === 0) return;
+  const supabase = createClient();
+  await supabase.from("leads").delete().in("id", leadIds).eq("tenant_id", tenantId);
+  revalidatePath("/dashboard");
+  const { data: userData } = await supabase.auth.getUser();
+  await logAudit({
+    tenantId,
+    userId: userData.user?.id,
+    action: "lead.bulk_deleted",
+    entityType: "lead",
+    summary: `Deleted ${leadIds.length} lead${leadIds.length === 1 ? "" : "s"}`,
+  });
+}
+
 // Lead value is owner-entered (the website form has no reason to ask a
 // visitor to price their own job) - null clears it rather than storing 0,
 // so an unpriced lead reads as "not estimated yet" instead of "worth £0"
@@ -540,6 +555,21 @@ export async function deleteQuote(quoteId: string) {
       summary: `Deleted ${quote.client_name}'s quote (${formatGBP(quote.total_pence)})`,
     });
   }
+}
+
+export async function bulkDeleteQuotes(quoteIds: string[], tenantId: string) {
+  if (quoteIds.length === 0) return;
+  const supabase = createClient();
+  await supabase.from("quotes").delete().in("id", quoteIds).eq("tenant_id", tenantId);
+  revalidatePath("/dashboard");
+  const { data: userData } = await supabase.auth.getUser();
+  await logAudit({
+    tenantId,
+    userId: userData.user?.id,
+    action: "quote.bulk_deleted",
+    entityType: "quote",
+    summary: `Deleted ${quoteIds.length} quote${quoteIds.length === 1 ? "" : "s"}`,
+  });
 }
 
 // Emails the customer a link to the public accept/decline page
