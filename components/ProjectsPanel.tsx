@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { updateProject, addProject, deleteProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { IconFolder } from "@/components/DashboardIcons";
+import { PanelSearchInput } from "@/components/PanelSearchInput";
 
 type Project = {
   id: string;
@@ -250,13 +251,27 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projects: Project[] }) {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter((p) =>
+      [p.client_name, p.ref, p.location, p.project_type, p.pm].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [projects, query]);
+
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
-        <IconFolder className="h-4 w-4 text-brand" />
-        Active projects
-      </h2>
-      <p className="text-xs text-muted">Tap a project to add details or update its status</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+            <IconFolder className="h-4 w-4 text-brand" />
+            Active projects
+          </h2>
+          <p className="text-xs text-muted">Tap a project to add details or update its status</p>
+        </div>
+        {projects.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search projects…" />}
+      </div>
 
       <div className="mt-3">
         <NewProjectForm tenantId={tenantId} />
@@ -267,9 +282,11 @@ export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projec
           <p className="text-sm font-semibold text-ink">No projects yet</p>
           <p className="mt-1 text-sm text-muted">Add your first one above to start tracking value, stages and deadlines.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">No projects match &ldquo;{query}&rdquo;.</p>
       ) : (
         <div>
-          {projects.map((p) => (
+          {filtered.map((p) => (
             <ProjectCard key={p.id} project={p} />
           ))}
         </div>

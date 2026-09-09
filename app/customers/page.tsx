@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
-import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { signOut } from "@/app/login/actions";
 import { IconUsers } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CustomersListPanel } from "@/components/CustomersListPanel";
 import { addCustomer } from "@/app/dashboard/actions";
 
 const field =
@@ -82,42 +81,12 @@ export default async function CustomersPage() {
           </button>
         </form>
 
-        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-          {customers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
-              <p className="text-sm font-semibold text-ink">No customers yet</p>
-              <p className="mt-1 px-2 text-sm text-muted">
-                Convert a won lead or an accepted quote into a project and a customer record is created automatically.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {customers.map((c) => {
-                const stats = projectsByCustomer.get(c.id) ?? { count: 0, totalValue: 0 };
-                return (
-                  <Link
-                    key={c.id}
-                    href={`/customers/${c.id}`}
-                    className="row-hover flex items-center justify-between gap-3 border-b border-black/8 py-3 last:border-none hover:bg-surface-2"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-ink">{c.name}</p>
-                      <p className="text-xs text-muted">
-                        {c.email ?? "no email"} {c.phone ? `· ${c.phone}` : ""}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono text-sm font-semibold text-ink">{formatGBP(stats.totalValue)}</p>
-                      <p className="text-xs text-muted">
-                        {stats.count} project{stats.count === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <CustomersListPanel
+          customers={customers.map((c) => {
+            const stats = projectsByCustomer.get(c.id) ?? { count: 0, totalValue: 0 };
+            return { id: c.id, name: c.name, email: c.email, phone: c.phone, projectCount: stats.count, totalValuePence: stats.totalValue };
+          })}
+        />
       </div>
     </main>
   );

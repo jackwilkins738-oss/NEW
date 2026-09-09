@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconBanknote } from "@/components/DashboardIcons";
+import { PanelSearchInput } from "@/components/PanelSearchInput";
 
 type Invoice = {
   id: string;
@@ -240,20 +241,31 @@ export function InvoicesPanel({
     if (rankDiff !== 0) return rankDiff;
     return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((inv) =>
+      [inv.client_name, inv.invoice_number, inv.reference, inv.milestone].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [sorted, query]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           <IconBanknote className="h-4 w-4 text-brand" />
           Invoices
         </h2>
-        <a
-          href={`/api/export/invoices?tenantId=${tenantId}`}
-          className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
-        >
-          Export CSV
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/export/invoices?tenantId=${tenantId}`}
+            className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
+          >
+            Export CSV
+          </a>
+          {invoices.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search invoices…" />}
+        </div>
       </div>
 
       <NewInvoiceForm tenantId={tenantId} projects={projects} leads={leads} />
@@ -265,7 +277,10 @@ export function InvoicesPanel({
             <p className="mt-1 text-sm text-muted">Add one above to start tracking what&apos;s owed and when it&apos;s due.</p>
           </div>
         )}
-        {sorted.map((inv) => {
+        {sorted.length > 0 && filtered.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted">No invoices match &ldquo;{query}&rdquo;.</p>
+        )}
+        {filtered.map((inv) => {
           const state = invoiceState(inv);
           const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
           return (

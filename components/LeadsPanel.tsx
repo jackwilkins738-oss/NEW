@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { updateLeadStatus, updateLeadValue, updateLeadDetails, convertLeadToProject, deleteLead } from "@/app/dashboard/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
+import { PanelSearchInput } from "@/components/PanelSearchInput";
 
 type Lead = {
   id: string;
@@ -217,10 +218,18 @@ export function LeadsPanel({
 }) {
   const followUpCount = leads.filter(needsFollowUp).length;
   const converted = new Set(convertedLeadIds);
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return leads;
+    return leads.filter((l) =>
+      [l.name, l.email, l.phone, l.source, l.job_type, l.address].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [leads, query]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           <IconUsers className="h-4 w-4 text-brand" />
           Recent leads
@@ -238,6 +247,7 @@ export function LeadsPanel({
             Export CSV
           </a>
         </div>
+        {leads.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search leads…" />}
       </div>
       <div className="mt-3 flex flex-col gap-3">
         {leads.length === 0 ? (
@@ -247,10 +257,10 @@ export function LeadsPanel({
               As enquiries come in through your website, they&apos;ll show up here automatically.
             </p>
           </div>
+        ) : filtered.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">No leads match &ldquo;{query}&rdquo;.</p>
         ) : (
-          leads.map((l) => (
-            <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />
-          ))
+          filtered.map((l) => <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />)
         )}
       </div>
     </div>

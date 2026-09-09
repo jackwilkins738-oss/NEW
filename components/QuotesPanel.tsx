@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, convertQuoteToProject } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
+import { PanelSearchInput } from "@/components/PanelSearchInput";
 
 type LineItem = { category: string; description: string; unit_price_pence: number };
 
@@ -386,13 +387,24 @@ export function QuotesPanel({
   defaultPaymentTerms: string | null;
 }) {
   const converted = new Set(convertedQuoteIds);
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return quotes;
+    return quotes.filter((quote) =>
+      [quote.client_name, quote.quote_number, quote.reference, quote.customer_email].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [quotes, query]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
-        <IconDocument className="h-4 w-4 text-brand" />
-        Quotes
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+          <IconDocument className="h-4 w-4 text-brand" />
+          Quotes
+        </h2>
+        {quotes.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search quotes…" />}
+      </div>
       <NewQuoteForm
         tenantId={tenantId}
         defaultVatRate={defaultVatRate}
@@ -405,10 +417,10 @@ export function QuotesPanel({
             <p className="text-sm font-semibold text-ink">No quotes yet</p>
             <p className="mt-1 px-2 text-sm text-muted">Build one above to send to a lead or customer.</p>
           </div>
+        ) : filtered.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">No quotes match &ldquo;{query}&rdquo;.</p>
         ) : (
-          quotes.map((q) => (
-            <QuoteRow key={q.id} quote={q} tenantId={tenantId} converted={converted.has(q.id)} />
-          ))
+          filtered.map((q) => <QuoteRow key={q.id} quote={q} tenantId={tenantId} converted={converted.has(q.id)} />)
         )}
       </div>
     </div>
