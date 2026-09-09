@@ -1,5 +1,6 @@
 import { formatGBP } from "@/lib/format";
 import { isPastUK } from "@/lib/ukDate";
+import type { ScheduleConflict } from "@/lib/scheduleConflicts";
 
 export type AlertLead = { id: string; name: string | null; email: string | null; status: string; created_at: string };
 export type AlertInvoice = {
@@ -69,7 +70,8 @@ export function buildAlerts(
   quotes: AlertQuote[] = [],
   variations: AlertVariation[] = [],
   projectBudgets: AlertProjectBudget[] = [],
-  pendingReviews: AlertReview[] = []
+  pendingReviews: AlertReview[] = [],
+  scheduleConflicts: ScheduleConflict[] = []
 ): Alert[] {
   const alerts: Alert[] = [];
   const now = Date.now();
@@ -168,6 +170,15 @@ export function buildAlerts(
       text: `Review request pending for ${r.customer_name} (${r.project_client_name})`,
       projectId: r.project_id ?? null,
       ownerName: r.project_id ? (pmByProjectId.get(r.project_id) ?? null) : null,
+    });
+  }
+
+  for (const c of scheduleConflicts) {
+    alerts.push({
+      severity: "warning",
+      text: `${c.teamMemberName} is booked on both ${c.projectAName} and ${c.projectBName} from ${c.overlapStart} to ${c.overlapEnd}`,
+      projectId: c.projectAId,
+      ownerName: c.teamMemberName,
     });
   }
 

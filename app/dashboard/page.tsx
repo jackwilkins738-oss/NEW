@@ -13,6 +13,7 @@ import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { JobsAtRiskPanel } from "@/components/JobsAtRiskPanel";
 import { computeProjectRisks } from "@/lib/projectRisk";
+import { computeScheduleConflicts } from "@/lib/scheduleConflicts";
 import { computePortfolioForecast } from "@/lib/portfolioForecast";
 import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { ReceivablesAgingPanel } from "@/components/ReceivablesAgingPanel";
@@ -161,6 +162,7 @@ export default async function DashboardPage() {
     variationsRes,
     pendingReviewsRes,
     snagsRes,
+    teamAssignmentsRes,
   ] = await Promise.all([
     supabase
       .from("leads")
@@ -221,6 +223,14 @@ export default async function DashboardPage() {
       .from("snags")
       .select("id, description, project_id, assigned_to, due_date, status, created_at")
       .eq("tenant_id", tenant.id),
+    // Joined through team_members (which does carry tenant_id) since
+    // project_team_members itself doesn't - !inner + the eq on the joined
+    // column scopes this to the current tenant without needing the
+    // projects query to finish first.
+    supabase
+      .from("project_team_members")
+      .select("project_id, team_member_id, team_members!inner(id, name, tenant_id)")
+      .eq("team_members.tenant_id", tenant.id),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -342,6 +352,21 @@ export default async function DashboardPage() {
     status: r.status,
     project_id: r.project_id,
   }));
+
+  const scheduleConflicts = computeScheduleConflicts(
+    (teamAssignmentsRes.data ?? []).map((a) => ({
+      projectId: a.project_id,
+      teamMemberId: a.team_member_id,
+      teamMemberName: (a.team_members as unknown as { name: string })?.name ?? "Someone",
+    })),
+    projects.map((p) => ({
+      id: p.id,
+      client_name: p.client_name,
+      start_date: p.start_date,
+      target_date: p.target_date,
+      completed_at: p.completed_at,
+    }))
+  );
 
   // "Actual" cost is paid cost items only (see migration 017) - committed-
   // but-unpaid items don't count here, same distinction the project detail
@@ -539,6 +564,7 @@ export default async function DashboardPage() {
             variations={variationAlerts}
             projectBudgets={projectBudgets}
             pendingReviews={reviewAlerts}
+            scheduleConflicts={scheduleConflicts}
           />
         </div>
 

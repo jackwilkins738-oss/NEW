@@ -10,6 +10,7 @@ import {
   type AlertProjectBudget,
   type AlertReview,
 } from "@/lib/alerts";
+import type { ScheduleConflict } from "@/lib/scheduleConflicts";
 
 type Lead = AlertLead;
 type Invoice = AlertInvoice;
@@ -54,6 +55,7 @@ export function AlertsPanel({
   variations = [],
   projectBudgets = [],
   pendingReviews = [],
+  scheduleConflicts = [],
 }: {
   leads: Lead[];
   invoices: Invoice[];
@@ -62,8 +64,9 @@ export function AlertsPanel({
   variations?: AlertVariation[];
   projectBudgets?: AlertProjectBudget[];
   pendingReviews?: AlertReview[];
+  scheduleConflicts?: ScheduleConflict[];
 }) {
-  const alerts = buildAlerts(leads, invoices, projects, quotes, variations, projectBudgets, pendingReviews);
+  const alerts = buildAlerts(leads, invoices, projects, quotes, variations, projectBudgets, pendingReviews, scheduleConflicts);
 
   return (
     // Spans the full grid row once there's something real to show - a

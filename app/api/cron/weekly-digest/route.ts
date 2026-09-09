@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildAlerts, type Alert } from "@/lib/alerts";
 import { computeProjectRisks } from "@/lib/projectRisk";
+import { computeScheduleConflicts } from "@/lib/scheduleConflicts";
 import { computePortfolioForecast } from "@/lib/portfolioForecast";
 import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { sendEmail } from "@/lib/email";
@@ -50,32 +51,37 @@ async function sendDigestForTenant(
   admin: ReturnType<typeof createAdminClient>,
   tenant: { id: string; business_name: string; slug: string; domain: string | null; brand_theme: string }
 ): Promise<boolean> {
-  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes] = await Promise.all([
-    admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
-    admin
-      .from("invoices")
-      .select("id, client_name, amount_pence, paid_pence, due_date, status, project_id")
-      .eq("tenant_id", tenant.id),
-    admin
-      .from("projects")
-      .select("id, client_name, target_date, next_visit_at, status, quote_id, value_pence, completed_at")
-      .eq("tenant_id", tenant.id),
-    admin
-      .from("quotes")
-      .select("id, client_name, quote_number, status, sent_at, line_items")
-      .eq("tenant_id", tenant.id),
-    admin
-      .from("variations")
-      .select("id, number, project_id, status, customer_price_pence")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "pending"),
-    admin.from("project_cost_items").select("project_id, amount_pence").eq("tenant_id", tenant.id),
-    admin
-      .from("reviews")
-      .select("id, customer_name, project_id, status")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "requested"),
-  ]);
+  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes, teamAssignmentsRes] =
+    await Promise.all([
+      admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
+      admin
+        .from("invoices")
+        .select("id, client_name, amount_pence, paid_pence, due_date, status, project_id")
+        .eq("tenant_id", tenant.id),
+      admin
+        .from("projects")
+        .select("id, client_name, start_date, target_date, next_visit_at, status, quote_id, value_pence, completed_at")
+        .eq("tenant_id", tenant.id),
+      admin
+        .from("quotes")
+        .select("id, client_name, quote_number, status, sent_at, line_items")
+        .eq("tenant_id", tenant.id),
+      admin
+        .from("variations")
+        .select("id, number, project_id, status, customer_price_pence")
+        .eq("tenant_id", tenant.id)
+        .eq("status", "pending"),
+      admin.from("project_cost_items").select("project_id, amount_pence").eq("tenant_id", tenant.id),
+      admin
+        .from("reviews")
+        .select("id, customer_name, project_id, status")
+        .eq("tenant_id", tenant.id)
+        .eq("status", "requested"),
+      admin
+        .from("project_team_members")
+        .select("project_id, team_member_id, team_members!inner(id, name, tenant_id)")
+        .eq("team_members.tenant_id", tenant.id),
+    ]);
 
   const projects = projectsRes.data ?? [];
   const quotes = quotesRes.data ?? [];
@@ -114,6 +120,21 @@ async function sendDigestForTenant(
     status: r.status,
   }));
 
+  const scheduleConflicts = computeScheduleConflicts(
+    (teamAssignmentsRes.data ?? []).map((a) => ({
+      projectId: a.project_id,
+      teamMemberId: a.team_member_id,
+      teamMemberName: (a.team_members as unknown as { name: string })?.name ?? "Someone",
+    })),
+    projects.map((p) => ({
+      id: p.id,
+      client_name: p.client_name,
+      start_date: p.start_date,
+      target_date: p.target_date,
+      completed_at: p.completed_at,
+    }))
+  );
+
   const alerts = buildAlerts(
     leadsRes.data ?? [],
     invoicesRes.data ?? [],
@@ -121,7 +142,8 @@ async function sendDigestForTenant(
     quotes,
     variationAlerts,
     projectBudgets,
-    reviewAlerts
+    reviewAlerts,
+    scheduleConflicts
   );
   // A "nothing to report" email every Monday is noise, not help - only
   // send when there's actually something worth a tenant's attention.
