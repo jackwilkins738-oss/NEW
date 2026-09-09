@@ -14,6 +14,8 @@ import { AlertsPanel } from "@/components/AlertsPanel";
 import { JobsAtRiskPanel } from "@/components/JobsAtRiskPanel";
 import { computeProjectRisks } from "@/lib/projectRisk";
 import { computePortfolioForecast } from "@/lib/portfolioForecast";
+import { computeReceivablesAging } from "@/lib/receivablesAging";
+import { ReceivablesAgingPanel } from "@/components/ReceivablesAgingPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -274,6 +276,8 @@ export default async function DashboardPage() {
     costItems
   );
 
+  const receivablesAging = computeReceivablesAging(invoices);
+
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
   const variationAlerts = pendingVariations.map((v) => ({
     id: v.id,
@@ -309,16 +313,15 @@ export default async function DashboardPage() {
   today.setHours(0, 0, 0, 0);
   const in7Days = new Date(today.getTime() + 7 * 86_400_000);
   const unpaidInvoices = invoices.filter((i) => i.status !== "paid");
-  const overdueInvoices = unpaidInvoices.filter((i) => new Date(i.due_date + "T00:00:00") < today);
   const dueSoonInvoices = unpaidInvoices.filter((i) => {
     const due = new Date(i.due_date + "T00:00:00");
     return due >= today && due <= in7Days;
   });
   // amount_pence minus paid_pence, not the full original amount - a
-  // part-paid invoice only owes what's left, so overdue/due-soon totals
-  // should reflect that rather than the invoice's face value.
+  // part-paid invoice only owes what's left, so due-soon totals should
+  // reflect that rather than the invoice's face value. (Overdue totals now
+  // come from computeReceivablesAging's bucket breakdown instead.)
   const outstanding = (i: { amount_pence: number; paid_pence: number | null }) => i.amount_pence - (i.paid_pence ?? 0);
-  const overdueTotal = overdueInvoices.reduce((sum, i) => sum + outstanding(i), 0);
   const dueSoonTotal = dueSoonInvoices.reduce((sum, i) => sum + outstanding(i), 0);
 
   const revenueTrend = monthlyValueTrend(projects);
@@ -513,13 +516,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="kpi-tile rounded-2xl border border-[rgba(208,59,59,0.3)] bg-[rgba(208,59,59,0.08)] p-5 shadow-sm">
-            <p className="text-sm font-semibold text-critical">Overdue invoices</p>
-            <p className="mt-2 text-3xl font-bold text-ink [font-feature-settings:'tnum']">{formatGBP(overdueTotal)}</p>
-            <p className="mt-1 text-xs text-muted">
-              {overdueInvoices.length} invoice{overdueInvoices.length === 1 ? "" : "s"}
-            </p>
-          </div>
+          <ReceivablesAgingPanel aging={receivablesAging} />
           <div className="kpi-tile rounded-2xl border border-[rgba(250,178,25,0.4)] bg-[rgba(250,178,25,0.1)] p-5 shadow-sm">
             <p className="text-sm font-semibold text-[#8a5a00]">Due in next 7 days</p>
             <p className="mt-2 text-3xl font-bold text-ink [font-feature-settings:'tnum']">{formatGBP(dueSoonTotal)}</p>
