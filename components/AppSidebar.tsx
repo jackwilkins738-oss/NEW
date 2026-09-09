@@ -4,7 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialsFor } from "@/lib/initials";
-import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconSettings } from "@/components/DashboardIcons";
+import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconClock, IconSettings } from "@/components/DashboardIcons";
+
+// Settings and Audit log are owner-only - see the `role === "member"`
+// filter below. Both pages also enforce this themselves server-side
+// (a redirect), so a stale role here is a cosmetic gap at worst.
+const OWNER_ONLY_HREFS = new Set(["/settings", "/audit"]);
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", Icon: IconFolder },
@@ -13,6 +18,7 @@ const LINKS = [
   { href: "/team", label: "Team", Icon: IconHardHat },
   { href: "/suppliers", label: "Suppliers", Icon: IconTruck },
   { href: "/reviews", label: "Reviews", Icon: IconStar },
+  { href: "/audit", label: "Audit log", Icon: IconClock },
   { href: "/settings", label: "Settings", Icon: IconSettings },
 ];
 
@@ -46,7 +52,7 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const links = role === "member" ? LINKS.filter((l) => l.href !== "/settings") : LINKS;
+  const links = role === "member" ? LINKS.filter((l) => !OWNER_ONLY_HREFS.has(l.href)) : LINKS;
 
   const brandMark = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element

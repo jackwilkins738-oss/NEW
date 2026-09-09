@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
+import { logAudit } from "@/lib/auditLog";
 
 async function requireAdmin() {
   const supabase = createClient();
@@ -125,11 +126,23 @@ export async function inviteTeammate(formData: FormData) {
 // real authorisation gate here, same pattern as removeMembership/
 // deleteTenant already use for the operations RLS doesn't cover.
 export async function updateMembershipRole(membershipId: string, role: "owner" | "member") {
-  await requireAdmin();
+  const { userId: adminUserId } = await requireAdmin();
   const admin = createAdminClient();
+  const { data: membership } = await admin.from("memberships").select("tenant_id, user_id").eq("id", membershipId).maybeSingle();
   const { error } = await admin.from("memberships").update({ role }).eq("id", membershipId);
   if (error) return { error: error.message };
   revalidatePath("/admin");
+  if (membership) {
+    const { data: userData } = await admin.auth.admin.getUserById(membership.user_id);
+    await logAudit({
+      tenantId: membership.tenant_id,
+      userId: adminUserId,
+      action: "membership.role_changed",
+      entityType: "membership",
+      entityId: membershipId,
+      summary: `Changed ${userData.user?.email ?? "a user"}'s access to ${role}`,
+    });
+  }
   return { ok: true as const };
 }
 
@@ -181,11 +194,23 @@ export async function updateTenantBrandTheme(formData: FormData) {
 // can be linked/unlinked, and only through this gated action), so this
 // bypasses RLS and requireAdmin() above is what's actually authorizing it.
 export async function removeMembership(membershipId: string) {
-  await requireAdmin();
+  const { userId: adminUserId } = await requireAdmin();
   const admin = createAdminClient();
+  const { data: membership } = await admin.from("memberships").select("tenant_id, user_id").eq("id", membershipId).maybeSingle();
   const { error } = await admin.from("memberships").delete().eq("id", membershipId);
   if (error) return { error: error.message };
   revalidatePath("/admin");
+  if (membership) {
+    const { data: userData } = await admin.auth.admin.getUserById(membership.user_id);
+    await logAudit({
+      tenantId: membership.tenant_id,
+      userId: adminUserId,
+      action: "membership.removed",
+      entityType: "membership",
+      entityId: membershipId,
+      summary: `Removed ${userData.user?.email ?? "a user"}'s access`,
+    });
+  }
   return { success: true };
 }
 

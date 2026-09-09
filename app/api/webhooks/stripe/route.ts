@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/stripe";
+import { logAudit } from "@/lib/auditLog";
+import { formatGBP } from "@/lib/format";
 
 // Registered once in the Stripe dashboard (platform account, with "listen
 // to events on Connected accounts" turned on) pointing at this URL. The raw
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
         const admin = createAdminClient();
         const { data: invoice } = await admin
           .from("invoices")
-          .select("amount_pence, project_id, tenant_id, status")
+          .select("amount_pence, project_id, tenant_id, status, client_name")
           .eq("id", invoiceId)
           .maybeSingle();
         // Stripe can redeliver the same event (their documented at-least-
@@ -49,6 +51,13 @@ export async function POST(request: Request) {
               summary: "Invoice paid online via Stripe",
             });
           }
+          await logAudit({
+            tenantId: invoice.tenant_id,
+            action: "invoice.paid_online",
+            entityType: "invoice",
+            entityId: invoiceId,
+            summary: `${invoice.client_name} paid their invoice online via Stripe (${formatGBP(invoice.amount_pence)})`,
+          });
         }
       }
     }

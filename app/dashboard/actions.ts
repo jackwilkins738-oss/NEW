@@ -10,6 +10,7 @@ import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { todayInUK } from "@/lib/ukDate";
 import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
+import { logAudit } from "@/lib/auditLog";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -86,8 +87,20 @@ export async function updateLeadStatus(leadId: string, status: string) {
 
 export async function deleteLead(leadId: string) {
   const supabase = createClient();
+  const { data: lead } = await supabase.from("leads").select("tenant_id, name, email").eq("id", leadId).maybeSingle();
   await supabase.from("leads").delete().eq("id", leadId);
   revalidatePath("/dashboard");
+  if (lead) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: lead.tenant_id,
+      userId: userData.user?.id,
+      action: "lead.deleted",
+      entityType: "lead",
+      entityId: leadId,
+      summary: `Deleted lead ${lead.name ?? lead.email ?? "(unnamed)"}`,
+    });
+  }
 }
 
 // Lead value is owner-entered (the website form has no reason to ask a
@@ -168,10 +181,25 @@ export async function addInvoice(formData: FormData) {
 
 export async function markInvoicePaid(invoiceId: string) {
   const supabase = createClient();
-  const { data: invoice } = await supabase.from("invoices").select("amount_pence, project_id").eq("id", invoiceId).maybeSingle();
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("amount_pence, project_id, tenant_id, client_name")
+    .eq("id", invoiceId)
+    .maybeSingle();
   await supabase.from("invoices").update({ status: "paid", paid_pence: invoice?.amount_pence ?? 0 }).eq("id", invoiceId);
   revalidatePath("/dashboard");
   if (invoice?.project_id) revalidatePath(`/projects/${invoice.project_id}`);
+  if (invoice) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: invoice.tenant_id,
+      userId: userData.user?.id,
+      action: "invoice.marked_paid",
+      entityType: "invoice",
+      entityId: invoiceId,
+      summary: `Marked ${invoice.client_name}'s invoice as paid (${formatGBP(invoice.amount_pence)})`,
+    });
+  }
 }
 
 // Supports part-payment: paid_pence accumulates, status becomes "paid" once
@@ -183,7 +211,7 @@ export async function recordInvoicePayment(invoiceId: string, amountPounds: numb
   const supabase = createClient();
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("amount_pence, paid_pence, project_id")
+    .select("amount_pence, paid_pence, project_id, tenant_id, client_name")
     .eq("id", invoiceId)
     .maybeSingle();
   if (!invoice) return;
@@ -196,12 +224,38 @@ export async function recordInvoicePayment(invoiceId: string, amountPounds: numb
 
   revalidatePath("/dashboard");
   if (invoice.project_id) revalidatePath(`/projects/${invoice.project_id}`);
+
+  const { data: userData } = await supabase.auth.getUser();
+  await logAudit({
+    tenantId: invoice.tenant_id,
+    userId: userData.user?.id,
+    action: "invoice.payment_recorded",
+    entityType: "invoice",
+    entityId: invoiceId,
+    summary: `Recorded a ${formatGBP(Math.round(amountPounds * 100))} payment for ${invoice.client_name}'s invoice`,
+  });
 }
 
 export async function deleteInvoice(invoiceId: string) {
   const supabase = createClient();
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("tenant_id, client_name, amount_pence")
+    .eq("id", invoiceId)
+    .maybeSingle();
   await supabase.from("invoices").delete().eq("id", invoiceId);
   revalidatePath("/dashboard");
+  if (invoice) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: invoice.tenant_id,
+      userId: userData.user?.id,
+      action: "invoice.deleted",
+      entityType: "invoice",
+      entityId: invoiceId,
+      summary: `Deleted ${invoice.client_name}'s invoice (${formatGBP(invoice.amount_pence)})`,
+    });
+  }
 }
 
 // The "sendable at a click of a button" invoice: emails the customer a link
@@ -468,8 +522,24 @@ export async function updateQuoteStatus(quoteId: string, status: string) {
 
 export async function deleteQuote(quoteId: string) {
   const supabase = createClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("tenant_id, client_name, total_pence")
+    .eq("id", quoteId)
+    .maybeSingle();
   await supabase.from("quotes").delete().eq("id", quoteId);
   revalidatePath("/dashboard");
+  if (quote) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: quote.tenant_id,
+      userId: userData.user?.id,
+      action: "quote.deleted",
+      entityType: "quote",
+      entityId: quoteId,
+      summary: `Deleted ${quote.client_name}'s quote (${formatGBP(quote.total_pence)})`,
+    });
+  }
 }
 
 // Emails the customer a link to the public accept/decline page
@@ -642,8 +712,28 @@ export async function deleteProject(projectId: string) {
     Sentry.captureException(err);
   }
 
+  const { data: projectForLog } = await supabase
+    .from("projects")
+    .select("tenant_id, client_name, value_pence")
+    .eq("id", projectId)
+    .maybeSingle();
+
   await supabase.from("projects").delete().eq("id", projectId);
   revalidatePath("/dashboard");
+
+  if (projectForLog) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: projectForLog.tenant_id,
+      userId: userData.user?.id,
+      action: "project.deleted",
+      entityType: "project",
+      entityId: projectId,
+      summary: `Deleted project ${projectForLog.client_name}${
+        projectForLog.value_pence != null ? ` (${formatGBP(projectForLog.value_pence)})` : ""
+      }`,
+    });
+  }
 }
 
 // Upsert on (tenant_id, trade_name): adding a trade that already exists
@@ -845,18 +935,60 @@ export async function approveVariation(projectId: string, variationId: string) {
   }
 
   revalidatePath(`/projects/${projectId}`);
+
+  const { data: userData } = await supabase.auth.getUser();
+  await logAudit({
+    tenantId: variation.tenant_id,
+    userId: userData.user?.id,
+    action: "variation.approved",
+    entityType: "variation",
+    entityId: variationId,
+    summary: `Approved ${variation.number ?? "a variation"} (${formatGBP(variation.customer_price_pence)})`,
+  });
 }
 
 export async function declineVariation(projectId: string, variationId: string) {
   const supabase = createClient();
+  const { data: variation } = await supabase
+    .from("variations")
+    .select("tenant_id, number, customer_price_pence")
+    .eq("id", variationId)
+    .maybeSingle();
   await supabase.from("variations").update({ status: "declined" }).eq("id", variationId);
   revalidatePath(`/projects/${projectId}`);
+  if (variation) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: variation.tenant_id,
+      userId: userData.user?.id,
+      action: "variation.declined",
+      entityType: "variation",
+      entityId: variationId,
+      summary: `Declined ${variation.number ?? "a variation"} (${formatGBP(variation.customer_price_pence)})`,
+    });
+  }
 }
 
 export async function deleteVariation(projectId: string, variationId: string) {
   const supabase = createClient();
+  const { data: variation } = await supabase
+    .from("variations")
+    .select("tenant_id, number, customer_price_pence")
+    .eq("id", variationId)
+    .maybeSingle();
   await supabase.from("variations").delete().eq("id", variationId);
   revalidatePath(`/projects/${projectId}`);
+  if (variation) {
+    const { data: userData } = await supabase.auth.getUser();
+    await logAudit({
+      tenantId: variation.tenant_id,
+      userId: userData.user?.id,
+      action: "variation.deleted",
+      entityType: "variation",
+      entityId: variationId,
+      summary: `Deleted ${variation.number ?? "a variation"} (${formatGBP(variation.customer_price_pence)})`,
+    });
+  }
 }
 
 // One-click, same shape as convertLeadToProject/convertQuoteToProject - an
@@ -968,6 +1100,15 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+
+  await logAudit({
+    tenantId,
+    userId: userData.user.id,
+    action: "tenant.settings_updated",
+    entityType: "tenant",
+    entityId: tenantId,
+    summary: "Updated business profile / quote & invoice defaults",
+  });
 }
 
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
@@ -1282,6 +1423,16 @@ export async function markProjectComplete(projectId: string, tenantId: string) {
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/reviews");
   revalidatePath("/dashboard");
+
+  const { data: userData } = await supabase.auth.getUser();
+  await logAudit({
+    tenantId,
+    userId: userData.user?.id,
+    action: "project.completed",
+    entityType: "project",
+    entityId: projectId,
+    summary: `Marked ${project.client_name} as complete`,
+  });
 }
 
 // Manual, one click - the owner decides when to actually ask, this just
