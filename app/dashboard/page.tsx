@@ -20,6 +20,8 @@ import { summarizeVariations } from "@/lib/variationRegister";
 import { VariationRegisterPanel } from "@/components/VariationRegisterPanel";
 import { computeDataQualityWarnings } from "@/lib/dataQuality";
 import { DataQualityPanel } from "@/components/DataQualityPanel";
+import { summarizeSnags } from "@/lib/snagRegister";
+import { SnagRegisterPanel } from "@/components/SnagRegisterPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -154,6 +156,7 @@ export default async function DashboardPage() {
     costItemsRes,
     variationsRes,
     pendingReviewsRes,
+    snagsRes,
   ] = await Promise.all([
     supabase
       .from("leads")
@@ -210,6 +213,10 @@ export default async function DashboardPage() {
       .select("id, customer_name, project_id, status")
       .eq("tenant_id", tenant.id)
       .eq("status", "requested"),
+    supabase
+      .from("snags")
+      .select("id, description, project_id, assigned_to, due_date, status, created_at")
+      .eq("tenant_id", tenant.id),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -289,6 +296,18 @@ export default async function DashboardPage() {
   const receivablesAging = computeReceivablesAging(invoices);
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
+  const snagRegister = summarizeSnags(
+    (snagsRes.data ?? []).map((s) => ({
+      id: s.id,
+      description: s.description,
+      project_id: s.project_id,
+      project_client_name: projectNameById.get(s.project_id) ?? "a project",
+      assigned_to: s.assigned_to,
+      due_date: s.due_date,
+      status: s.status,
+      created_at: s.created_at,
+    }))
+  );
   const variationRegister = summarizeVariations(
     allVariations.map((v) => ({
       id: v.id,
@@ -552,8 +571,9 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <VariationRegisterPanel summary={variationRegister} />
+          <SnagRegisterPanel summary={snagRegister} />
         </div>
 
         {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
