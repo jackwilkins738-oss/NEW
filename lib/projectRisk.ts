@@ -1,3 +1,5 @@
+import { isPastUK, todayInUK, daysBetweenUK } from "@/lib/ukDate";
+
 // Turns the raw per-project signals already on the dashboard (overdue
 // invoices, budget overrun, pending variations, slipped schedule) into a
 // single ranked "what needs attention, and how much is it worth" list -
@@ -45,14 +47,12 @@ export function computeProjectRisks(
   budgets: RiskBudget[],
   today: Date = new Date()
 ): JobRisk[] {
-  const todayMidnight = new Date(today);
-  todayMidnight.setHours(0, 0, 0, 0);
+  const todayStr = todayInUK(today);
 
   const overdueByProject = new Map<string, number>();
   for (const inv of invoices) {
     if (!inv.project_id || inv.status === "paid") continue;
-    const due = new Date(inv.due_date + "T00:00:00");
-    if (due >= todayMidnight) continue;
+    if (!isPastUK(inv.due_date, today)) continue;
     const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
     overdueByProject.set(inv.project_id, (overdueByProject.get(inv.project_id) ?? 0) + outstanding);
   }
@@ -97,8 +97,7 @@ export function computeProjectRisks(
     }
 
     if (p.target_date) {
-      const target = new Date(p.target_date + "T00:00:00");
-      const daysLate = Math.round((todayMidnight.getTime() - target.getTime()) / 86_400_000);
+      const daysLate = daysBetweenUK(p.target_date, todayStr);
       if (daysLate > 0 && (p.status === "on_track" || !p.status)) {
         reasons.push("Target date passed");
         scheduleImpactDays = daysLate;

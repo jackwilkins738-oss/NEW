@@ -8,6 +8,7 @@ import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnec
 import { upsertEvent, deleteEvent } from "@/lib/googleCalendar";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
+import { todayInUK } from "@/lib/ukDate";
 import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
@@ -729,7 +730,7 @@ export async function addProjectCostItem(formData: FormData) {
       description: String(formData.get("description") ?? "").trim() || null,
       supplier: String(formData.get("supplier") ?? "").trim() || null,
       amount_pence: Math.round(amountPounds * 100),
-      cost_date: String(formData.get("costDate") ?? "") || new Date().toISOString().slice(0, 10),
+      cost_date: String(formData.get("costDate") ?? "") || todayInUK(),
       notes: String(formData.get("notes") ?? "").trim() || null,
       status: "committed",
     });

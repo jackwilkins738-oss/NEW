@@ -6,6 +6,7 @@ import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { isPastUK } from "@/lib/ukDate";
 
 type LineItem = { category: string; description: string; unit_price_pence: number };
 
@@ -269,7 +270,7 @@ function NewQuoteForm({
 function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: string; converted: boolean }) {
   const [status, setStatus] = useState(quote.status);
   const [isPending, startTransition] = useTransition();
-  const expired = quote.expires_at ? new Date(quote.expires_at + "T00:00:00") < new Date() : false;
+  const expired = quote.expires_at ? isPastUK(quote.expires_at) : false;
 
   return (
     <div className="row-hover border-b border-black/8 pb-3 last:border-none last:pb-0">

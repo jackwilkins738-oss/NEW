@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
+import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 
 // Called once a day from the calendar-sync cron rather than getting its own
 // vercel.json entry - Vercel's free Hobby plan caps a project at 2 cron
@@ -17,7 +18,7 @@ const REMINDER_INTERVAL_DAYS = 7;
 
 export async function sendPaymentReminders(): Promise<{ checked: number; sent: number }> {
   const admin = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInUK();
   const reminderCutoff = new Date(Date.now() - REMINDER_INTERVAL_DAYS * 86_400_000).toISOString();
 
   const { data: invoices } = await admin
@@ -64,7 +65,7 @@ export async function sendPaymentReminders(): Promise<{ checked: number; sent: n
       const outstanding = invoice.amount_pence - (invoice.paid_pence ?? 0);
       const origin = tenant.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
       const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
-      const daysOverdue = Math.floor((Date.now() - new Date(invoice.due_date + "T00:00:00").getTime()) / 86_400_000);
+      const daysOverdue = daysBetweenUK(invoice.due_date, todayInUK());
 
       await sendEmail({
         to: [recipient],

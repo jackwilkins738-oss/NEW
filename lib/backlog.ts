@@ -5,6 +5,8 @@
 // tile (on_track/at_risk only, no monthly breakdown) - this includes every
 // active project regardless of status, since a delayed job is still
 // backlog, just at-risk backlog.
+import { todayInUK } from "@/lib/ukDate";
+
 export type BacklogProject = { value_pence: number | null; completed_at: string | null; target_date: string | null };
 
 export type BacklogBucket = { label: string; value: number; detail: string };
@@ -24,9 +26,13 @@ export function computeBacklogByMonth(
   const MONTH_LABEL = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const active = projects.filter((p) => !p.completed_at && p.value_pence != null);
 
+  // UK calendar year/month, not the server's own local getFullYear/getMonth
+  // (always UTC on Vercel) - matters right at a month boundary near
+  // midnight BST, where UTC can still be in the previous month.
+  const [todayYear, todayMonth] = todayInUK(today).split("-").map(Number);
   const buckets: { key: string; label: string; value: number; count: number }[] = [];
   for (let i = 0; i < monthsAhead; i++) {
-    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const d = new Date(todayYear, todayMonth - 1 + i, 1);
     buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: `${MONTH_LABEL[d.getMonth()]} ${d.getFullYear()}`, value: 0, count: 0 });
   }
   const byKey = new Map(buckets.map((b) => [b.key, b]));
@@ -40,8 +46,8 @@ export function computeBacklogByMonth(
       noTargetDatePence += value;
       continue;
     }
-    const target = new Date(p.target_date + "T00:00:00");
-    const key = `${target.getFullYear()}-${target.getMonth()}`;
+    const [targetYear, targetMonth] = p.target_date.split("-").map(Number);
+    const key = `${targetYear}-${targetMonth - 1}`;
     const bucket = byKey.get(key);
     if (bucket) {
       bucket.value += value;

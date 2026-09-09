@@ -30,6 +30,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Sparkline } from "@/components/Sparkline";
 import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
+import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 import { brandThemeStyleTag } from "@/lib/theme";
 
 // Leads/projects/invoices change from outside this app (a customer's own
@@ -357,13 +358,11 @@ export default async function DashboardPage() {
   const grossProfitTracked = costedRevenue - costedActualCost;
   const portfolioMargin = costedRevenue > 0 ? (grossProfitTracked / costedRevenue) * 100 : null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const in7Days = new Date(today.getTime() + 7 * 86_400_000);
+  const todayStr = todayInUK();
   const unpaidInvoices = invoices.filter((i) => i.status !== "paid");
   const dueSoonInvoices = unpaidInvoices.filter((i) => {
-    const due = new Date(i.due_date + "T00:00:00");
-    return due >= today && due <= in7Days;
+    const daysUntil = daysBetweenUK(todayStr, i.due_date);
+    return daysUntil >= 0 && daysUntil <= 7;
   });
   // amount_pence minus paid_pence, not the full original amount - a
   // part-paid invoice only owes what's left, so due-soon totals should
@@ -438,7 +437,8 @@ export default async function DashboardPage() {
   // money that's actually been paid, all-time (there's no paid_at
   // timestamp to window this by date, only a status).
   const revenue = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount_pence, 0);
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [todayYear, todayMonth] = todayStr.split("-").map(Number);
+  const monthStart = new Date(todayYear, todayMonth - 1, 1);
   const wonThisMonth = projects
     .filter((p) => new Date(p.created_at) >= monthStart)
     .reduce((sum, p) => sum + (p.value_pence ?? 0), 0);

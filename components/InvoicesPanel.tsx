@@ -6,6 +6,7 @@ import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconBanknote } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 
 type Invoice = {
   id: string;
@@ -27,11 +28,8 @@ type LeadOption = { id: string; name: string | null; email: string | null; statu
 function invoiceState(inv: Invoice): "paid" | "overdue" | "due_soon" | "upcoming" | "part_paid" {
   if (inv.status === "paid") return "paid";
   if (inv.status === "part_paid") return "part_paid";
-  const due = new Date(inv.due_date + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (due < today) return "overdue";
-  const daysUntil = (due.getTime() - today.getTime()) / 86_400_000;
+  const daysUntil = daysBetweenUK(todayInUK(), inv.due_date);
+  if (daysUntil < 0) return "overdue";
   return daysUntil <= 7 ? "due_soon" : "upcoming";
 }
 

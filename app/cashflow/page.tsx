@@ -6,6 +6,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { signOut } from "@/app/login/actions";
 import { IconWallet } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
+import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 
 export const dynamic = "force-dynamic";
 
@@ -42,21 +43,15 @@ export default async function CashflowPage() {
   const invoices = invoicesRes.data ?? [];
   const costItems = costItemsRes.data ?? [];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const in7Days = new Date(today.getTime() + 7 * 86_400_000);
-  const in30Days = new Date(today.getTime() + 30 * 86_400_000);
+  const todayStr = todayInUK();
+  // Positive when due_date is in the future, relative to the UK's actual
+  // calendar date rather than the server's own (always UTC) local time.
+  const daysUntilDue = (dueDate: string) => daysBetweenUK(todayStr, dueDate);
 
-  const overdue = invoices.filter((i) => new Date(i.due_date + "T00:00:00") < today);
-  const dueThisWeek = invoices.filter((i) => {
-    const due = new Date(i.due_date + "T00:00:00");
-    return due >= today && due <= in7Days;
-  });
-  const dueNext30 = invoices.filter((i) => {
-    const due = new Date(i.due_date + "T00:00:00");
-    return due > in7Days && due <= in30Days;
-  });
-  const dueLater = invoices.filter((i) => new Date(i.due_date + "T00:00:00") > in30Days);
+  const overdue = invoices.filter((i) => daysUntilDue(i.due_date) < 0);
+  const dueThisWeek = invoices.filter((i) => daysUntilDue(i.due_date) >= 0 && daysUntilDue(i.due_date) <= 7);
+  const dueNext30 = invoices.filter((i) => daysUntilDue(i.due_date) > 7 && daysUntilDue(i.due_date) <= 30);
+  const dueLater = invoices.filter((i) => daysUntilDue(i.due_date) > 30);
 
   const sum = (rows: { amount_pence: number }[]) => rows.reduce((s, r) => s + r.amount_pence, 0);
   const outstandingSum = (rows: { amount_pence: number; paid_pence: number | null }[]) =>

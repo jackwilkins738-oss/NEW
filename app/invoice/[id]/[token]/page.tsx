@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
+import { isPastUK } from "@/lib/ukDate";
 import { PayInvoiceButton } from "@/app/invoice/PayInvoiceButton";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export default async function PublicInvoicePage({
     .maybeSingle();
 
   const outstanding = invoice.amount_pence - (invoice.paid_pence ?? 0);
-  const overdue = invoice.status !== "paid" && new Date(invoice.due_date + "T00:00:00") < new Date();
+  const overdue = invoice.status !== "paid" && isPastUK(invoice.due_date);
   const businessName = tenant?.business_name ?? "Your contractor";
   const canPayOnline = invoice.status !== "paid" && outstanding > 0 && tenant?.stripe_account_id;
 

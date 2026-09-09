@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
+import { isPastUK } from "@/lib/ukDate";
 import { QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export default async function PublicQuotePage({
     .eq("id", quote.tenant_id)
     .maybeSingle();
 
-  const expired = quote.expires_at ? new Date(quote.expires_at + "T00:00:00") < new Date() : false;
+  const expired = quote.expires_at ? isPastUK(quote.expires_at) : false;
   const decided = quote.status === "accepted" || quote.status === "declined";
   const saleSubtotal = quote.total_pence - quote.vat_amount_pence;
   const businessName = tenant?.business_name ?? "Your contractor";

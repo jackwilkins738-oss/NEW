@@ -1,3 +1,5 @@
+import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
+
 // Buckets unpaid/part-paid invoices by how overdue they are, instead of
 // the dashboard's previous single "overdue" total - a £500 invoice a
 // week late and a £500 invoice three months late carry very different
@@ -21,8 +23,7 @@ export type ReceivablesAging = {
 };
 
 export function computeReceivablesAging(invoices: AgingInvoice[], today: Date = new Date()): ReceivablesAging {
-  const todayMidnight = new Date(today);
-  todayMidnight.setHours(0, 0, 0, 0);
+  const todayStr = todayInUK(today);
 
   const buckets: ReceivablesAging = {
     current: { label: "Not yet due", totalPence: 0, count: 0 },
@@ -38,8 +39,7 @@ export function computeReceivablesAging(invoices: AgingInvoice[], today: Date = 
     const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
     if (outstanding <= 0) continue;
 
-    const due = new Date(inv.due_date + "T00:00:00");
-    const daysOverdue = Math.round((todayMidnight.getTime() - due.getTime()) / 86_400_000);
+    const daysOverdue = daysBetweenUK(inv.due_date, todayStr);
 
     const bucket =
       daysOverdue <= 0

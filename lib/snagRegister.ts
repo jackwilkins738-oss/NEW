@@ -1,3 +1,5 @@
+import { isPastUK } from "@/lib/ukDate";
+
 // Same treatment as the variation register: snags/defects only show up one
 // project at a time in the per-project SnagsPanel, so there's nowhere to
 // see "how much open defect work is there across the whole business right
@@ -33,9 +35,6 @@ export type SnagRegisterSummary = {
 };
 
 export function summarizeSnags(snags: RegisterSnag[], today: Date = new Date()): SnagRegisterSummary {
-  const todayMidnight = new Date(today);
-  todayMidnight.setHours(0, 0, 0, 0);
-
   let overdueCount = 0;
   let completeCount = 0;
   let unassignedCount = 0;
@@ -47,12 +46,12 @@ export function summarizeSnags(snags: RegisterSnag[], today: Date = new Date()):
       continue;
     }
 
-    const overdue = !!s.due_date && new Date(s.due_date + "T00:00:00") < todayMidnight;
+    const overdue = !!s.due_date && isPastUK(s.due_date, today);
     if (overdue) overdueCount += 1;
     if (!s.assigned_to) unassignedCount += 1;
 
     const created = new Date(s.created_at);
-    const daysOpen = Math.max(0, Math.round((todayMidnight.getTime() - created.getTime()) / 86_400_000));
+    const daysOpen = Math.max(0, Math.round((today.getTime() - created.getTime()) / 86_400_000));
 
     openRows.push({
       id: s.id,

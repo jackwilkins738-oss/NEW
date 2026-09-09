@@ -1,4 +1,5 @@
 import { formatGBP } from "@/lib/format";
+import { isPastUK } from "@/lib/ukDate";
 
 export type AlertLead = { id: string; name: string | null; email: string | null; status: string; created_at: string };
 export type AlertInvoice = {
@@ -72,8 +73,6 @@ export function buildAlerts(
 ): Alert[] {
   const alerts: Alert[] = [];
   const now = Date.now();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const pmByProjectId = new Map(projects.map((p) => [p.id, p.pm ?? null]));
 
   for (const l of leads) {
@@ -89,8 +88,7 @@ export function buildAlerts(
 
   for (const inv of invoices) {
     if (inv.status === "paid") continue;
-    const due = new Date(inv.due_date + "T00:00:00");
-    if (due < today) {
+    if (isPastUK(inv.due_date)) {
       alerts.push({
         severity: "critical",
         text: `${inv.client_name}'s invoice is overdue (${formatGBP(inv.amount_pence)})`,
@@ -105,8 +103,7 @@ export function buildAlerts(
     // Only flag "on_track" projects whose date has slipped - at_risk/delayed
     // already signal awareness of a problem, no need to double-flag those.
     if (p.target_date && p.status === "on_track") {
-      const target = new Date(p.target_date + "T00:00:00");
-      if (target < today) {
+      if (isPastUK(p.target_date)) {
         alerts.push({
           severity: "warning",
           text: `${p.client_name}'s target date has passed but it's still marked on track`,

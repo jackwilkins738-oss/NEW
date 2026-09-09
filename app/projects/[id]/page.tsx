@@ -13,6 +13,7 @@ import { ReviewsPanel } from "@/components/ReviewsPanel";
 import { markProjectComplete } from "@/app/dashboard/actions";
 import { signOut } from "@/app/login/actions";
 import { AppSidebar } from "@/components/AppSidebar";
+import { isPastUK } from "@/lib/ukDate";
 
 export const dynamic = "force-dynamic";
 
@@ -277,7 +278,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
                         <span className="text-good">✓</span>
                       ) : inv.status === "part_paid" ? (
                         <span className="text-xs font-semibold text-[#8a5a00]">{formatGBP(outstanding)} left</span>
-                      ) : new Date(inv.due_date + "T00:00:00") < new Date() ? (
+                      ) : isPastUK(inv.due_date) ? (
                         <span className="text-xs font-semibold text-critical">Overdue</span>
                       ) : (
                         <span className="text-xs font-semibold text-muted">Upcoming</span>
