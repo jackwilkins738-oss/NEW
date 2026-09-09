@@ -22,7 +22,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
 
   if (!editing) {
     return (
-      <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
+      <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
@@ -47,7 +47,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex-none rounded-md border border-black/10 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+            className="flex-none rounded-md border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
           >
             Edit
           </button>
@@ -62,7 +62,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
         await updateCustomer(customer.id, formData);
         setEditing(false);
       }}
-      className="mt-3 grid grid-cols-1 gap-3 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:grid-cols-2"
+      className="mt-3 grid grid-cols-1 gap-3 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:grid-cols-2"
     >
       <label className={label}>
         Name
@@ -91,7 +91,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="rounded-md border border-black/10 bg-surface-2 px-4 py-2.5 text-sm font-semibold text-ink-2"
+          className="rounded-md border border-black/8 bg-surface-2 px-4 py-2.5 text-sm font-semibold text-ink-2"
         >
           Cancel
         </button>

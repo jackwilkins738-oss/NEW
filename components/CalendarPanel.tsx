@@ -17,7 +17,7 @@ export function CalendarPanel({ connected, events }: { connected: boolean; event
 
   if (!connected) {
     return (
-      <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+      <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
         <h2 className="text-sm font-bold text-ink">Your calendar</h2>
         <p className="mt-1 text-sm text-muted">
           Connect Google Calendar to see your day-to-day appointments here alongside your jobs, and have each job&apos;s
@@ -34,7 +34,7 @@ export function CalendarPanel({ connected, events }: { connected: boolean; event
   }
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-ink">Your calendar</h2>
         <button
@@ -62,7 +62,7 @@ export function CalendarPanel({ connected, events }: { connected: boolean; event
               href={e.htmlLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between gap-2 rounded-lg border border-black/10 px-3 py-2 hover:bg-surface-2"
+              className="flex items-center justify-between gap-2 rounded-lg border border-black/8 px-3 py-2 hover:bg-surface-2"
             >
               <span className="text-sm font-medium text-ink">{e.summary}</span>
               <span className="whitespace-nowrap text-xs font-semibold text-muted">{formatEventTime(e.start)}</span>

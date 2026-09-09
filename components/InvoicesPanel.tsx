@@ -67,7 +67,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+        className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
       >
         Record payment
       </button>
@@ -151,7 +151,7 @@ function NewInvoiceForm({
   return (
     <form
       action={addInvoice}
-      className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
+      className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
     >
       <input type="hidden" name="tenantId" value={tenantId} />
       <input type="hidden" name="leadId" value={leadId} />
@@ -242,7 +242,7 @@ export function InvoicesPanel({
   });
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           <IconBanknote className="h-4 w-4 text-brand" />
@@ -271,7 +271,7 @@ export function InvoicesPanel({
           return (
             <div
               key={inv.id}
-              className="row-hover flex flex-col gap-2 border-b border-black/10 pb-3 last:border-none last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              className="row-hover flex flex-col gap-2 border-b border-black/8 pb-3 last:border-none last:pb-0 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="text-sm font-semibold text-ink">
@@ -294,7 +294,7 @@ export function InvoicesPanel({
                   href={`/api/invoices/${inv.id}/pdf`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex min-h-[32px] items-center rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
+                  className="flex min-h-[32px] items-center rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
                 >
                   PDF
                 </a>
@@ -305,7 +305,7 @@ export function InvoicesPanel({
                     <form action={markInvoicePaid.bind(null, inv.id)}>
                       <button
                         type="submit"
-                        className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+                        className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
                       >
                         Mark fully paid
                       </button>

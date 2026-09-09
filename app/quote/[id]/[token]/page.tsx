@@ -55,7 +55,7 @@ export default async function PublicQuotePage({
         <h1 className="mt-1 font-display text-2xl font-extrabold text-ink">{quote.client_name}</h1>
         {quote.quote_number && <p className="mt-1 text-xs text-muted">{quote.quote_number}</p>}
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <div className="flex flex-col gap-2">
             {quote.line_items.map((item: { category: string; description: string; unit_price_pence: number }, i: number) => (
               <div key={i} className="flex items-start justify-between gap-3 text-sm">
@@ -70,7 +70,7 @@ export default async function PublicQuotePage({
             ))}
           </div>
 
-          <div className="mt-4 flex flex-col gap-1 border-t border-black/10 pt-3 text-sm text-ink-2">
+          <div className="mt-4 flex flex-col gap-1 border-t border-black/8 pt-3 text-sm text-ink-2">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span className="font-mono">{formatGBP(saleSubtotal)}</span>
@@ -92,7 +92,7 @@ export default async function PublicQuotePage({
           </div>
 
           {(quote.payment_terms || quote.exclusions || quote.terms) && (
-            <div className="mt-4 flex flex-col gap-2 border-t border-black/10 pt-3 text-xs text-muted">
+            <div className="mt-4 flex flex-col gap-2 border-t border-black/8 pt-3 text-xs text-muted">
               {quote.payment_terms && (
                 <p>
                   <span className="font-semibold text-ink-2">Payment terms: </span>

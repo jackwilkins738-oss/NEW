@@ -71,7 +71,7 @@ function LeadValueInput({ leadId, valuePence }: { leadId: string; valuePence: nu
       onBlur={commit}
       placeholder="Value £"
       aria-label="Lead value in pounds"
-      className={`min-h-[32px] w-[84px] rounded-md border border-black/10 bg-surface px-2 py-1.5 text-xs font-semibold text-ink ${
+      className={`min-h-[32px] w-[84px] rounded-md border border-black/8 bg-surface px-2 py-1.5 text-xs font-semibold text-ink ${
         isPending ? "opacity-60" : ""
       }`}
     />
@@ -129,7 +129,7 @@ function LeadDetails({ lead }: { lead: Lead }) {
         <button type="submit" className="btn-primary rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong">
           Save
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-semibold text-ink-2">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-black/8 px-3 py-1.5 text-xs font-semibold text-ink-2">
           Cancel
         </button>
       </div>
@@ -143,7 +143,7 @@ function LeadRow({ lead, tenantId, converted }: { lead: Lead; tenantId: string; 
   const flagged = needsFollowUp({ ...lead, status });
 
   return (
-    <div className="row-hover border-b border-black/10 pb-3 last:border-none last:pb-0">
+    <div className="row-hover border-b border-black/8 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{lead.name ?? lead.email ?? "Unnamed lead"}</p>
@@ -219,7 +219,7 @@ export function LeadsPanel({
   const converted = new Set(convertedLeadIds);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           <IconUsers className="h-4 w-4 text-brand" />

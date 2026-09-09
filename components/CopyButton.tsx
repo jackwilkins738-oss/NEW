@@ -20,7 +20,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
           // showing an error for something the user can work around anyway.
         }
       }}
-      className="rounded-md border border-black/10 bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-brand-tint"
+      className="rounded-md border border-black/8 bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-brand-tint"
     >
       {copied ? "Copied!" : label}
     </button>

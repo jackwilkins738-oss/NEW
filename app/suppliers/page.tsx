@@ -35,7 +35,7 @@ export default async function SuppliersPage() {
           &larr; Back to dashboard
         </Link>
 
-        <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
+        <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
             <IconTruck className="h-5 w-5 text-brand" />
             Suppliers
@@ -45,7 +45,7 @@ export default async function SuppliersPage() {
 
         <form
           action={addSupplier}
-          className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm sm:grid-cols-3 sm:items-end"
+          className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:grid-cols-3 sm:items-end"
         >
           <input type="hidden" name="tenantId" value={tenant.id} />
           <label className={label}>
@@ -80,7 +80,7 @@ export default async function SuppliersPage() {
           </button>
         </form>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           {(suppliers ?? []).length === 0 ? (
             <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
               <p className="text-sm font-semibold text-ink">No suppliers yet</p>
@@ -89,7 +89,7 @@ export default async function SuppliersPage() {
           ) : (
             <div className="flex flex-col">
               {(suppliers ?? []).map((s) => (
-                <div key={s.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none">
+                <div key={s.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/8 py-3 last:border-none">
                   <div>
                     <p className="text-sm font-semibold text-ink">{s.name}</p>
                     <p className="text-xs text-muted">

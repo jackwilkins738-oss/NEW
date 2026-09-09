@@ -17,7 +17,7 @@ function meterColor(percent: number) {
 
 function TradeRow({ trade }: { trade: Trade }) {
   return (
-    <div className="border-t border-black/10 py-2.5 first:border-none first:pt-0">
+    <div className="border-t border-black/8 py-2.5 first:border-none first:pt-0">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-ink">{trade.trade_name}</span>
         <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ function AddTradeForm({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
+    <form onSubmit={handleSubmit} className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
       <input type="hidden" name="tenantId" value={tenantId} />
       <label className={`${label} col-span-2 sm:col-span-2`}>
         Trade
@@ -77,7 +77,7 @@ function AddTradeForm({ tenantId }: { tenantId: string }) {
 
 export function CapacityPanel({ tenantId, trades }: { tenantId: string; trades: Trade[] }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Trade capacity this week</h2>
       <p className="text-xs text-muted">Kept up to date by you - add a trade already listed to update its percentage</p>
 

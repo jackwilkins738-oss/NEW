@@ -42,7 +42,7 @@ export function BarChart({
   const seriesColors = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">{title}</h2>
       {note && <p className="text-xs text-muted">{note}</p>}
       <div className="mt-4 flex flex-col gap-3">
@@ -142,7 +142,7 @@ export function RevenueTrend({
   const gradientId = `revenue-trend-fill-${title.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-ink">{title}</h2>

@@ -19,7 +19,7 @@ export function AssignedTeamPanel({
   const unassignedOptions = available.filter((t) => !assigned.some((a) => a.id === t.id));
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Assigned team</h2>
 
       <div className="mt-3 flex flex-wrap gap-2">

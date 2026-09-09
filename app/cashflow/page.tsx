@@ -77,7 +77,7 @@ export default async function CashflowPage() {
           &larr; Back to dashboard
         </Link>
 
-        <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
+        <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
             <IconWallet className="h-5 w-5 text-brand" />
             Cashflow
@@ -88,7 +88,7 @@ export default async function CashflowPage() {
           </p>
         </header>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-brand-tint p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-brand-tint p-5 shadow-sm">
           <p className="text-sm font-semibold text-brand-strong">Expected cash position</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">{formatGBP(netPosition)}</p>
           <p className="mt-1 text-xs text-brand-strong">
@@ -97,7 +97,7 @@ export default async function CashflowPage() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
             <h2 className="text-sm font-bold text-ink">Money coming in</h2>
             <p className="text-xs text-muted">Unpaid invoices, {formatGBP(totalIn)} total</p>
 
@@ -123,7 +123,7 @@ export default async function CashflowPage() {
             {invoices.length === 0 && <p className="mt-3 text-sm text-muted">No unpaid invoices right now.</p>}
           </div>
 
-          <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
             <h2 className="text-sm font-bold text-ink">Money going out</h2>
             <p className="text-xs text-muted">Costs committed but not yet paid, {formatGBP(totalOut)} total</p>
 

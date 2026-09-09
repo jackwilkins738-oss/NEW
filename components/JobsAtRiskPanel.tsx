@@ -15,7 +15,7 @@ const SEVERITY_LABEL: Record<JobRisk["severity"], string> = {
 export function JobsAtRiskPanel({ risks }: { risks: JobRisk[] }) {
   if (risks.length === 0) {
     return (
-      <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm lg:col-span-3">
+      <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:col-span-3">
         <h2 className="text-sm font-bold text-ink">Projects at risk</h2>
         <p className="text-xs text-muted">Ranked by financial exposure - the jobs that need a decision first</p>
         <div className="mt-3 rounded-xl border border-dashed border-black/15 py-6 text-center">
@@ -28,7 +28,7 @@ export function JobsAtRiskPanel({ risks }: { risks: JobRisk[] }) {
   const totalExposure = risks.reduce((sum, r) => sum + r.financialImpactPence, 0);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm lg:col-span-3">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:col-span-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 className="text-sm font-bold text-ink">Projects at risk</h2>
@@ -40,7 +40,7 @@ export function JobsAtRiskPanel({ risks }: { risks: JobRisk[] }) {
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="border-b border-black/10 text-left text-xs font-semibold uppercase tracking-wide text-muted">
+            <tr className="border-b border-black/8 text-left text-xs font-semibold uppercase tracking-wide text-muted">
               <th className="py-2">Project</th>
               <th className="py-2">Risk</th>
               <th className="py-2 text-right">Financial impact</th>

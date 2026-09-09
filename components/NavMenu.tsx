@@ -32,12 +32,12 @@ export function NavMenu() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
+        className="w-full rounded-lg border border-black/8 bg-surface-2 px-3 py-2.5 text-center text-sm font-semibold text-ink sm:w-auto sm:py-2"
       >
         Menu {open ? "▴" : "▾"}
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-2 w-44 rounded-lg border border-black/10 bg-surface p-1.5 shadow-lg">
+        <div className="absolute right-0 z-10 mt-2 w-44 rounded-lg border border-black/8 bg-surface p-1.5 shadow-lg">
           {LINKS.map((l) => (
             <a
               key={l.href}

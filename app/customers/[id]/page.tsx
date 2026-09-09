@@ -80,15 +80,15 @@ export default async function CustomerPage({ params }: { params: { id: string } 
         <CustomerHeader customer={customer} />
 
         <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-black/8 bg-surface p-4 text-center shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Invoiced</p>
             <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(totalInvoiced)}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-black/8 bg-surface p-4 text-center shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Paid</p>
             <p className="mt-1 font-mono text-lg font-bold text-good">{formatGBP(totalPaid)}</p>
           </div>
-          <div className="rounded-2xl border border-black/10 bg-surface p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-black/8 bg-surface p-4 text-center shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Outstanding</p>
             <p className={`mt-1 font-mono text-lg font-bold ${totalOutstanding > 0 ? "text-critical" : "text-ink"}`}>
               {formatGBP(totalOutstanding)}
@@ -96,7 +96,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Projects</h2>
           {(projects ?? []).length === 0 ? (
             <p className="mt-2 text-sm text-muted">No projects for this customer yet.</p>
@@ -106,7 +106,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}
-                  className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-3 last:border-none hover:bg-surface-2"
+                  className="row-hover flex items-center justify-between gap-3 border-b border-black/8 py-3 last:border-none hover:bg-surface-2"
                 >
                   <div>
                     <p className="font-mono text-xs text-muted">{p.ref}</p>
@@ -127,14 +127,14 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           )}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Invoices</h2>
           {invoices.length === 0 ? (
             <p className="mt-2 text-sm text-muted">No invoices for this customer yet.</p>
           ) : (
             <div className="mt-2 flex flex-col">
               {invoices.map((inv) => (
-                <div key={inv.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+                <div key={inv.id} className="row-hover flex items-center justify-between gap-3 border-b border-black/8 py-2.5 last:border-none">
                   <p className="text-sm text-ink-2">{inv.reference ?? "no reference"}</p>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold text-ink">{formatGBP(inv.amount_pence)}</span>
@@ -153,7 +153,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
         </div>
 
         {photos.length > 0 && (
-          <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+          <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
             <h2 className="text-sm font-bold text-ink">Photos</h2>
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {photos.map((photo) => (

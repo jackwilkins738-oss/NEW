@@ -43,7 +43,7 @@ export function ProjectPhotosPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Currently on site</h2>
       <p className="text-xs text-muted">
         Photos here show up on your live website automatically, newest first - no need to ask us to update anything.
@@ -52,7 +52,7 @@ export function ProjectPhotosPanel({
       <form
         ref={formRef}
         action={handleSubmit}
-        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end"
+        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end"
       >
         <input type="hidden" name="tenantId" value={tenantId} />
         <label className={`${label} sm:col-span-2`}>
@@ -105,7 +105,7 @@ function PhotoCard({ photo }: { photo: Photo }) {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-black/10 bg-surface-2">
+    <div className="group relative overflow-hidden rounded-lg border border-black/8 bg-surface-2">
       {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, not a local asset */}
       <img src={publicPhotoUrl(photo.storage_path)} alt={photo.caption ?? ""} className="aspect-[4/3] w-full object-cover" />
       {photo.caption && <p className="truncate p-1.5 text-xs text-ink-2">{photo.caption}</p>}

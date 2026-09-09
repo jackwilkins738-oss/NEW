@@ -34,7 +34,7 @@ function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
+    <div className="row-hover flex flex-col gap-2 border-b border-black/8 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-semibold text-ink">{snag.description}</p>
         <p className="text-xs text-muted">
@@ -77,7 +77,7 @@ export function SnagsPanel({ tenantId, projectId, snags }: { tenantId: string; p
   const remaining = snags.filter((s) => s.status !== "complete").length;
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-ink">Snagging</h2>
         {remaining > 0 && (
@@ -87,7 +87,7 @@ export function SnagsPanel({ tenantId, projectId, snags }: { tenantId: string; p
         )}
       </div>
 
-      <form action={addSnag} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
+      <form action={addSnag} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />
         <label className={`${label} sm:col-span-2`}>

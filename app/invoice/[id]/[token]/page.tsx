@@ -54,7 +54,7 @@ export default async function PublicInvoicePage({
           {invoice.milestone ? ` · ${invoice.milestone}` : ""}
         </p>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-sm text-ink-2">Amount</span>
             <span className="font-mono text-2xl font-bold text-ink">{formatGBP(invoice.amount_pence)}</span>
@@ -72,7 +72,7 @@ export default async function PublicInvoicePage({
             </>
           )}
 
-          <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3">
+          <div className="mt-4 flex items-center justify-between border-t border-black/8 pt-3">
             <span className="text-sm text-ink-2">
               Due {new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
             </span>
@@ -90,7 +90,7 @@ export default async function PublicInvoicePage({
           </div>
 
           {tenant?.bank_details && invoice.status !== "paid" && (
-            <div className="mt-4 border-t border-black/10 pt-3">
+            <div className="mt-4 border-t border-black/8 pt-3">
               <p className="text-xs font-semibold text-ink-2">Payment details</p>
               <p className="mt-1 whitespace-pre-line text-xs text-muted">{tenant.bank_details}</p>
             </div>
@@ -114,14 +114,14 @@ export default async function PublicInvoicePage({
             href={`/api/invoices/${invoice.id}/pdf?token=${invoice.view_token}`}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 rounded-lg border border-black/10 bg-surface px-4 py-3 text-center text-sm font-semibold text-ink-2 hover:bg-surface-2"
+            className="flex-1 rounded-lg border border-black/8 bg-surface px-4 py-3 text-center text-sm font-semibold text-ink-2 hover:bg-surface-2"
           >
             Download PDF
           </a>
           {tenant?.contact_email && (
             <a
               href={`mailto:${tenant.contact_email}`}
-              className="flex-1 rounded-lg border border-black/10 bg-surface px-4 py-3 text-center text-sm font-semibold text-ink-2 hover:bg-surface-2"
+              className="flex-1 rounded-lg border border-black/8 bg-surface px-4 py-3 text-center text-sm font-semibold text-ink-2 hover:bg-surface-2"
             >
               Query this invoice
             </a>

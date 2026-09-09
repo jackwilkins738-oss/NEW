@@ -48,7 +48,7 @@ function MonthGroup({ label, projects, total }: { label: string; projects: Proje
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-t border-black/10 first:border-none">
+    <div className="border-t border-black/8 first:border-none">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -101,7 +101,7 @@ export function MonthlyHistory({ projects }: { projects: Project[] }) {
   const groups = groupByMonth(projects);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Progress by month</h2>
       <p className="text-xs text-muted">Every project, grouped by the month it was added</p>
       <div className="mt-2">

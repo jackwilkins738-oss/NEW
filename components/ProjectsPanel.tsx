@@ -62,7 +62,7 @@ function NewProjectForm({ tenantId }: { tenantId: string }) {
   return (
     <form
       action={addProject}
-      className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
+      className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-5 sm:items-end"
     >
       <input type="hidden" name="tenantId" value={tenantId} />
       <label className={label}>
@@ -95,7 +95,7 @@ function ProjectCard({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-t border-black/10 first:border-none">
+    <div className="border-t border-black/8 first:border-none">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -226,7 +226,7 @@ function ProjectCard({ project }: { project: Project }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex-1 rounded-md border border-black/10 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
+                className="flex-1 rounded-md border border-black/8 bg-surface px-4 py-2.5 text-sm font-semibold text-ink-2 sm:flex-none"
               >
                 Close
               </button>
@@ -251,7 +251,7 @@ function ProjectCard({ project }: { project: Project }) {
 
 export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projects: Project[] }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
         <IconFolder className="h-4 w-4 text-brand" />
         Active projects

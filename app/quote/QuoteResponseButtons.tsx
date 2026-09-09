@@ -39,7 +39,7 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
             if (res.ok) setResult("declined");
           });
         }}
-        className="flex-1 rounded-lg border border-black/10 bg-surface px-4 py-3 text-sm font-semibold text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+        className="flex-1 rounded-lg border border-black/8 bg-surface px-4 py-3 text-sm font-semibold text-ink-2 hover:bg-surface-2 disabled:opacity-60"
       >
         Decline
       </button>

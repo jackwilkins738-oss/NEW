@@ -58,7 +58,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
           &larr; Back to dashboard
         </Link>
 
-        <header className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
+        <header className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <div>
             <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
               <IconStar className="h-5 w-5 text-brand" />
@@ -69,7 +69,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
           <ReviewsSortSelect current={sort} />
         </header>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           {reviews.length === 0 ? (
             <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
               <p className="text-sm font-semibold text-ink">No reviews yet</p>
@@ -80,7 +80,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
               {reviews.map((r) => {
                 const project = r.project_id ? projectById.get(r.project_id) : null;
                 return (
-                  <div key={r.id} className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-start sm:justify-between">
+                  <div key={r.id} className="row-hover flex flex-col gap-2 border-b border-black/8 py-3 last:border-none sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-ink">
                         {r.customer_name}

@@ -29,14 +29,14 @@ export function CommunicationsPanel({
   communications: Communication[];
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
         <IconChatBubble className="h-4 w-4 text-brand" />
         Communication
       </h2>
       <p className="text-xs text-muted">A record, not automated follow-up yet.</p>
 
-      <form action={addCommunication} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
+      <form action={addCommunication} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-4 sm:items-end">
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />
         <label className={label}>
@@ -66,7 +66,7 @@ export function CommunicationsPanel({
           <p className="py-4 text-center text-sm text-muted">No communication logged yet.</p>
         ) : (
           communications.map((c) => (
-            <div key={c.id} className="flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+            <div key={c.id} className="flex items-center justify-between gap-3 border-b border-black/8 py-2.5 last:border-none">
               <p className="text-sm text-ink-2">
                 <span className="font-mono text-xs text-muted">
                   {new Date(c.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}

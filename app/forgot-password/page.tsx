@@ -34,7 +34,7 @@ export default async function ForgotPasswordPage({
           style={{ background: "radial-gradient(closest-side, var(--brand-tint), transparent 72%)" }}
         />
 
-        <div className="login-card-enter rounded-[28px] border border-black/10 bg-surface p-7 shadow-[0_1px_2px_rgba(23,20,15,0.06),0_28px_56px_-16px_rgba(23,20,15,0.28)] sm:p-9">
+        <div className="login-card-enter rounded-[28px] border border-black/8 bg-surface p-7 shadow-[0_1px_2px_rgba(23,20,15,0.06),0_28px_56px_-16px_rgba(23,20,15,0.28)] sm:p-9">
           <div className="flex flex-col items-center text-center">
             <div
               className="flex h-14 w-14 items-center justify-center rounded-2xl font-display text-lg font-bold tracking-wide text-white shadow-[0_10px_22px_-8px_rgba(23,20,15,0.55),inset_0_1px_0_rgba(255,255,255,0.25)]"

@@ -34,7 +34,7 @@ function CostItemRow({ item, projectId }: { item: CostItem; projectId: string })
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="row-hover flex flex-col gap-2 border-b border-black/10 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
+    <div className="row-hover flex flex-col gap-2 border-b border-black/8 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-semibold text-ink">
           {item.description || CATEGORY_LABEL[item.category] || "Cost"}
@@ -59,7 +59,7 @@ function CostItemRow({ item, projectId }: { item: CostItem; projectId: string })
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => markCostItemPaid(projectId, item.id))}
-            className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
+            className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-[rgba(12,163,12,0.15)] hover:text-good"
           >
             Mark paid
           </button>
@@ -88,13 +88,13 @@ export function ProjectCostLedger({
   const sorted = [...items].sort((a, b) => new Date(b.cost_date).getTime() - new Date(a.cost_date).getTime());
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Cost ledger</h2>
       <p className="text-xs text-muted">Log a cost the moment it's committed, mark it paid once it's actually settled.</p>
 
       <form
         action={addProjectCostItem}
-        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
+        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-6 sm:items-end"
       >
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />

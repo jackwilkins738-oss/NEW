@@ -45,7 +45,7 @@ export default async function AdminPage() {
             <h1 className="font-display text-2xl font-extrabold text-ink">Customer admin</h1>
           </div>
           <form action={signOut}>
-            <button className="w-full rounded-lg border border-black/10 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
+            <button className="w-full rounded-lg border border-black/8 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
               Sign out
             </button>
           </form>

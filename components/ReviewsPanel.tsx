@@ -29,7 +29,7 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
   const [recording, setRecording] = useState(false);
 
   return (
-    <div className="row-hover border-b border-black/10 py-3 last:border-none">
+    <div className="row-hover border-b border-black/8 py-3 last:border-none">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{review.customer_name}</p>
@@ -111,14 +111,14 @@ export function ReviewsPanel({
   reviews: Review[];
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
         <IconStar className="h-4 w-4 text-brand" />
         Reviews
       </h2>
       <p className="text-xs text-muted">Published reviews show on the customer's website via testimonials.js.</p>
 
-      <form action={requestReview} className="mt-3 flex items-end gap-2 rounded-xl border border-black/10 bg-surface-2 p-3">
+      <form action={requestReview} className="mt-3 flex items-end gap-2 rounded-xl border border-black/8 bg-surface-2 p-3">
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />
         <label className={`${label} flex-1`}>

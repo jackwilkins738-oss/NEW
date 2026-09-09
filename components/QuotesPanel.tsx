@@ -101,7 +101,7 @@ function NewQuoteForm({
   return (
     <form
       action={addQuote}
-      className="mt-3 flex flex-col gap-3 rounded-xl border border-black/10 bg-surface-2 p-3"
+      className="mt-3 flex flex-col gap-3 rounded-xl border border-black/8 bg-surface-2 p-3"
       onSubmit={() => {
         // The hidden field's value is read by the browser before this fires,
         // so clearing state here is safe - it only resets what's shown next.
@@ -176,7 +176,7 @@ function NewQuoteForm({
             <button
               type="button"
               onClick={() => setLines((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
-              className="min-h-[36px] rounded-md border border-black/10 px-2 text-xs font-semibold text-ink-2 hover:bg-surface"
+              className="min-h-[36px] rounded-md border border-black/8 px-2 text-xs font-semibold text-ink-2 hover:bg-surface"
             >
               Remove
             </button>
@@ -244,7 +244,7 @@ function NewQuoteForm({
         </label>
       </div>
 
-      <div className="flex flex-col gap-1 border-t border-black/10 pt-2 text-xs text-ink-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-1 border-t border-black/8 pt-2 text-xs text-ink-2 sm:flex-row sm:items-center sm:justify-between">
         <span>
           Cost {formatGBP(Math.round(totals.costSubtotal * 100))} &middot; Sale{" "}
           {formatGBP(Math.round(totals.saleSubtotal * 100))} &middot; VAT {formatGBP(Math.round(totals.vatAmount * 100))}
@@ -271,7 +271,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
   const expired = quote.expires_at ? new Date(quote.expires_at + "T00:00:00") < new Date() : false;
 
   return (
-    <div className="row-hover border-b border-black/10 pb-3 last:border-none last:pb-0">
+    <div className="row-hover border-b border-black/8 pb-3 last:border-none last:pb-0">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">{quote.client_name}</p>
@@ -319,7 +319,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => sendQuote(quote.id, tenantId))}
-            className={`min-h-[32px] whitespace-nowrap rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface ${
+            className={`min-h-[32px] whitespace-nowrap rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface ${
               isPending ? "opacity-60" : ""
             }`}
           >
@@ -331,7 +331,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
           href={`/api/quotes/${quote.id}/pdf?token=${quote.accept_token}`}
           target="_blank"
           rel="noreferrer"
-          className="min-h-[32px] rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+          className="min-h-[32px] rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
         >
           PDF
         </a>
@@ -341,7 +341,7 @@ function QuoteRow({ quote, tenantId, converted }: { quote: Quote; tenantId: stri
             href={`/quote/${quote.id}/${quote.accept_token}`}
             target="_blank"
             rel="noreferrer"
-            className="min-h-[32px] rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
+            className="min-h-[32px] rounded-md border border-black/8 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface flex items-center"
           >
             Customer link
           </a>
@@ -388,7 +388,7 @@ export function QuotesPanel({
   const converted = new Set(convertedQuoteIds);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
         <IconDocument className="h-4 w-4 text-brand" />
         Quotes

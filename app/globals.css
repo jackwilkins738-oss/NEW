@@ -68,12 +68,27 @@
 }
 
 body {
-  background: var(--page-bg);
+  background-color: var(--page-bg);
   color: var(--ink);
+  /* A soft brand-tinted glow anchored top-left (warmth, not noise) sits
+     over a much quieter blueprint grid than before - the concept stays
+     (this app's whole visual identity is "blueprint made real"), it just
+     recedes into texture instead of competing with the content on top of
+     it. Cell size roughly doubled and the lines themselves blended toward
+     the page color so they read as a faint watermark, not a worksheet. */
   background-image:
-    linear-gradient(var(--hairline) 1px, transparent 1px),
-    linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
-  background-size: 34px 34px;
+    radial-gradient(1100px 620px at 12% -8%, color-mix(in srgb, var(--brand) 14%, transparent), transparent 65%),
+    linear-gradient(color-mix(in srgb, var(--hairline) 55%, var(--page-bg)) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--hairline) 55%, var(--page-bg)) 1px, transparent 1px);
+  background-size: 100% 100%, 64px 64px, 64px 64px;
+  background-attachment: fixed, scroll, scroll;
+}
+
+/* Fraunces at display sizes wants slightly tightened tracking - a serif
+   this warm reads loose by default, and a touch of negative tracking is
+   what turns "big soft heading" into "considered, editorial heading". */
+.font-display {
+  letter-spacing: -0.01em;
 }
 
 @keyframes login-card-enter {

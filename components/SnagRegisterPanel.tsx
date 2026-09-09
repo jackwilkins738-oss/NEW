@@ -5,7 +5,7 @@ export function SnagRegisterPanel({ summary }: { summary: SnagRegisterSummary })
   const hasAnything = summary.openCount > 0 || summary.completeCount > 0;
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Defect register</h2>
       <p className="text-xs text-muted">Open snags across every project, oldest and overdue first</p>
 
@@ -35,7 +35,7 @@ export function SnagRegisterPanel({ summary }: { summary: SnagRegisterSummary })
           </div>
 
           {summary.openRows.length > 0 && (
-            <div className="mt-4 flex flex-col gap-1.5 border-t border-black/10 pt-3">
+            <div className="mt-4 flex flex-col gap-1.5 border-t border-black/8 pt-3">
               {summary.openRows.slice(0, 8).map((r) => (
                 <Link
                   key={r.id}

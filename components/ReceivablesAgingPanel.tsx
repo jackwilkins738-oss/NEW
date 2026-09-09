@@ -14,7 +14,7 @@ export function ReceivablesAgingPanel({ aging }: { aging: ReceivablesAging }) {
   const max = Math.max(1, ...buckets.map((b) => b.totalPence));
 
   return (
-    <div className="kpi-tile rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="kpi-tile rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-semibold text-ink-2">Receivables ageing</p>
         <p className="font-mono text-sm font-bold text-ink">{formatGBP(aging.totalOutstandingPence)}</p>

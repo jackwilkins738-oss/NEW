@@ -5,7 +5,12 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Big Shoulders Display"', "system-ui", "sans-serif"],
+        // Fraunces (variable, optical-size aware) replaces the old bold
+        // condensed grotesque for every font-display heading/hero number
+        // app-wide - one token swap instead of touching the ~17 files that
+        // reference the class, same leverage the shadow/kpi-tile tokens
+        // already use elsewhere in this file/globals.css.
+        display: ['"Fraunces"', "ui-serif", "Georgia", "serif"],
         sans: ['"Public Sans"', "system-ui", "-apple-system", "sans-serif"],
         mono: ['"IBM Plex Mono"', "monospace"],
       },

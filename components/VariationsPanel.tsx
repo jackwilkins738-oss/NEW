@@ -39,7 +39,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
   const totalCost = variation.materials_cost_pence + variation.labour_cost_pence + variation.other_cost_pence;
 
   return (
-    <div className="row-hover border-b border-black/10 py-3 last:border-none">
+    <div className="row-hover border-b border-black/8 py-3 last:border-none">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink">
@@ -72,7 +72,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
               type="button"
               disabled={isPending}
               onClick={() => startTransition(() => declineVariation(projectId, variation.id))}
-              className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+              className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
             >
               Decline
             </button>
@@ -83,7 +83,7 @@ function VariationRow({ variation, projectId }: { variation: Variation; projectI
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => createInvoiceFromVariation(projectId, variation.id))}
-            className="min-h-[32px] rounded-md border border-black/10 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
+            className="min-h-[32px] rounded-md border border-black/8 bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-surface"
           >
             Create invoice
           </button>
@@ -112,13 +112,13 @@ export function VariationsPanel({
   variations: Variation[];
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Variations</h2>
       <p className="text-xs text-muted">Extra work the customer's asked for - approving adds it to the project value.</p>
 
       <form
         action={addVariation}
-        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-3"
+        className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-3"
       >
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />

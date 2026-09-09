@@ -6,7 +6,7 @@ export function VariationRegisterPanel({ summary }: { summary: VariationRegister
   const hasAnything = summary.pendingCount > 0 || summary.approvedCount > 0 || summary.declinedCount > 0;
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Variation register</h2>
       <p className="text-xs text-muted">Extra work requested across every project - what's pending, approved, or declined</p>
 
@@ -43,7 +43,7 @@ export function VariationRegisterPanel({ summary }: { summary: VariationRegister
           </div>
 
           {summary.pendingRows.length > 0 && (
-            <div className="mt-4 overflow-x-auto border-t border-black/10 pt-3">
+            <div className="mt-4 overflow-x-auto border-t border-black/8 pt-3">
               <table className="w-full min-w-[420px] text-sm">
                 <thead>
                   <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted">

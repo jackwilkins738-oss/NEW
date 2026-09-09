@@ -28,7 +28,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
           &larr; Back to dashboard
         </Link>
 
-        <header className="mt-3 rounded-2xl border border-black/10 bg-surface px-5 py-4 shadow-sm">
+        <header className="mt-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <h1 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink sm:text-2xl">
             <IconSettings className="h-5 w-5 text-brand" />
             Settings
@@ -36,14 +36,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
           <p className="mt-1 text-sm text-muted">Defaults for {tenant.business_name} - override any of these per-quote.</p>
         </header>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Logo</h2>
           <p className="mt-1 text-xs text-muted">Shown on quote and invoice PDFs.</p>
           <form action={uploadTenantLogo} className="mt-3 flex items-center gap-3">
             <input type="hidden" name="tenantId" value={tenant.id} />
             {tenant.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={tenant.logo_url} alt="" className="h-12 w-12 rounded-lg border border-black/10 object-contain bg-white p-1" />
+              <img src={tenant.logo_url} alt="" className="h-12 w-12 rounded-lg border border-black/8 object-contain bg-white p-1" />
             )}
             <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required className={field} />
             <button type="submit" className="btn-primary flex-none rounded-md bg-brand px-3 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
@@ -52,7 +52,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
           </form>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Online payment</h2>
           {searchParams.stripe === "error" && (
             <p className="mt-1 text-xs font-semibold text-critical">Something went wrong connecting Stripe - try again.</p>
@@ -83,7 +83,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
 
         <form
           action={updateTenantSettings.bind(null, tenant.id)}
-          className="mt-5 flex flex-col gap-4 rounded-2xl border border-black/10 bg-surface p-5 shadow-sm"
+          className="mt-5 flex flex-col gap-4 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm"
         >
           <h2 className="text-sm font-bold text-ink">Business profile</h2>
           <label className={label}>
@@ -117,7 +117,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
             </label>
           </div>
 
-          <h2 className="mt-2 text-sm font-bold text-ink border-t border-black/10 pt-4">Quote &amp; invoice defaults</h2>
+          <h2 className="mt-2 text-sm font-bold text-ink border-t border-black/8 pt-4">Quote &amp; invoice defaults</h2>
           <label className={label}>
             Default VAT rate (%)
             <input

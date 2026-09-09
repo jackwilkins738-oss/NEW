@@ -99,7 +99,7 @@ function CreateTenantForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Add a new customer</h2>
       <form onSubmit={handleSubmit} className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className={label}>
@@ -181,7 +181,7 @@ function InviteForm({ tenants }: { tenants: Tenant[] }) {
   }
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Invite a login</h2>
       <p className="text-xs text-muted">Generates a one-time link - copy it and send it yourself (email, text, WhatsApp).</p>
       <form onSubmit={handleSubmit} className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -266,7 +266,7 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
       <button
         type="submit"
         disabled={pending || !changed}
-        className="min-h-[38px] rounded-md border border-black/10 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+        className="min-h-[38px] rounded-md border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save"}
       </button>
@@ -319,7 +319,7 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
           type="button"
           onClick={handleSave}
           disabled={pending}
-          className="min-h-[38px] rounded-md border border-black/10 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
+          className="min-h-[38px] rounded-md border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -354,12 +354,12 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Customers ({tenants.length})</h2>
       <div className="mt-3 flex flex-col gap-4">
         {tenants.length === 0 && <p className="text-sm text-muted">No customers yet.</p>}
         {tenants.map((t) => (
-          <div key={t.id} className="row-hover border-b border-black/10 pb-4 text-sm last:border-none last:pb-0">
+          <div key={t.id} className="row-hover border-b border-black/8 pb-4 text-sm last:border-none last:pb-0">
             <p className="font-semibold text-ink">{t.business_name}</p>
             <p className="text-xs text-muted">
               slug: <span className="font-mono">{t.slug}</span>
@@ -421,7 +421,7 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
               </div>
             )}
 
-            <div className="mt-3 border-t border-black/10 pt-3">
+            <div className="mt-3 border-t border-black/8 pt-3">
               <DeleteButton
                 action={deleteTenant}
                 id={t.id}

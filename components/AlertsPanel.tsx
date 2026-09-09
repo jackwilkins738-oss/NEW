@@ -69,7 +69,7 @@ export function AlertsPanel({
     // Spans the full grid row once there's something real to show - a
     // genuine problem list shouldn't have to compete for space with
     // Capacity/Calendar the way it does when it's empty.
-    <div className={`rounded-2xl border border-black/10 bg-surface p-5 shadow-sm ${alerts.length > 0 ? "lg:col-span-3" : ""}`}>
+    <div className={`rounded-2xl border border-black/8 bg-surface p-5 shadow-sm ${alerts.length > 0 ? "lg:col-span-3" : ""}`}>
       <h2 className="text-sm font-bold text-ink">Action centre</h2>
       <p className="text-xs text-muted">Ranked by urgency - the owner and date shown are pulled from the linked project</p>
       <div className="mt-3 flex flex-col gap-2">

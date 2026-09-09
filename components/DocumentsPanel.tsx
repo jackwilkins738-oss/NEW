@@ -33,7 +33,7 @@ function DocumentRowItem({ doc, projectId }: { doc: DocumentRow; projectId: stri
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-black/10 py-2.5 last:border-none">
+    <div className="flex items-center justify-between gap-3 border-b border-black/8 py-2.5 last:border-none">
       <div className="min-w-0">
         {doc.url ? (
           <a href={doc.url} target="_blank" rel="noreferrer" className="truncate text-sm font-semibold text-brand hover:underline">
@@ -72,11 +72,11 @@ export function DocumentsPanel({
   documents: DocumentRow[];
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-surface p-5 shadow-sm">
+    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Documents</h2>
       <p className="text-xs text-muted">Contracts, drawings, RAMS, certificates, insurance, purchase orders.</p>
 
-      <form action={uploadProjectDocument} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/10 bg-surface-2 p-3 sm:grid-cols-3 sm:items-end">
+      <form action={uploadProjectDocument} className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-black/8 bg-surface-2 p-3 sm:grid-cols-3 sm:items-end">
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="projectId" value={projectId} />
         <label className={label}>
