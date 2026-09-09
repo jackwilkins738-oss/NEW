@@ -16,6 +16,8 @@ import { computeProjectRisks } from "@/lib/projectRisk";
 import { computePortfolioForecast } from "@/lib/portfolioForecast";
 import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { ReceivablesAgingPanel } from "@/components/ReceivablesAgingPanel";
+import { summarizeVariations } from "@/lib/variationRegister";
+import { VariationRegisterPanel } from "@/components/VariationRegisterPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -199,9 +201,8 @@ export default async function DashboardPage() {
       .eq("tenant_id", tenant.id),
     supabase
       .from("variations")
-      .select("id, number, description, project_id, status, customer_price_pence")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "pending"),
+      .select("id, number, description, project_id, status, customer_price_pence, created_at, approved_at")
+      .eq("tenant_id", tenant.id),
     supabase
       .from("reviews")
       .select("id, customer_name, project_id, status")
@@ -217,7 +218,8 @@ export default async function DashboardPage() {
   const projectPhotos = photosRes.data ?? [];
   const quotes = quotesRes.data ?? [];
   const costItems = costItemsRes.data ?? [];
-  const pendingVariations = variationsRes.data ?? [];
+  const allVariations = variationsRes.data ?? [];
+  const pendingVariations = allVariations.filter((v) => v.status === "pending");
   const pendingReviews = pendingReviewsRes.data ?? [];
 
   const pipelineValue = projects
@@ -279,6 +281,18 @@ export default async function DashboardPage() {
   const receivablesAging = computeReceivablesAging(invoices);
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
+  const variationRegister = summarizeVariations(
+    allVariations.map((v) => ({
+      id: v.id,
+      number: v.number,
+      project_id: v.project_id,
+      project_client_name: projectNameById.get(v.project_id) ?? "a project",
+      customer_price_pence: v.customer_price_pence,
+      status: v.status,
+      created_at: v.created_at,
+      approved_at: v.approved_at,
+    }))
+  );
   const variationAlerts = pendingVariations.map((v) => ({
     id: v.id,
     number: v.number,
@@ -526,6 +540,10 @@ export default async function DashboardPage() {
               {dueSoonInvoices.length} invoice{dueSoonInvoices.length === 1 ? "" : "s"}
             </p>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <VariationRegisterPanel summary={variationRegister} />
         </div>
 
         {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
