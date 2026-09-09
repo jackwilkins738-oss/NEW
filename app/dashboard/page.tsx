@@ -18,6 +18,8 @@ import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { ReceivablesAgingPanel } from "@/components/ReceivablesAgingPanel";
 import { summarizeVariations } from "@/lib/variationRegister";
 import { VariationRegisterPanel } from "@/components/VariationRegisterPanel";
+import { computeDataQualityWarnings } from "@/lib/dataQuality";
+import { DataQualityPanel } from "@/components/DataQualityPanel";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -273,6 +275,12 @@ export default async function DashboardPage() {
     projectBudgets
   );
 
+  const dataQualityWarnings = computeDataQualityWarnings(
+    projects.map((p) => ({ id: p.id, client_name: p.client_name, value_pence: p.value_pence, quote_id: p.quote_id, completed_at: p.completed_at })),
+    invoices.map((i) => ({ id: i.id, client_name: i.client_name, project_id: i.project_id })),
+    costItems
+  );
+
   const portfolioForecast = computePortfolioForecast(
     projects.map((p) => ({ id: p.id, value_pence: p.value_pence, completed_at: p.completed_at })),
     costItems
@@ -507,6 +515,8 @@ export default async function DashboardPage() {
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
           <JobsAtRiskPanel risks={jobRisks} />
         </div>
+
+        <DataQualityPanel warnings={dataQualityWarnings} />
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
           <AlertsPanel
