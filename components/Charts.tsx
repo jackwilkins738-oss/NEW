@@ -99,11 +99,13 @@ export function RevenueTrend({
   note,
   points,
   format,
+  bare = false,
 }: {
   title: string;
   note?: string;
   points: { label: string; value: number }[];
   format: Format;
+  bare?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const W = 620;
@@ -149,7 +151,7 @@ export function RevenueTrend({
   const gridLines = [0.25, 0.5, 0.75].map((f) => top + (bottom - top) * f);
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div className={bare ? "" : "rounded-2xl border border-black/8 bg-surface p-5 shadow-sm"}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-ink">{title}</h2>

@@ -12,12 +12,21 @@ function formatEventTime(iso: string) {
   return d.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export function CalendarPanel({ connected, events }: { connected: boolean; events: CalendarEvent[] }) {
+export function CalendarPanel({
+  connected,
+  events,
+  bare = false,
+}: {
+  connected: boolean;
+  events: CalendarEvent[];
+  bare?: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
+  const chrome = bare ? "" : "rounded-2xl border border-black/8 bg-surface p-5 shadow-sm";
 
   if (!connected) {
     return (
-      <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+      <div className={chrome}>
         <h2 className="text-sm font-bold text-ink">Your calendar</h2>
         <p className="mt-1 text-sm text-muted">
           Connect Google Calendar to see your day-to-day appointments here alongside your jobs, and have each job&apos;s
@@ -34,7 +43,7 @@ export function CalendarPanel({ connected, events }: { connected: boolean; event
   }
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div className={chrome}>
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-ink">Your calendar</h2>
         <button

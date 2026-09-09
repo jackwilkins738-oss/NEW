@@ -522,13 +522,13 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="mt-5">
           <JobsAtRiskPanel risks={jobRisks} />
         </div>
 
         <DataQualityPanel warnings={dataQualityWarnings} />
 
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="mt-5">
           <AlertsPanel
             leads={leads}
             invoices={invoices}
@@ -538,17 +538,22 @@ export default async function DashboardPage() {
             projectBudgets={projectBudgets}
             pendingReviews={reviewAlerts}
           />
-          <CapacityPanel tenantId={tenant.id} trades={trades} />
-          <Suspense
-            fallback={
-              <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-                <h2 className="text-sm font-bold text-ink">Your calendar</h2>
-                <p className="mt-1 text-sm text-muted">Loading&hellip;</p>
-              </div>
-            }
-          >
-            <CalendarPanelData userId={userData.user.id} />
-          </Suspense>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
+          <CapacityPanel tenantId={tenant.id} trades={trades} bare />
+          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+            <Suspense
+              fallback={
+                <div>
+                  <h2 className="text-sm font-bold text-ink">Your calendar</h2>
+                  <p className="mt-1 text-sm text-muted">Loading&hellip;</p>
+                </div>
+              }
+            >
+              <CalendarPanelData userId={userData.user.id} bare />
+            </Suspense>
+          </div>
         </div>
 
         <div className="mt-4">
@@ -621,21 +626,19 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-black/8">
           <div className="lg:col-span-2">
             <RevenueTrend
               title="Project value won · trailing 12 months"
               note="By month the project was created - an early proxy for revenue until invoicing is wired in"
               points={revenueTrend}
               format="gbp"
+              bare
             />
           </div>
-          <BarChart
-            title="Revenue by project type"
-            note="Trailing 12 months"
-            rows={projectTypeBreakdown}
-            format="gbp"
-          />
+          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+            <BarChart title="Revenue by project type" note="Trailing 12 months" rows={projectTypeBreakdown} format="gbp" bare />
+          </div>
         </div>
 
         <div className="mt-5">

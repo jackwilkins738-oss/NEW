@@ -7,7 +7,7 @@ import { CalendarPanel } from "@/components/CalendarPanel";
 // (real network round-trip, sometimes an OAuth token refresh on top) is
 // wrapped in its own <Suspense> boundary and streamed in separately -
 // leads/invoices/projects/alerts etc. no longer wait on Google to render.
-export async function CalendarPanelData({ userId }: { userId: string }) {
+export async function CalendarPanelData({ userId, bare = false }: { userId: string; bare?: boolean }) {
   const calendarConnection = await getCalendarConnection(userId);
   let calendarEvents: { id: string; summary: string; start: string; end: string; htmlLink: string }[] = [];
 
@@ -22,5 +22,5 @@ export async function CalendarPanelData({ userId }: { userId: string }) {
     }
   }
 
-  return <CalendarPanel connected={!!calendarConnection} events={calendarEvents} />;
+  return <CalendarPanel connected={!!calendarConnection} events={calendarEvents} bare={bare} />;
 }

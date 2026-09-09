@@ -75,9 +75,9 @@ function AddTradeForm({ tenantId }: { tenantId: string }) {
   );
 }
 
-export function CapacityPanel({ tenantId, trades }: { tenantId: string; trades: Trade[] }) {
+export function CapacityPanel({ tenantId, trades, bare = false }: { tenantId: string; trades: Trade[]; bare?: boolean }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div className={bare ? "" : "rounded-2xl border border-black/8 bg-surface p-5 shadow-sm"}>
       <h2 className="text-sm font-bold text-ink">Trade capacity this week</h2>
       <p className="text-xs text-muted">Kept up to date by you - add a trade already listed to update its percentage</p>
 
