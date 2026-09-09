@@ -22,6 +22,7 @@ import { computeDataQualityWarnings } from "@/lib/dataQuality";
 import { DataQualityPanel } from "@/components/DataQualityPanel";
 import { summarizeSnags } from "@/lib/snagRegister";
 import { SnagRegisterPanel } from "@/components/SnagRegisterPanel";
+import { computeBacklogByMonth } from "@/lib/backlog";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
@@ -296,6 +297,10 @@ export default async function DashboardPage() {
   const receivablesAging = computeReceivablesAging(invoices);
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.client_name]));
+  const backlog = computeBacklogByMonth(
+    projects.map((p) => ({ value_pence: p.value_pence, completed_at: p.completed_at, target_date: p.target_date }))
+  );
+
   const snagRegister = summarizeSnags(
     (snagsRes.data ?? []).map((s) => ({
       id: s.id,
@@ -650,6 +655,18 @@ export default async function DashboardPage() {
             rows={projectTypeBreakdown}
             format="gbp"
             colorMode="categorical"
+          />
+        </div>
+
+        <div className="mt-5">
+          <BarChart
+            title="Backlog by month"
+            note={`${formatGBP(backlog.totalBacklogPence)} contracted, not yet completed, across ${backlog.projectCount} active project${
+              backlog.projectCount === 1 ? "" : "s"
+            }${backlog.noTargetDatePence > 0 ? ` · ${formatGBP(backlog.noTargetDatePence)} has no target date, not shown below` : ""}`}
+            rows={backlog.buckets}
+            format="gbp"
+            colorMode="single"
           />
         </div>
 
