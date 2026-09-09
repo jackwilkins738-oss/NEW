@@ -6,7 +6,10 @@ import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconBanknote } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PanelPagination } from "@/components/PanelPagination";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
+
+const PAGE_SIZE = 20;
 
 type Invoice = {
   id: string;
@@ -240,6 +243,7 @@ export function InvoicesPanel({
     return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sorted;
@@ -247,6 +251,9 @@ export function InvoicesPanel({
       [inv.client_name, inv.invoice_number, inv.reference, inv.milestone].some((f) => f?.toLowerCase().includes(q))
     );
   }, [sorted, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page_ = Math.min(page, totalPages);
+  const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -262,7 +269,16 @@ export function InvoicesPanel({
           >
             Export CSV
           </a>
-          {invoices.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search invoices…" />}
+          {invoices.length > 0 && (
+            <PanelSearchInput
+              value={query}
+              onChange={(v) => {
+                setQuery(v);
+                setPage(1);
+              }}
+              placeholder="Search invoices…"
+            />
+          )}
         </div>
       </div>
 
@@ -278,7 +294,7 @@ export function InvoicesPanel({
         {sorted.length > 0 && filtered.length === 0 && (
           <p className="py-6 text-center text-sm text-muted">No invoices match &ldquo;{query}&rdquo;.</p>
         )}
-        {filtered.map((inv) => {
+        {pageItems.map((inv) => {
           const state = invoiceState(inv);
           const outstanding = inv.amount_pence - (inv.paid_pence ?? 0);
           return (
@@ -336,6 +352,7 @@ export function InvoicesPanel({
           );
         })}
       </div>
+      <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

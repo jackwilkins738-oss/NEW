@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatGBP } from "@/lib/format";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PanelPagination } from "@/components/PanelPagination";
+
+const PAGE_SIZE = 20;
 
 type Customer = {
   id: string;
@@ -16,17 +19,28 @@ type Customer = {
 
 export function CustomersListPanel({ customers }: { customers: Customer[] }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return customers;
     return customers.filter((c) => [c.name, c.email, c.phone].some((f) => f?.toLowerCase().includes(q)));
   }, [customers, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page_ = Math.min(page, totalPages);
+  const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
     <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       {customers.length > 0 && (
         <div className="mb-3 flex justify-end">
-          <PanelSearchInput value={query} onChange={setQuery} placeholder="Search customers…" />
+          <PanelSearchInput
+            value={query}
+            onChange={(v) => {
+              setQuery(v);
+              setPage(1);
+            }}
+            placeholder="Search customers…"
+          />
         </div>
       )}
       {customers.length === 0 ? (
@@ -40,7 +54,7 @@ export function CustomersListPanel({ customers }: { customers: Customer[] }) {
         <p className="py-6 text-center text-sm text-muted">No customers match &ldquo;{query}&rdquo;.</p>
       ) : (
         <div className="flex flex-col">
-          {filtered.map((c) => (
+          {pageItems.map((c) => (
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
@@ -62,6 +76,7 @@ export function CustomersListPanel({ customers }: { customers: Customer[] }) {
           ))}
         </div>
       )}
+      <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

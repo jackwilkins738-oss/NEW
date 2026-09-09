@@ -6,6 +6,9 @@ import { updateProject, addProject, deleteProject } from "@/app/dashboard/action
 import { formatGBP } from "@/lib/format";
 import { IconFolder } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PanelPagination } from "@/components/PanelPagination";
+
+const PAGE_SIZE = 20;
 
 type Project = {
   id: string;
@@ -252,6 +255,7 @@ function ProjectCard({ project }: { project: Project }) {
 
 export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projects: Project[] }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return projects;
@@ -259,6 +263,9 @@ export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projec
       [p.client_name, p.ref, p.location, p.project_type, p.pm].some((f) => f?.toLowerCase().includes(q))
     );
   }, [projects, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page_ = Math.min(page, totalPages);
+  const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -270,7 +277,16 @@ export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projec
           </h2>
           <p className="text-xs text-muted">Tap a project to add details or update its status</p>
         </div>
-        {projects.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search projects…" />}
+        {projects.length > 0 && (
+          <PanelSearchInput
+            value={query}
+            onChange={(v) => {
+              setQuery(v);
+              setPage(1);
+            }}
+            placeholder="Search projects…"
+          />
+        )}
       </div>
 
       <div className="mt-3">
@@ -286,11 +302,12 @@ export function ProjectsPanel({ tenantId, projects }: { tenantId: string; projec
         <p className="py-6 text-center text-sm text-muted">No projects match &ldquo;{query}&rdquo;.</p>
       ) : (
         <div>
-          {filtered.map((p) => (
+          {pageItems.map((p) => (
             <ProjectCard key={p.id} project={p} />
           ))}
         </div>
       )}
+      <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

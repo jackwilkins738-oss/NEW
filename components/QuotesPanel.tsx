@@ -6,7 +6,10 @@ import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PanelPagination } from "@/components/PanelPagination";
 import { isPastUK } from "@/lib/ukDate";
+
+const PAGE_SIZE = 20;
 
 type LineItem = { category: string; description: string; unit_price_pence: number };
 
@@ -389,6 +392,7 @@ export function QuotesPanel({
 }) {
   const converted = new Set(convertedQuoteIds);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return quotes;
@@ -396,6 +400,9 @@ export function QuotesPanel({
       [quote.client_name, quote.quote_number, quote.reference, quote.customer_email].some((f) => f?.toLowerCase().includes(q))
     );
   }, [quotes, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page_ = Math.min(page, totalPages);
+  const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -404,7 +411,16 @@ export function QuotesPanel({
           <IconDocument className="h-4 w-4 text-brand" />
           Quotes
         </h2>
-        {quotes.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search quotes…" />}
+        {quotes.length > 0 && (
+          <PanelSearchInput
+            value={query}
+            onChange={(v) => {
+              setQuery(v);
+              setPage(1);
+            }}
+            placeholder="Search quotes…"
+          />
+        )}
       </div>
       <NewQuoteForm
         tenantId={tenantId}
@@ -421,9 +437,10 @@ export function QuotesPanel({
         ) : filtered.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No quotes match &ldquo;{query}&rdquo;.</p>
         ) : (
-          filtered.map((q) => <QuoteRow key={q.id} quote={q} tenantId={tenantId} converted={converted.has(q.id)} />)
+          pageItems.map((q) => <QuoteRow key={q.id} quote={q} tenantId={tenantId} converted={converted.has(q.id)} />)
         )}
       </div>
+      <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

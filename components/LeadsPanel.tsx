@@ -5,6 +5,9 @@ import { updateLeadStatus, updateLeadValue, updateLeadDetails, convertLeadToProj
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PanelPagination } from "@/components/PanelPagination";
+
+const PAGE_SIZE = 20;
 
 type Lead = {
   id: string;
@@ -219,6 +222,7 @@ export function LeadsPanel({
   const followUpCount = leads.filter(needsFollowUp).length;
   const converted = new Set(convertedLeadIds);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return leads;
@@ -226,6 +230,9 @@ export function LeadsPanel({
       [l.name, l.email, l.phone, l.source, l.job_type, l.address].some((f) => f?.toLowerCase().includes(q))
     );
   }, [leads, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page_ = Math.min(page, totalPages);
+  const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -247,7 +254,16 @@ export function LeadsPanel({
             Export CSV
           </a>
         </div>
-        {leads.length > 0 && <PanelSearchInput value={query} onChange={setQuery} placeholder="Search leads…" />}
+        {leads.length > 0 && (
+          <PanelSearchInput
+            value={query}
+            onChange={(v) => {
+              setQuery(v);
+              setPage(1);
+            }}
+            placeholder="Search leads…"
+          />
+        )}
       </div>
       <div className="mt-3 flex flex-col gap-3">
         {leads.length === 0 ? (
@@ -260,9 +276,10 @@ export function LeadsPanel({
         ) : filtered.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No leads match &ldquo;{query}&rdquo;.</p>
         ) : (
-          filtered.map((l) => <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />)
+          pageItems.map((l) => <LeadRow key={l.id} lead={l} tenantId={tenantId} converted={converted.has(l.id)} />)
         )}
       </div>
+      <PanelPagination page={page_} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }
