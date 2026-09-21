@@ -17,8 +17,18 @@ data (enforced by database row-level security, not just app logic).
 ## One-time setup
 
 1. **Create a Supabase project** at supabase.com (free tier is fine).
-2. In the Supabase SQL editor, run `supabase/schema.sql`, then (optional, for
-   a demo tenant) `supabase/seed.sql`.
+2. **Build the database.** In the Supabase SQL editor, run, in this order:
+   1. `supabase/schema.sql` — the original baseline (9 tables).
+   2. **Every file in `supabase/migrations/` in numeric order**, `002` through
+      `038`. These add the other 13 tables the app needs (quotes, variations,
+      snags, team, suppliers, reviews, audit log and the rest), along with
+      their row-level-security policies and indexes.
+   3. Optionally `supabase/seed.sql`, for a demo tenant to click around.
+
+   Do not skip step 2.2 — `schema.sql` alone gives you a database the app
+   cannot run against, because most pages query tables that only exist after
+   the migrations. Every migration is written to be run once, in order, on top
+   of the one before it.
 3. In Supabase → Project Settings → API, copy the **Project URL**, the
    **anon public key**, and the **service_role key** (the last one is
    secret — it powers `/admin`, see below).
@@ -39,10 +49,20 @@ data (enforced by database row-level security, not just app logic).
 
 ### Local development
 
-This machine doesn't currently have Node.js installed, so `npm install` /
-`npm run dev` won't run here yet — install Node 18+ (nodejs.org) to develop
-locally. You don't strictly need to: pushing to GitHub and letting Vercel
-build it works without ever running it on your own machine.
+Needs Node 18+ (nodejs.org). Then:
+
+```bash
+npm install
+npm run dev
+```
+
+Visit `http://<tenant-slug>.localhost:3000` — the slug, not plain
+`localhost`, because `lib/tenant.ts` works out which customer a request is
+for from the hostname. With `seed.sql` loaded that's
+`http://ridgeview.localhost:3000`.
+
+`npm test` runs the unit tests (the `lib/` business logic); `npx tsc --noEmit`
+type-checks the whole app without building it.
 
 ## Onboarding a new customer (~10–15 min)
 
@@ -108,8 +128,9 @@ functional.
    `https://admin.scalardigital.co.uk/api/calendar/google/callback`
 5. Copy the Client ID and secret into `GOOGLE_CLIENT_ID` /
    `GOOGLE_CLIENT_SECRET` in Vercel's env vars.
-6. Run `supabase/migrations/011_calendar_connections.sql` in the Supabase
-   SQL editor (adds the token-storage table and one column on `projects`).
+6. No SQL needed here — the token-storage table and the extra `projects`
+   column come from `supabase/migrations/011_calendar_connections.sql`, which
+   you already ran as part of one-time setup step 2.
 
 ## Weekly digest email
 
