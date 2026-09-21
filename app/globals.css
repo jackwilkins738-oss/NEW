@@ -67,6 +67,43 @@
   }
 }
 
+/* The same dark tokens again, this time keyed on an explicit attribute so a
+   viewer can choose dark while their OS is in light mode. The duplication is
+   unavoidable - CSS custom properties can't be shared between a media query
+   and an attribute selector - so treat these two blocks as one unit and
+   change them together. lib/theme.ts already emitted a matching
+   :root[data-theme="dark"] rule for the per-tenant brand colours; this is
+   the base palette that was missing underneath it. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #0d1015;
+  --surface: #171c24;
+  --surface-2: #232a37;
+  --ink: #f5f1e6;
+  --ink-2: #c2c6cc;
+  --muted: #838894;
+  --hairline: #2e3542;
+  --brand: #e8935e;
+  --brand-strong: #f5b488;
+  --brand-tint: rgba(232, 147, 94, 0.16);
+
+  --chart-surface: #1a1a19;
+  --chart-ink: #ffffff;
+  --chart-ink-2: #c3c2b7;
+  --chart-muted: #898781;
+  --chart-grid: #2c2c2a;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-other: #5b5b56;
+
+  --card-shadow-tight: rgba(0, 0, 0, 0.35);
+  --card-shadow-ambient: rgba(0, 0, 0, 0.55);
+  --card-highlight: rgba(255, 255, 255, 0.05);
+}
+
 body {
   background-color: var(--page-bg);
   color: var(--ink);
@@ -133,6 +170,143 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------
+   Mobile navigation drawer.
+
+   It previously appeared instantly, which read as a glitch next to the
+   considered motion everywhere else in this app. The panel slides in on
+   the same cubic-bezier(0.16, 1, 0.3, 1) the login card and the KPI tiles
+   use, and the scrim fades rather than snapping to 50% black.
+
+   Only the entrance is animated. Animating the exit would mean keeping the
+   drawer mounted after it's closed purely to play it out, which fights the
+   focus-restore in AppSidebar - a fast, clean dismissal is the better
+   trade.
+   --------------------------------------------------------------------- */
+@keyframes drawer-panel-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes drawer-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.drawer-panel {
+  animation: drawer-panel-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.drawer-scrim {
+  animation: drawer-scrim-in 0.28s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-panel,
+  .drawer-scrim {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Skeletons.
+
+   Every page in this app is `force-dynamic` and waits on a dozen queries,
+   so without a loading state a navigation is a white screen until all of
+   them resolve. These placeholders keep the layout's shape on screen while
+   that happens, so the page feels like it's filling in rather than
+   stalling.
+
+   The sheen travels left-to-right over a flat tinted block rather than
+   pulsing opacity - a pulse reads as "broken/flashing", a directional
+   sweep reads as "working".
+   --------------------------------------------------------------------- */
+@keyframes skeleton-sweep {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
+.skeleton {
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--hairline) 55%, var(--surface));
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--card-highlight) 70%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 180% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+
+/* Reduced motion: keep the placeholder blocks, drop the travelling sheen.
+   The layout still communicates "content is coming" without anything
+   moving. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Focus: one visible indicator for the whole app.
+
+   Nearly every input in this app carried `outline-none focus:border-brand`,
+   which removes the browser's focus ring and replaces it with a 1px border
+   colour change - not enough contrast to see where you are, and a WCAG
+   2.4.11 failure. The login page already had the good version
+   (.login-input:focus, above): brand border *plus* a 4px tinted halo.
+
+   These rules promote that one good pattern to the whole app. They sit
+   after @tailwind utilities in the cascade, so they beat the `outline-none`
+   utility still present on those elements - which also means any field
+   added later gets a correct focus ring without anyone remembering to ask
+   for one.
+
+   :focus-visible (not :focus) so a mouse click doesn't light up a ring,
+   only keyboard navigation does.
+   --------------------------------------------------------------------- */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px var(--brand-tint);
+}
+
+/* Buttons, links and anything else focusable get an offset ring instead of
+   an inset halo - it reads clearly over the solid brand fill of a primary
+   button and over the dark sidebar alike. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* The sidebar is always dark regardless of theme, so a brand-coloured ring
+   can fall below contrast against it - white is the reliable choice there. */
+[data-app-sidebar] a:focus-visible,
+[data-app-sidebar] button:focus-visible {
+  outline-color: #ffffff;
+}
+
 /* Dashboard elevation system - a card lifts and its shadow deepens on
    hover/focus rather than every surface sitting at the same flat
    shadow-sm, and the brand color (different per tenant) shows through as
@@ -143,7 +317,11 @@ body {
   overflow: hidden;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
-.kpi-tile:hover {
+/* :focus-within as well as :hover - the comment above always claimed
+   "hover/focus", but only hover was implemented, so tabbing into a tile's
+   contents gave no sign of where you were. */
+.kpi-tile:hover,
+.kpi-tile:focus-within {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--brand) 45%, var(--hairline));
   box-shadow: 0 20px 36px -22px color-mix(in srgb, var(--brand) 55%, transparent), 0 2px 6px -2px rgba(0, 0, 0, 0.08);
@@ -157,7 +335,8 @@ body {
   transition: opacity 0.25s ease;
   pointer-events: none;
 }
-.kpi-tile:hover::after {
+.kpi-tile:hover::after,
+.kpi-tile:focus-within::after {
   opacity: 1;
 }
 
@@ -169,7 +348,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .kpi-tile,
-  .kpi-tile:hover {
+  .kpi-tile:hover,
+  .kpi-tile:focus-within {
     transform: none;
   }
 }
