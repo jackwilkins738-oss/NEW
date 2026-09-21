@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { disconnectGoogleCalendar } from "@/app/dashboard/actions";
+import { disconnectGoogleCalendar } from "@/app/actions";
 
 type CalendarEvent = { id: string; summary: string; start: string; htmlLink: string };
 

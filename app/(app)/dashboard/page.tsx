@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
@@ -27,13 +26,10 @@ import { computeBacklogByMonth } from "@/lib/backlog";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { CalendarPanelData } from "@/components/CalendarPanelData";
 import { ContactEmailField } from "@/components/ContactEmailField";
-import { AppSidebar } from "@/components/AppSidebar";
-import { getCurrentUserRole } from "@/lib/membershipRole";
 import { Sparkline } from "@/components/Sparkline";
 import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
-import { brandThemeStyleTag } from "@/lib/theme";
 
 // Leads/projects/invoices change from outside this app (a customer's own
 // website, another teammate) - never let Next.js serve a cached snapshot of
@@ -138,7 +134,6 @@ export default async function DashboardPage() {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
-  const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
 
   const membership = await supabase
     .from("memberships")
@@ -473,330 +468,326 @@ export default async function DashboardPage() {
   const quotesAwaitingDecision = quotes.filter((q) => q.status === "sent").length;
 
   return (
-    <main className="min-h-screen bg-page sm:pl-64">
-      <style dangerouslySetInnerHTML={{ __html: brandThemeStyleTag(tenant.brand_theme) }} />
-      <AppSidebar businessName={tenant.business_name} logoUrl={tenant.logo_url} signOutAction={signOut} role={role ?? "owner"} />
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Operations &amp; Sales Dashboard</p>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{tenant.business_name}</h1>
-          </div>
-          <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
-        </header>
+    <div className="mx-auto max-w-6xl px-6 py-8">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Operations &amp; Sales Dashboard</p>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{tenant.business_name}</h1>
+        </div>
+        <ContactEmailField tenantId={tenant.id} contactEmail={tenant.contact_email} />
+      </header>
 
-        {/* One unified overview card instead of seven separate tiles - the
-            two numbers worth a real glance (with trend lines) up top, the
-            five secondary stats as a divided strip below, sharing a single
-            border/shadow instead of each competing for attention on their
-            own. */}
-        <div className="hero-tile kpi-tile mt-5 rounded-2xl p-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
-            <div className="sm:col-span-3">
-              <div className="flex items-start justify-between gap-3">
+      {/* One unified overview card instead of seven separate tiles - the
+          two numbers worth a real glance (with trend lines) up top, the
+          five secondary stats as a divided strip below, sharing a single
+          border/shadow instead of each competing for attention on their
+          own. */}
+      <div className="hero-tile kpi-tile mt-5 rounded-2xl p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
+          <div className="sm:col-span-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
+                <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
+                  {formatGBP(pipelineValue)}
+                </p>
+                <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
+              </div>
+              <IconTrendUp className="h-8 w-8 flex-none text-brand-strong opacity-70" />
+            </div>
+            <Sparkline values={pipelineSparkline} color="var(--brand-strong)" />
+          </div>
+          <div className="sm:col-span-2 sm:border-l sm:border-black/8 sm:pl-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink-2">Revenue</p>
+                <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
+                <p className="mt-1 text-xs text-muted">All paid invoices</p>
+              </div>
+              <IconBanknote className="h-6 w-6 flex-none text-muted" />
+            </div>
+            <Sparkline values={revenueSparkline} color="var(--brand)" />
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-black/8 pt-4 sm:grid-cols-5 sm:divide-x sm:divide-black/8">
+          <div className="sm:pr-4">
+            <IconTrophy className="h-4 w-4 text-muted" />
+            <p className="mt-1.5 text-xs font-semibold text-ink-2">Won this month</p>
+            <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(wonThisMonth)}</p>
+          </div>
+          <div className="sm:px-4">
+            <IconClock className={`h-4 w-4 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
+            <p className="mt-1.5 text-xs font-semibold text-ink-2">Outstanding</p>
+            <p className={`mt-0.5 font-mono text-lg font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
+              {formatGBP(outstandingTotal)}
+            </p>
+          </div>
+          <div className="sm:px-4">
+            <IconDocument className="h-4 w-4 text-muted" />
+            <p className="mt-1.5 text-xs font-semibold text-ink-2">Quotes awaiting</p>
+            <p className="mt-0.5 font-mono text-lg font-bold text-ink">{quotesAwaitingDecision}</p>
+          </div>
+          <div className="sm:px-4">
+            <IconUsers className="h-4 w-4 text-muted" />
+            <p className="mt-1.5 text-xs font-semibold text-ink-2">Leads &middot; 30d</p>
+            <p className="mt-0.5 font-mono text-lg font-bold text-ink">{leads.length}</p>
+          </div>
+          <div className="sm:pl-4">
+            <IconEye className="h-4 w-4 text-muted" />
+            <p className="mt-1.5 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
+            <p className="mt-0.5 font-mono text-lg font-bold text-ink">{pageviewCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <JobsAtRiskPanel risks={jobRisks} />
+      </div>
+
+      <DataQualityPanel warnings={dataQualityWarnings} />
+
+      <div className="mt-5">
+        <AlertsPanel
+          leads={leads}
+          invoices={invoices}
+          projects={projects}
+          quotes={quotes}
+          variations={variationAlerts}
+          projectBudgets={projectBudgets}
+          pendingReviews={reviewAlerts}
+          scheduleConflicts={scheduleConflicts}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
+        <CapacityPanel tenantId={tenant.id} trades={trades} bare />
+        <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+          <Suspense
+            fallback={
+              <div>
+                <h2 className="text-sm font-bold text-ink">Your calendar</h2>
+                <p className="mt-1 text-sm text-muted">Loading&hellip;</p>
+              </div>
+            }
+          >
+            <CalendarPanelData userId={userData.user.id} bare />
+          </Suspense>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <ReceivablesAgingPanel aging={receivablesAging} dueSoonPence={dueSoonTotal} dueSoonCount={dueSoonInvoices.length} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
+        <VariationRegisterPanel summary={variationRegister} />
+        <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+          <SnagRegisterPanel summary={snagRegister} />
+        </div>
+      </div>
+
+      {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
+        <div className="kpi-tile mt-4 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+          <p className="text-sm font-semibold text-ink-2">Portfolio margin</p>
+          <p className="mt-1 text-xs text-muted">Forecast (committed cost, active jobs) vs. actual (paid cost only)</p>
+
+          {portfolioForecast.forecastMarginPercent !== null && (
+            <div className="mt-3 border-t border-black/8 pt-3 first:mt-0 first:border-none first:pt-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                Forecast &middot; {portfolioForecast.projectCount} active project{portfolioForecast.projectCount === 1 ? "" : "s"}
+              </p>
+              <div className="mt-1 grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
-                  <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-                    {formatGBP(pipelineValue)}
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastRevenuePence)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Committed cost</p>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastCostPence)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+                  <p
+                    className={`mt-0.5 font-mono text-lg font-bold ${
+                      portfolioForecast.forecastMarginPercent >= 15 ? "text-good" : "text-critical"
+                    }`}
+                  >
+                    {portfolioForecast.forecastMarginPercent.toFixed(1)}%
                   </p>
-                  <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
                 </div>
-                <IconTrendUp className="h-8 w-8 flex-none text-brand-strong opacity-70" />
               </div>
-              <Sparkline values={pipelineSparkline} color="var(--brand-strong)" />
             </div>
-            <div className="sm:col-span-2 sm:border-l sm:border-black/8 sm:pl-5">
-              <div className="flex items-start justify-between gap-3">
+          )}
+
+          {portfolioMargin !== null && (
+            <div className="mt-3 border-t border-black/8 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                Actual &middot; {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged
+              </p>
+              <div className="mt-1 grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <p className="text-sm font-semibold text-ink-2">Revenue</p>
-                  <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
-                  <p className="mt-1 text-xs text-muted">All paid invoices</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedRevenue)}</p>
                 </div>
-                <IconBanknote className="h-6 w-6 flex-none text-muted" />
-              </div>
-              <Sparkline values={revenueSparkline} color="var(--brand)" />
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-black/8 pt-4 sm:grid-cols-5 sm:divide-x sm:divide-black/8">
-            <div className="sm:pr-4">
-              <IconTrophy className="h-4 w-4 text-muted" />
-              <p className="mt-1.5 text-xs font-semibold text-ink-2">Won this month</p>
-              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(wonThisMonth)}</p>
-            </div>
-            <div className="sm:px-4">
-              <IconClock className={`h-4 w-4 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
-              <p className="mt-1.5 text-xs font-semibold text-ink-2">Outstanding</p>
-              <p className={`mt-0.5 font-mono text-lg font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
-                {formatGBP(outstandingTotal)}
-              </p>
-            </div>
-            <div className="sm:px-4">
-              <IconDocument className="h-4 w-4 text-muted" />
-              <p className="mt-1.5 text-xs font-semibold text-ink-2">Quotes awaiting</p>
-              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{quotesAwaitingDecision}</p>
-            </div>
-            <div className="sm:px-4">
-              <IconUsers className="h-4 w-4 text-muted" />
-              <p className="mt-1.5 text-xs font-semibold text-ink-2">Leads &middot; 30d</p>
-              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{leads.length}</p>
-            </div>
-            <div className="sm:pl-4">
-              <IconEye className="h-4 w-4 text-muted" />
-              <p className="mt-1.5 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
-              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{pageviewCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <JobsAtRiskPanel risks={jobRisks} />
-        </div>
-
-        <DataQualityPanel warnings={dataQualityWarnings} />
-
-        <div className="mt-5">
-          <AlertsPanel
-            leads={leads}
-            invoices={invoices}
-            projects={projects}
-            quotes={quotes}
-            variations={variationAlerts}
-            projectBudgets={projectBudgets}
-            pendingReviews={reviewAlerts}
-            scheduleConflicts={scheduleConflicts}
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
-          <CapacityPanel tenantId={tenant.id} trades={trades} bare />
-          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
-            <Suspense
-              fallback={
                 <div>
-                  <h2 className="text-sm font-bold text-ink">Your calendar</h2>
-                  <p className="mt-1 text-sm text-muted">Loading&hellip;</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedActualCost)}</p>
                 </div>
-              }
-            >
-              <CalendarPanelData userId={userData.user.id} bare />
-            </Suspense>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <ReceivablesAgingPanel aging={receivablesAging} dueSoonPence={dueSoonTotal} dueSoonCount={dueSoonInvoices.length} />
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-2 lg:gap-6 lg:divide-x lg:divide-black/8">
-          <VariationRegisterPanel summary={variationRegister} />
-          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
-            <SnagRegisterPanel summary={snagRegister} />
-          </div>
-        </div>
-
-        {(portfolioForecast.forecastMarginPercent !== null || portfolioMargin !== null) && (
-          <div className="kpi-tile mt-4 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-            <p className="text-sm font-semibold text-ink-2">Portfolio margin</p>
-            <p className="mt-1 text-xs text-muted">Forecast (committed cost, active jobs) vs. actual (paid cost only)</p>
-
-            {portfolioForecast.forecastMarginPercent !== null && (
-              <div className="mt-3 border-t border-black/8 pt-3 first:mt-0 first:border-none first:pt-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  Forecast &middot; {portfolioForecast.projectCount} active project{portfolioForecast.projectCount === 1 ? "" : "s"}
-                </p>
-                <div className="mt-1 grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
-                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastRevenuePence)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Committed cost</p>
-                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(portfolioForecast.forecastCostPence)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
-                    <p
-                      className={`mt-0.5 font-mono text-lg font-bold ${
-                        portfolioForecast.forecastMarginPercent >= 15 ? "text-good" : "text-critical"
-                      }`}
-                    >
-                      {portfolioForecast.forecastMarginPercent.toFixed(1)}%
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
+                  <p className={`mt-0.5 font-mono text-lg font-bold ${portfolioMargin >= 15 ? "text-good" : "text-critical"}`}>
+                    {portfolioMargin.toFixed(1)}%
+                  </p>
                 </div>
-              </div>
-            )}
-
-            {portfolioMargin !== null && (
-              <div className="mt-3 border-t border-black/8 pt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  Actual &middot; {costedProjects.length} project{costedProjects.length === 1 ? "" : "s"} with costs logged
-                </p>
-                <div className="mt-1 grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Revenue</p>
-                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedRevenue)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Actual cost</p>
-                    <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(costedActualCost)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Margin</p>
-                    <p className={`mt-0.5 font-mono text-lg font-bold ${portfolioMargin >= 15 ? "text-good" : "text-critical"}`}>
-                      {portfolioMargin.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-black/8">
-          <div className="lg:col-span-2">
-            <RevenueTrend
-              title="Project value won · trailing 12 months"
-              note="By month the project was created - an early proxy for revenue until invoicing is wired in"
-              points={revenueTrend}
-              format="gbp"
-              bare
-            />
-          </div>
-          <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
-            <BarChart title="Revenue by project type" note="Trailing 12 months" rows={projectTypeBreakdown} format="gbp" bare />
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <BarChart
-            title="Backlog by month"
-            note={`${formatGBP(backlog.totalBacklogPence)} contracted, not yet completed, across ${backlog.projectCount} active project${
-              backlog.projectCount === 1 ? "" : "s"
-            }${backlog.noTargetDatePence > 0 ? ` · ${formatGBP(backlog.noTargetDatePence)} has no target date, not shown below` : ""}`}
-            rows={backlog.buckets}
-            format="gbp"
-          />
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-black/8">
-          <BarChart title="Lead source" note="Last 30 days &middot; by volume" rows={leadSourceBreakdown} format="count" bare />
-          <div className="border-t border-black/8 pt-5 sm:border-none sm:pl-6 sm:pt-0">
-            <BarChart
-              title="Win rate by source"
-              note="Won vs. lost - leads still in progress aren't counted yet"
-              rows={leadSourceWinRate}
-              format="percent"
-              bare
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
-            <IconTrendUp className="h-4 w-4 text-brand" />
-            Business analytics
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl bg-surface-2 p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project value</p>
-              <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgProjectValue)}</p>
-            </div>
-            <div className="rounded-xl bg-surface-2 p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Win rate</p>
-              <p className="mt-1 font-mono text-lg font-bold text-ink">
-                {overallWinRate != null ? `${overallWinRate.toFixed(0)}%` : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-surface-2 p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg quote value</p>
-              <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgQuoteValue)}</p>
-            </div>
-            <div className="rounded-xl bg-surface-2 p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project duration</p>
-              <p className="mt-1 font-mono text-lg font-bold text-ink">
-                {avgProjectDurationDays != null ? `${Math.round(avgProjectDurationDays)}d` : "—"}
-              </p>
-            </div>
-          </div>
-          {marginByType.length > 0 && (
-            <div className="mt-4 border-t border-black/8 pt-4">
-              <p className="text-xs font-semibold text-ink-2">Gross margin by project type</p>
-              <div className="mt-3 flex flex-col gap-2">
-                {marginByType.map((row) => (
-                  <div key={row.label}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-semibold text-ink-2">{row.label}</span>
-                      <span className="font-mono text-xs font-semibold text-ink">{row.value.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-[14px] w-full overflow-hidden rounded-[4px] bg-surface-2">
-                      <div
-                        className="h-full rounded-r-[4px]"
-                        style={{
-                          width: `${Math.max(2, Math.min(100, row.value))}%`,
-                          background: row.value >= 15 ? "var(--status-good)" : "var(--status-critical)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
         </div>
+      )}
 
-        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <ProjectsPanel tenantId={tenant.id} projects={projects} />
-          </div>
-
-          <LeadsPanel
-            leads={leads}
-            tenantId={tenant.id}
-            convertedLeadIds={projects.map((p) => p.lead_id).filter((id): id is string => !!id)}
+      <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-black/8">
+        <div className="lg:col-span-2">
+          <RevenueTrend
+            title="Project value won · trailing 12 months"
+            note="By month the project was created - an early proxy for revenue until invoicing is wired in"
+            points={revenueTrend}
+            format="gbp"
+            bare
           />
         </div>
-
-        <div className="mt-5">
-          <ProjectPhotosPanel
-            tenantId={tenant.id}
-            photos={projectPhotos}
-            projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
-          />
+        <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
+          <BarChart title="Revenue by project type" note="Trailing 12 months" rows={projectTypeBreakdown} format="gbp" bare />
         </div>
-
-        <div className="mt-5">
-          <MonthlyHistory projects={projects} />
-        </div>
-
-        <div className="mt-5">
-          <QuotesPanel
-            tenantId={tenant.id}
-            quotes={quotes}
-            convertedQuoteIds={projects.map((p) => p.quote_id).filter((id): id is string => !!id)}
-            defaultVatRate={tenant.default_vat_rate}
-            defaultQuoteTerms={tenant.default_quote_terms}
-            defaultPaymentTerms={tenant.default_payment_terms}
-          />
-        </div>
-
-        <div className="mt-5">
-          <InvoicesPanel
-            tenantId={tenant.id}
-            invoices={invoices}
-            projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
-            leads={leads.map((l) => ({ id: l.id, name: l.name, email: l.email, status: l.status }))}
-          />
-        </div>
-
-        <footer className="mt-8 flex justify-end">
-          <p className="text-xs text-muted">
-            Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
-            <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
-          </p>
-        </footer>
       </div>
-    </main>
+
+      <div className="mt-5">
+        <BarChart
+          title="Backlog by month"
+          note={`${formatGBP(backlog.totalBacklogPence)} contracted, not yet completed, across ${backlog.projectCount} active project${
+            backlog.projectCount === 1 ? "" : "s"
+          }${backlog.noTargetDatePence > 0 ? ` · ${formatGBP(backlog.noTargetDatePence)} has no target date, not shown below` : ""}`}
+          rows={backlog.buckets}
+          format="gbp"
+        />
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-black/8">
+        <BarChart title="Lead source" note="Last 30 days &middot; by volume" rows={leadSourceBreakdown} format="count" bare />
+        <div className="border-t border-black/8 pt-5 sm:border-none sm:pl-6 sm:pt-0">
+          <BarChart
+            title="Win rate by source"
+            note="Won vs. lost - leads still in progress aren't counted yet"
+            rows={leadSourceWinRate}
+            format="percent"
+            bare
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+          <IconTrendUp className="h-4 w-4 text-brand" />
+          Business analytics
+        </h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl bg-surface-2 p-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project value</p>
+            <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgProjectValue)}</p>
+          </div>
+          <div className="rounded-xl bg-surface-2 p-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Win rate</p>
+            <p className="mt-1 font-mono text-lg font-bold text-ink">
+              {overallWinRate != null ? `${overallWinRate.toFixed(0)}%` : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-surface-2 p-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg quote value</p>
+            <p className="mt-1 font-mono text-lg font-bold text-ink">{formatGBP(avgQuoteValue)}</p>
+          </div>
+          <div className="rounded-xl bg-surface-2 p-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Avg project duration</p>
+            <p className="mt-1 font-mono text-lg font-bold text-ink">
+              {avgProjectDurationDays != null ? `${Math.round(avgProjectDurationDays)}d` : "—"}
+            </p>
+          </div>
+        </div>
+        {marginByType.length > 0 && (
+          <div className="mt-4 border-t border-black/8 pt-4">
+            <p className="text-xs font-semibold text-ink-2">Gross margin by project type</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {marginByType.map((row) => (
+                <div key={row.label}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-semibold text-ink-2">{row.label}</span>
+                    <span className="font-mono text-xs font-semibold text-ink">{row.value.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-[14px] w-full overflow-hidden rounded-[4px] bg-surface-2">
+                    <div
+                      className="h-full rounded-r-[4px]"
+                      style={{
+                        width: `${Math.max(2, Math.min(100, row.value))}%`,
+                        background: row.value >= 15 ? "var(--status-good)" : "var(--status-critical)",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ProjectsPanel tenantId={tenant.id} projects={projects} />
+        </div>
+
+        <LeadsPanel
+          leads={leads}
+          tenantId={tenant.id}
+          convertedLeadIds={projects.map((p) => p.lead_id).filter((id): id is string => !!id)}
+        />
+      </div>
+
+      <div className="mt-5">
+        <ProjectPhotosPanel
+          tenantId={tenant.id}
+          photos={projectPhotos}
+          projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
+        />
+      </div>
+
+      <div className="mt-5">
+        <MonthlyHistory projects={projects} />
+      </div>
+
+      <div className="mt-5">
+        <QuotesPanel
+          tenantId={tenant.id}
+          quotes={quotes}
+          convertedQuoteIds={projects.map((p) => p.quote_id).filter((id): id is string => !!id)}
+          defaultVatRate={tenant.default_vat_rate}
+          defaultQuoteTerms={tenant.default_quote_terms}
+          defaultPaymentTerms={tenant.default_payment_terms}
+        />
+      </div>
+
+      <div className="mt-5">
+        <InvoicesPanel
+          tenantId={tenant.id}
+          invoices={invoices}
+          projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
+          leads={leads.map((l) => ({ id: l.id, name: l.name, email: l.email, status: l.status }))}
+        />
+      </div>
+
+      <footer className="mt-8 flex justify-end">
+        <p className="text-xs text-muted">
+          Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
+          <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
+        </p>
+      </footer>
+    </div>
   );
 }

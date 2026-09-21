@@ -8,7 +8,7 @@ import {
   convertLeadToProject,
   deleteLead,
   bulkDeleteLeads,
-} from "@/app/dashboard/actions";
+} from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";

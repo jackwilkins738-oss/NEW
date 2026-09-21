@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateCustomer } from "@/app/dashboard/actions";
+import { updateCustomer } from "@/app/actions";
 import { IconUsers } from "@/components/DashboardIcons";
 
 type Customer = {

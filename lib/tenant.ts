@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,28 +22,32 @@ export type Tenant = {
   stripe_account_id: string | null;
 };
 
+// Every authed page selects the same 17 columns; naming the list once keeps
+// the domain and slug lookups below from drifting apart.
+const TENANT_COLUMNS =
+  "id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix, stripe_account_id";
+
 // Figures out which customer this request is for, purely from the hostname
 // it arrived on:
 //   dashboard.ridgeviewlofts.co.uk  -> tenants.domain match
 //   ridgeview.localhost:3000        -> tenants.slug match (local dev)
-export async function getCurrentTenant(): Promise<Tenant | null> {
+//
+// Wrapped in React's cache() so it's computed once per request no matter how
+// many callers ask. That matters now that the shared (app) layout resolves
+// the tenant for the sidebar *and* each page resolves it again for its own
+// queries - without this, every authed page would pay for those lookups
+// twice, and a slug-based host (local dev) pays for two queries each time
+// because the domain lookup misses first.
+export const getCurrentTenant = cache(async function getCurrentTenant(): Promise<Tenant | null> {
   const host = headers().get("host")?.split(":")[0] ?? "";
   const supabase = createClient();
 
-  const byDomain = await supabase
-    .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix, stripe_account_id")
-    .eq("domain", host)
-    .maybeSingle();
+  const byDomain = await supabase.from("tenants").select(TENANT_COLUMNS).eq("domain", host).maybeSingle();
 
   if (byDomain.data) return byDomain.data;
 
   const subdomain = host.split(".")[0];
-  const bySlug = await supabase
-    .from("tenants")
-    .select("id, business_name, slug, domain, brand_theme, contact_email, default_vat_rate, default_quote_terms, default_payment_terms, google_review_url, company_address, vat_number, bank_details, logo_url, quote_number_prefix, invoice_number_prefix, stripe_account_id")
-    .eq("slug", subdomain)
-    .maybeSingle();
+  const bySlug = await supabase.from("tenants").select(TENANT_COLUMNS).eq("slug", subdomain).maybeSingle();
 
   return bySlug.data ?? null;
-}
+})

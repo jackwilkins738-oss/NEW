@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateTenantContactEmail } from "@/app/dashboard/actions";
+import { updateTenantContactEmail } from "@/app/actions";
 
 // Reply-to address used on emails sent on this tenant's behalf (quotes for
 // now, invoices later) - lets a customer's reply land in the tenant's own

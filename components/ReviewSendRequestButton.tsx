@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { sendReviewRequestEmail } from "@/app/dashboard/actions";
+import { sendReviewRequestEmail } from "@/app/actions";
 
 export function ReviewSendRequestButton({
   projectId,

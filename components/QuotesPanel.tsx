@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, bulkDeleteQuotes, convertQuoteToProject } from "@/app/dashboard/actions";
+import { addQuote, updateQuoteStatus, sendQuote, deleteQuote, bulkDeleteQuotes, convertQuoteToProject } from "@/app/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";

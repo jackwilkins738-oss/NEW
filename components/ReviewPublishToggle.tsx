@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { togglePublishReview } from "@/app/dashboard/actions";
+import { togglePublishReview } from "@/app/actions";
 
 export function ReviewPublishToggle({
   projectId,

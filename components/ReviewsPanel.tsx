@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { requestReview, recordReview, deleteReview } from "@/app/dashboard/actions";
+import { requestReview, recordReview, deleteReview } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
 import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";

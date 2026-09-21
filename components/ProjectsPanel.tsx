@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { updateProject, addProject, deleteProject } from "@/app/dashboard/actions";
+import { updateProject, addProject, deleteProject } from "@/app/actions";
 import { formatGBP } from "@/lib/format";
 import { IconFolder } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";

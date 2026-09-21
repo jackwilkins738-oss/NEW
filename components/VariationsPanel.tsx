@@ -7,7 +7,7 @@ import {
   declineVariation,
   deleteVariation,
   createInvoiceFromVariation,
-} from "@/app/dashboard/actions";
+} from "@/app/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 

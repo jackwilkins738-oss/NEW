@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addProjectCostItem, markCostItemPaid, deleteProjectCostItem } from "@/app/dashboard/actions";
+import { addProjectCostItem, markCostItemPaid, deleteProjectCostItem } from "@/app/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 

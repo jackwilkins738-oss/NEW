@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { setTradeCapacity, deleteTradeCapacity } from "@/app/dashboard/actions";
+import { setTradeCapacity, deleteTradeCapacity } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 
 type Trade = { id: string; trade_name: string; percent_booked: number };

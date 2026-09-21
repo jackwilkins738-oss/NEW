@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { assignTeamMemberToProject, unassignTeamMemberFromProject } from "@/app/dashboard/actions";
+import { assignTeamMemberToProject, unassignTeamMemberFromProject } from "@/app/actions";
 
 type TeamOption = { id: string; name: string; role: string | null };
 

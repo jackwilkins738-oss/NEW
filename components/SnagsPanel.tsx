@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addSnag, updateSnagStatus, deleteSnag } from "@/app/dashboard/actions";
+import { addSnag, updateSnagStatus, deleteSnag } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 
 type Snag = {

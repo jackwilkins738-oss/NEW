@@ -1,6 +1,6 @@
 "use client";
 
-import { addCommunication, deleteCommunication } from "@/app/dashboard/actions";
+import { addCommunication, deleteCommunication } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconChatBubble } from "@/components/DashboardIcons";
 

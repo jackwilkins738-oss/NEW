@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { uploadProjectDocument, deleteProjectDocument } from "@/app/dashboard/actions";
+import { uploadProjectDocument, deleteProjectDocument } from "@/app/actions";
 
 type DocumentRow = {
   id: string;

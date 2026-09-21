@@ -1,4 +1,6 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
 export type MembershipRole = "owner" | "member";
 
@@ -18,3 +20,15 @@ export async function getCurrentUserRole(
   const { data } = await supabase.from("memberships").select("role").eq("tenant_id", tenantId).eq("user_id", userId).maybeSingle();
   return (data?.role as MembershipRole | undefined) ?? null;
 }
+
+// Same lookup, but keyed only on the two ids so React's cache() can actually
+// dedupe it - the caller-supplied SupabaseClient above is a fresh object on
+// every call, which would make each one a cache miss. Used by the shared
+// (app) layout (to decide which nav links to show) and by the pages that
+// enforce owner-only access, so a request that does both pays for one query.
+export const getCurrentUserRoleCached = cache(async function getCurrentUserRoleCached(
+  tenantId: string,
+  userId: string
+): Promise<MembershipRole | null> {
+  return getCurrentUserRole(createClient(), tenantId, userId);
+});

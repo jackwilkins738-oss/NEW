@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/dashboard/actions";
+import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconBanknote } from "@/components/DashboardIcons";
