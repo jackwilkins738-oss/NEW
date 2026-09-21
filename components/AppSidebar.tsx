@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialsFor } from "@/lib/initials";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconClock, IconSettings } from "@/components/DashboardIcons";
 
 // Settings and Audit log are owner-only - see the `role === "member"`
@@ -54,6 +55,60 @@ export function AppSidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const links = role === "member" ? LINKS.filter((l) => !OWNER_ONLY_HREFS.has(l.href)) : LINKS;
 
+  const drawerRef = useRef<HTMLDivElement>(null);
+  // Remembered so focus can go back to the hamburger when the drawer closes,
+  // rather than being dumped at the top of the document.
+  const openerRef = useRef<HTMLButtonElement>(null);
+
+  // Everything a slide-over owes a keyboard or screen-reader user: Escape
+  // closes it, Tab cycles inside it instead of wandering into the page
+  // behind it, focus lands in it on open and returns to the opener on
+  // close, and the page underneath doesn't scroll while it's covered.
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const drawer = drawerRef.current;
+    const focusables = () =>
+      Array.from(
+        drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []
+      );
+
+    focusables()[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      // Wrap at whichever end we've run off, so focus never escapes into
+      // the content behind the overlay.
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      openerRef.current?.focus();
+    };
+  }, [mobileOpen]);
+
   const brandMark = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={logoUrl} alt="" className="h-10 w-10 flex-none rounded-xl border border-white/15 bg-white object-contain p-1.5" />
@@ -84,6 +139,10 @@ export function AppSidebar({
               key={href}
               href={href}
               onClick={() => setMobileOpen(false)}
+              // Tells a screen reader which page it's already on - the
+              // white-on-white-10% highlight conveys that visually, and this
+              // is the non-visual half of the same signal.
+              aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
                 active ? "bg-white/10 text-white" : "text-white/55 hover:bg-white/5 hover:text-white"
               }`}
@@ -94,6 +153,10 @@ export function AppSidebar({
           );
         })}
       </nav>
+
+      <div className="mt-2 px-2">
+        <ThemeToggle />
+      </div>
 
       <form action={signOutAction} className="px-2 pb-1">
         <button
@@ -117,9 +180,12 @@ export function AppSidebar({
           <p className="font-display text-sm font-bold text-ink">{businessName}</p>
         </div>
         <button
+          ref={openerRef}
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open navigation"
+          aria-expanded={mobileOpen}
+          aria-haspopup="dialog"
           className="rounded-lg border border-black/8 bg-surface-2 p-2 text-ink-2"
         >
           <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
@@ -129,16 +195,21 @@ export function AppSidebar({
       </div>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} aria-hidden />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col py-6" style={{ background: SIDEBAR_BG }}>
+        <div className="fixed inset-0 z-40 sm:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
+          <div className="drawer-scrim absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} aria-hidden />
+          <div
+            ref={drawerRef}
+            data-app-sidebar
+            className="drawer-panel absolute inset-y-0 left-0 flex w-72 flex-col py-6"
+            style={{ background: SIDEBAR_BG }}
+          >
             {navContent}
           </div>
         </div>
       )}
 
       {/* Desktop persistent rail */}
-      <div className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col py-6 sm:flex" style={{ background: SIDEBAR_BG }}>
+      <div data-app-sidebar className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col py-6 sm:flex" style={{ background: SIDEBAR_BG }}>
         {navContent}
       </div>
     </>
