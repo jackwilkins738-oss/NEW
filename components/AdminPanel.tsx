@@ -14,6 +14,7 @@ import {
 import { CopyButton } from "@/components/CopyButton";
 import { DeleteButton } from "@/components/DeleteButton";
 import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
+import { field, label } from "@/lib/formStyles";
 
 type Tenant = {
   id: string;
@@ -51,10 +52,6 @@ function SwatchPicker({ value, onChange }: { value: string; onChange: (key: stri
     </div>
   );
 }
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 // admin.scalardigital.co.uk is the stable, permanent home for this app -
 // track.js itself doesn't care which domain serves it (it reads its
@@ -269,7 +266,7 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
         placeholder="dashboard.theirdomain.co.uk"
         // text-base (16px), not text-xs: below 16px, iOS Safari auto-zooms
         // into the field on focus.
-        className="w-full max-w-[280px] rounded-lg border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink outline-none focus:border-brand sm:text-xs"
+        className="w-full max-w-[280px] rounded-lg border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink sm:text-xs"
       />
       <button
         type="submit"

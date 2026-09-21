@@ -3,6 +3,7 @@
 import { addCommunication, deleteCommunication } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconChatBubble } from "@/components/DashboardIcons";
+import { field, label } from "@/lib/formStyles";
 
 type Communication = { id: string; type: string; summary: string; created_at: string };
 
@@ -14,10 +15,6 @@ const TYPE_OPTIONS = [
 ];
 
 const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map((t) => [t.value, t.label]));
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export function CommunicationsPanel({
   tenantId,

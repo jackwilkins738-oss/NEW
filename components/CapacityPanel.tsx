@@ -3,12 +3,9 @@
 import { useState, type FormEvent } from "react";
 import { setTradeCapacity, deleteTradeCapacity } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { field, label } from "@/lib/formStyles";
 
 type Trade = { id: string; trade_name: string; percent_booked: number };
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 function meterColor(percent: number) {
   if (percent >= 100) return "var(--status-warning)"; // fully booked - worth noticing, not necessarily bad

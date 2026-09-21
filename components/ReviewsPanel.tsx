@@ -6,6 +6,7 @@ import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
 import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
 import { IconStar } from "@/components/DashboardIcons";
+import { field, label } from "@/lib/formStyles";
 
 type Review = {
   id: string;
@@ -15,10 +16,6 @@ type Review = {
   status: string;
   published: boolean;
 };
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export function Stars({ rating }: { rating: number | null }) {
   if (rating == null) return null;

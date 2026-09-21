@@ -8,6 +8,7 @@ import { IconBanknote } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
+import { field } from "@/lib/formStyles";
 
 const PAGE_SIZE = 20;
 
@@ -56,8 +57,6 @@ const SORT_RANK: Record<string, number> = { overdue: 0, due_soon: 1, part_paid: 
 
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
 // 16px on focus, which is a real usability problem on a form meant for a phone.
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
 
 function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; outstanding: number }) {
   const [open, setOpen] = useState(false);

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { uploadProjectPhoto, deleteProjectPhoto } from "@/app/actions";
+import { field, label } from "@/lib/formStyles";
 
 type Photo = {
   id: string;
@@ -19,10 +20,6 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 function publicPhotoUrl(storagePath: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/project-photos/${storagePath}`;
 }
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export function ProjectPhotosPanel({
   tenantId,

@@ -14,6 +14,7 @@ import { IconUsers } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
 import { BulkActionBar } from "@/components/BulkActionBar";
+import { field, label } from "@/lib/formStyles";
 
 const PAGE_SIZE = 20;
 
@@ -48,10 +49,6 @@ const STATUS_CLASS: Record<string, string> = {
   won: "bg-[rgba(12,163,12,0.15)] text-good",
   lost: "bg-[rgba(208,59,59,0.15)] text-critical",
 };
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 function needsFollowUp(lead: Lead) {
   if (lead.status !== "new") return false;

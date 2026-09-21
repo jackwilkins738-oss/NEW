@@ -9,6 +9,7 @@ import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { isPastUK } from "@/lib/ukDate";
+import { field, label } from "@/lib/formStyles";
 
 const PAGE_SIZE = 20;
 
@@ -63,9 +64,6 @@ const CATEGORY_OPTIONS = [
 
 // text-base (16px), not text-sm: iOS Safari auto-zooms into any input under
 // 16px on focus - matches the field size already used elsewhere.
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 type DraftLine = { category: string; description: string; amountPounds: string };
 

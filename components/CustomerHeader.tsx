@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { updateCustomer } from "@/app/actions";
 import { IconUsers } from "@/components/DashboardIcons";
+import { field, label } from "@/lib/formStyles";
 
 type Customer = {
   id: string;
@@ -12,10 +13,6 @@ type Customer = {
   address: string | null;
   notes: string | null;
 };
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export function CustomerHeader({ customer }: { customer: Customer }) {
   const [editing, setEditing] = useState(false);

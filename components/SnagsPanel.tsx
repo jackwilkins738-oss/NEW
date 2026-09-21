@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { addSnag, updateSnagStatus, deleteSnag } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { field, label } from "@/lib/formStyles";
 
 type Snag = {
   id: string;
@@ -24,10 +25,6 @@ const STATUS_CLASS: Record<string, string> = {
   assigned: "bg-[rgba(250,178,25,0.25)] text-[#8a5a00]",
   complete: "bg-[rgba(12,163,12,0.15)] text-good",
 };
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 function SnagRow({ snag, projectId }: { snag: Snag; projectId: string }) {
   const [status, setStatus] = useState(snag.status);

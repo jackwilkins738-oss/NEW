@@ -33,7 +33,7 @@ export function PanelSearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-black/15 bg-surface py-1.5 pl-8 pr-2.5 text-xs text-ink outline-none transition-colors focus:border-brand sm:w-52"
+        className="w-full rounded-lg border border-black/15 bg-surface py-1.5 pl-8 pr-2.5 text-xs text-ink transition-colors sm:w-52"
       />
     </div>
   );

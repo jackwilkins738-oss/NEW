@@ -4,12 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { updateTenantSettings, uploadTenantLogo } from "@/app/actions";
 import { IconSettings } from "@/components/DashboardIcons";
 import { getCurrentUserRoleCached } from "@/lib/membershipRole";
+import { fieldLarge as field, label } from "@/lib/formStyles";
 
 export const dynamic = "force-dynamic";
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export default async function SettingsPage({ searchParams }: { searchParams: { stripe?: string } }) {
   const tenant = await getCurrentTenant();

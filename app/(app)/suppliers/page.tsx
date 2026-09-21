@@ -4,12 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { IconTruck } from "@/components/DashboardIcons";
 import { addSupplier, deleteSupplier } from "@/app/actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { field, label } from "@/lib/formStyles";
 
 export const dynamic = "force-dynamic";
-
-const field =
-  "mt-1 w-full rounded-lg border border-black/15 bg-surface px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-sm";
-const label = "text-xs font-semibold text-ink-2";
 
 export default async function SuppliersPage() {
   const tenant = await getCurrentTenant();
