@@ -164,7 +164,22 @@ export function RevenueTrend({
         <p className="mt-6 text-sm text-muted">No data yet.</p>
       ) : (
         <div className="relative mt-3">
-          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible">
+          {/* The chart's numbers were previously reachable only by hovering
+              a point, which leaves a screen reader user with nothing at all
+              (and a touch user with very little). The list below carries the
+              same series as text; it's visually hidden, so nothing changes on
+              screen. The <svg> itself is then marked decorative rather than
+              given a long aria-label, so the data is announced once, in a
+              form someone can actually navigate, instead of as one
+              unbroken sentence. */}
+          <ul className="sr-only">
+            {points.map((p) => (
+              <li key={p.label}>
+                {p.label}: {formatValue(format, p.value)}
+              </li>
+            ))}
+          </ul>
+          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible" aria-hidden>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.24} />

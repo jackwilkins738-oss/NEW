@@ -16,6 +16,13 @@ type Lead = AlertLead;
 type Invoice = AlertInvoice;
 type Project = AlertProject;
 
+// Announced by screen readers only - see the sr-only span below.
+const SEVERITY_LABEL: Record<Alert["severity"], string> = {
+  critical: "Critical",
+  warning: "Warning",
+  info: "For information",
+};
+
 const SEVERITY_CLASS: Record<Alert["severity"], string> = {
   critical: "bg-[rgba(208,59,59,0.12)] text-critical",
   warning: "bg-[rgba(250,178,25,0.2)] text-[#8a5a00]",
@@ -28,7 +35,18 @@ function formatAlertDate(isoDate: string) {
 }
 
 function AlertIcon({ severity }: { severity: Alert["severity"] }) {
-  const shared = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  // aria-hidden on the glyph, with the severity spelled out in sr-only text
+  // at the call site. Severity is otherwise carried only by the icon shape
+  // and SEVERITY_CLASS's colour - neither of which reaches a screen reader,
+  // and colour alone doesn't reach a colourblind user either.
+  const shared = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
   if (severity === "info") {
     return (
       <svg viewBox="0 0 20 20" className="h-4 w-4 flex-none" {...shared}>
@@ -91,6 +109,11 @@ export function AlertsPanel({
                   <AlertIcon severity={a.severity} />
                 </span>
                 <span className="flex-1">
+                  {/* Severity reaches a sighted user through the icon shape
+                      and SEVERITY_CLASS's background colour. Neither is
+                      available to a screen reader, and colour alone isn't
+                      enough on its own anyway, so it's stated here. */}
+                  <span className="sr-only">{SEVERITY_LABEL[a.severity]}: </span>
                   <span>{a.text}</span>
                   {meta && <span className="mt-0.5 block text-xs opacity-70">{meta}</span>}
                 </span>

@@ -2,7 +2,19 @@
 // simple, common glyphs), not worth pulling in an icon library for.
 type IconProps = { className?: string };
 
-const shared = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+// aria-hidden on every one of them: each icon in this file is decorative,
+// sitting next to a visible text label that already says the same thing
+// ("Leads", "Revenue", "Settings"). Without it a screen reader announces a
+// meaningless graphic before each of those labels. Spreading it through the
+// shared props covers all 14 at once - and any added later.
+const shared = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.6,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
 
 export function IconTrendUp({ className }: IconProps) {
   return (

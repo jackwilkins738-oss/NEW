@@ -143,7 +143,10 @@ function PhotoCard({ photo }: { photo: Photo }) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="absolute right-1.5 top-1.5 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100"
+          // focus-visible:opacity-100 as well as group-hover: the button was
+          // reachable by keyboard but rendered fully transparent, so tabbing
+          // through the grid moved focus onto a control nobody could see.
+          className="absolute right-1.5 top-1.5 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
         >
           Delete
         </button>

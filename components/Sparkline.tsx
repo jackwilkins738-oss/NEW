@@ -26,7 +26,16 @@ export function Sparkline({ values, color = "var(--brand)" }: { values: number[]
   const last = coords[coords.length - 1];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 block w-full" preserveAspectRatio="none" style={{ height: 28 }}>
+    // Decorative: a sparkline always sits directly beneath the figure it
+    // trends, so the value is already available as text. Describing the
+    // shape of the line adds nothing a screen reader user can act on.
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="mt-2 block w-full"
+      preserveAspectRatio="none"
+      style={{ height: 28 }}
+      aria-hidden
+    >
       <path d={areaPath} fill={color} opacity={0.1} />
       <path d={bodyPath} fill="none" stroke="var(--muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.6} />
       <path d={finalPath} fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
