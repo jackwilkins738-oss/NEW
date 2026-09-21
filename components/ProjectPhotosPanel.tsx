@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { uploadProjectPhoto, deleteProjectPhoto } from "@/app/dashboard/actions";
+import Image from "next/image";
+import { uploadProjectPhoto, deleteProjectPhoto } from "@/app/actions";
 
 type Photo = {
   id: string;
@@ -106,8 +107,20 @@ function PhotoCard({ photo }: { photo: Photo }) {
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-black/8 bg-surface-2">
-      {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, not a local asset */}
-      <img src={publicPhotoUrl(photo.storage_path)} alt={photo.caption ?? ""} className="aspect-[4/3] w-full object-cover" />
+      {/* Site photos come straight off a phone camera, so they're often
+          several MB of JPEG rendered into a thumbnail slot. next/image
+          resizes and re-encodes them at the CDN and lazy-loads the ones
+          below the fold. `sizes` tells it how wide this actually renders -
+          without it the optimizer assumes full viewport width and ships a
+          far larger file than the grid needs. */}
+      <Image
+        src={publicPhotoUrl(photo.storage_path)}
+        alt={photo.caption ?? ""}
+        width={480}
+        height={360}
+        sizes="(max-width: 640px) 50vw, 240px"
+        className="aspect-[4/3] w-full object-cover"
+      />
       {photo.caption && <p className="truncate p-1.5 text-xs text-ink-2">{photo.caption}</p>}
       {confirming ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 p-2 text-center">

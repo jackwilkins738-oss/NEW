@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
@@ -146,11 +147,16 @@ export default async function ProjectPortalPage({ params }: { params: { id: stri
             <h2 className="text-sm font-bold text-ink">Progress photos</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {photos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                // Optimised and lazy-loaded - this page is the one a
+                // customer opens on their phone, often on mobile data, and
+                // it can carry a dozen full-resolution site photos.
+                <Image
                   key={p.id}
                   src={publicPhotoUrl(p.storage_path)}
                   alt={p.caption ?? ""}
+                  width={400}
+                  height={400}
+                  sizes="(max-width: 640px) 33vw, 160px"
                   className="aspect-square w-full rounded-lg border border-black/8 object-cover"
                 />
               ))}
