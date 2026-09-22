@@ -344,3 +344,129 @@ body {
     opacity: 0.7;
   }
 }
+
+/* Film-grain texture (app/login/page.tsx) - a single tiled SVG noise data-URI,
+   painted at very low opacity with mix-blend-mode so it darkens/lightens
+   what's under it rather than sitting on top as visible speckle. This is
+   the difference between a flat color field and something that reads as
+   printed/textured rather than a raw CSS gradient - a cheap, static (no
+   animation, no JS, no image request) way to add the kind of tactile depth
+   a premium brand's marketing site would have, without any of the "AI
+   glow"/glassmorphism cliches the brand direction explicitly avoids. */
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .grain-overlay {
+    opacity: 0.05;
+    mix-blend-mode: soft-light;
+  }
+}
+:root[data-theme="dark"] .grain-overlay {
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+}
+
+/* Headline lines enter one after another rather than as one block - reads
+   as considered pacing instead of everything landing in one frame. */
+@keyframes login-line-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.login-line {
+  display: block;
+  animation: login-line-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.login-line-1 { animation-delay: 0.05s; }
+.login-line-2 { animation-delay: 0.16s; }
+
+/* Form fields stagger in rather than appearing as one flat block under
+   .login-card-enter - each direct child gets a slightly later start,
+   capped at 5 children so a long form doesn't end in a visible queue. */
+.login-field-stagger > * {
+  animation: login-line-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.login-field-stagger > *:nth-child(1) { animation-delay: 0.32s; }
+.login-field-stagger > *:nth-child(2) { animation-delay: 0.38s; }
+.login-field-stagger > *:nth-child(3) { animation-delay: 0.44s; }
+.login-field-stagger > *:nth-child(4) { animation-delay: 0.5s; }
+.login-field-stagger > *:nth-child(5) { animation-delay: 0.56s; }
+
+/* Preview card mouse-tilt (app/login/TiltCard.tsx) - .login-tilt-perspective
+   gives the 3D context, .login-tilt-inner is what the component actually
+   rotates. Kept to a couple of degrees and only on pointer input (see the
+   component's own pointer-fine check) - a parallax effect that's felt on
+   the first pass and ignored after, not a gimmick that draws attention to
+   itself every time the eye crosses it. */
+.login-tilt-perspective {
+  perspective: 1200px;
+}
+.login-tilt-inner {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Badge chip gets a faint gradient ring instead of a flat 1px border - the
+   kind of detail that's invisible individually and adds up, per the brand
+   direction's "hundreds of small decisions" point. */
+.login-badge-ring {
+  position: relative;
+}
+.login-badge-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--brand) 55%, transparent), transparent 40%, color-mix(in srgb, var(--brand) 30%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Sparkline draw-in (components/Sparkline.tsx, `animate` prop) - the line
+   traces itself in using pathLength-normalized stroke-dashoffset, so the
+   dash math works regardless of each sparkline's actual geometry. */
+@keyframes sparkline-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.sparkline-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sparkline-draw 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+.sparkline-draw-delay {
+  animation-delay: 0.3s;
+}
+@keyframes sparkline-fade {
+  from { opacity: 0; }
+}
+.sparkline-fade {
+  animation: sparkline-fade 0.5s ease 1s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-line,
+  .login-field-stagger > * {
+    animation: none;
+  }
+  .login-tilt-inner {
+    transition: none;
+  }
+  .sparkline-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .sparkline-fade {
+    animation: none;
+    opacity: 1;
+  }
+}

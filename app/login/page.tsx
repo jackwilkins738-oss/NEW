@@ -50,7 +50,7 @@ export default async function LoginPage({
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage: `
-              radial-gradient(900px 560px at 15% -10%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 65%),
+              radial-gradient(900px 560px at 15% -10%, color-mix(in srgb, var(--brand) 7%, transparent), transparent 65%),
               linear-gradient(color-mix(in srgb, var(--hairline) 55%, var(--page-bg)) 1px, transparent 1px),
               linear-gradient(90deg, color-mix(in srgb, var(--hairline) 55%, var(--page-bg)) 1px, transparent 1px)
             `,
@@ -59,19 +59,20 @@ export default async function LoginPage({
             WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 30% 40%, black 40%, transparent 90%)",
           }}
         />
+        <div className="grain-overlay" />
 
         {/* Two soft brand-tinted orbs drifting slowly behind the copy - not
             noticed consciously, just enough ambient motion that the panel
             doesn't sit dead-still next to the live preview card below. */}
         <div
           aria-hidden
-          className="login-orb pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl"
-          style={{ background: "color-mix(in srgb, var(--brand) 28%, transparent)" }}
+          className="login-orb pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full blur-3xl"
+          style={{ background: "color-mix(in srgb, var(--brand) 12%, transparent)" }}
         />
         <div
           aria-hidden
-          className="login-orb login-orb-delay pointer-events-none absolute bottom-10 right-10 h-56 w-56 rounded-full blur-3xl"
-          style={{ background: "color-mix(in srgb, var(--brand-strong) 22%, transparent)" }}
+          className="login-orb login-orb-delay pointer-events-none absolute bottom-10 right-10 h-48 w-48 rounded-full blur-3xl"
+          style={{ background: "color-mix(in srgb, var(--brand-strong) 9%, transparent)" }}
         />
         <div className="relative flex items-center gap-3">
           {tenant?.logo_url ? (
@@ -89,7 +90,7 @@ export default async function LoginPage({
         </div>
 
         <div className="relative max-w-md py-10">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/10 bg-brand-tint px-3.5 py-1.5">
+          <div className="login-badge-ring mb-6 inline-flex items-center gap-2 rounded-full border border-black/10 bg-brand-tint px-3.5 py-1.5">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: "var(--brand)" }} />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: "var(--brand)" }} />
@@ -101,22 +102,23 @@ export default async function LoginPage({
 
           {tenant ? (
             <>
-              <h1 className="font-display text-3xl font-bold leading-[1.1] tracking-tight text-ink xl:text-4xl">
-                Run the job,
-                <br />
-                <span style={{ color: "var(--brand)" }}>not the paperwork.</span>
+              <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight text-ink xl:text-5xl">
+                <span className="login-line login-line-1">Run the job,</span>
+                <span className="login-line login-line-2" style={{ color: "var(--brand)" }}>
+                  not the paperwork.
+                </span>
               </h1>
-              <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted">
+              <p className="login-line login-line-2 mt-5 max-w-sm text-[15px] leading-relaxed text-muted">
                 Leads, quotes, invoices and the calendar - everything {brandName} needs to run the business, in one
                 place.
               </p>
             </>
           ) : (
             <>
-              <h1 className="font-display text-3xl font-bold leading-[1.1] tracking-tight text-ink xl:text-4xl">
-                Customer admin.
+              <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight text-ink xl:text-5xl">
+                <span className="login-line login-line-1">Customer admin.</span>
               </h1>
-              <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted">
+              <p className="login-line login-line-2 mt-5 max-w-sm text-[15px] leading-relaxed text-muted">
                 Sign in with a platform admin account to manage every business running on Scalar Digital.
               </p>
             </>
@@ -146,9 +148,27 @@ export default async function LoginPage({
         )}
       </aside>
 
-      {/* Right form panel */}
-      <div className="flex items-center justify-center overflow-hidden px-5 py-10 sm:px-6">
-        <div className="w-full max-w-sm">
+      {/* Right form panel - previously a flat bg-page with the form
+          floating directly on it; now carries the same textured background
+          the left panel and the rest of the app use (mirrored, lower
+          intensity so it recedes behind a contained card) rather than
+          reading as an unfinished half of the page. */}
+      <div className="relative flex items-center justify-center overflow-hidden px-5 py-10 sm:px-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `
+              radial-gradient(900px 560px at 85% 110%, color-mix(in srgb, var(--brand) 4%, transparent), transparent 65%),
+              linear-gradient(color-mix(in srgb, var(--hairline) 45%, var(--page-bg)) 1px, transparent 1px),
+              linear-gradient(90deg, color-mix(in srgb, var(--hairline) 45%, var(--page-bg)) 1px, transparent 1px)
+            `,
+            backgroundSize: "100% 100%, 56px 56px, 56px 56px",
+          }}
+        />
+        <div className="grain-overlay" />
+
+        <div className="relative w-full max-w-sm">
           {/* Mark shown only when the brand panel is hidden (below lg) -
               otherwise the page has no identity at all on a phone. */}
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
@@ -166,16 +186,34 @@ export default async function LoginPage({
             <span className="font-display text-base font-bold tracking-tight text-ink">{brandName}</span>
           </div>
 
-          <div className="login-card-enter">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          {/* Contained card instead of the form floating directly on the
+              page - the same elevation tokens (--card-shadow-*) the
+              dashboard's own KPI tiles use, so this reads as one more
+              considered surface in the same system rather than a login
+              template bolted on the front of it. */}
+          <div
+            className="login-card-enter relative overflow-hidden rounded-2xl border p-7 sm:p-8"
+            style={{
+              borderColor: "var(--hairline)",
+              background: "var(--surface)",
+              boxShadow: `0 1px 0 0 var(--card-highlight) inset, 0 1px 2px var(--card-shadow-tight), 0 32px 64px -28px var(--card-shadow-ambient)`,
+            }}
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-20"
+              style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--brand) 5%, transparent), transparent)" }}
+            />
+
+            <p className="relative text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
               {tenant ? "Operations & Sales Dashboard" : "Scalar Digital"}
             </p>
-            <h2 className="font-display mt-1 text-2xl font-extrabold leading-tight text-ink">Welcome back</h2>
-            <p className="mt-1.5 text-sm text-muted">
+            <h2 className="font-display relative mt-1 text-2xl font-extrabold leading-tight text-ink">Welcome back</h2>
+            <p className="relative mt-1.5 text-sm text-muted">
               {tenant ? `Sign in to ${brandName}'s dashboard.` : "Sign in with your admin account."}
             </p>
 
-            <form action={isAdminDomain ? adminSignIn : signIn} className="mt-7 flex flex-col gap-4">
+            <form action={isAdminDomain ? adminSignIn : signIn} className="login-field-stagger relative mt-7 flex flex-col gap-4">
               <label className="block text-sm font-medium text-ink-2">
                 Email
                 <div className="relative mt-1.5">
@@ -214,12 +252,12 @@ export default async function LoginPage({
                 Sign in
               </button>
             </form>
-
-            <p className="mt-7 text-center text-xs text-muted">
-              Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
-              <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
-            </p>
           </div>
+
+          <p className="relative mt-6 text-center text-xs text-muted">
+            Powered by Scalar Digital &middot; <a href="/privacy" className="hover:text-brand hover:underline">Privacy</a> &middot;{" "}
+            <a href="/terms" className="hover:text-brand hover:underline">Terms</a>
+          </p>
         </div>
       </div>
     </main>
