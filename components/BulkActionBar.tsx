@@ -13,7 +13,7 @@ export function BulkActionBar({
   if (count === 0) return null;
 
   return (
-    <div className="sticky top-2 z-10 mb-3 flex items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-tint px-3 py-2">
+    <div className="toast-enter sticky top-2 z-10 mb-3 flex items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-tint px-3 py-2">
       <p className="text-xs font-semibold text-brand-strong">
         {count} selected
         <button type="button" onClick={onClear} className="ml-2 font-normal text-brand-strong underline hover:no-underline">

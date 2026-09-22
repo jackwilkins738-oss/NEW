@@ -8,6 +8,8 @@ import { IconBanknote } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
 import { PanelPagination } from "@/components/PanelPagination";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
+import { Spinner } from "@/components/Spinner";
+import { useToast } from "@/components/Toast";
 
 const PAGE_SIZE = 20;
 
@@ -63,6 +65,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(outstanding / 100));
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   if (!open) {
     return (
@@ -90,14 +93,15 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
         type="button"
         disabled={isPending}
         onClick={() =>
-          startTransition(() => {
-            recordInvoicePayment(invoiceId, Number(amount));
+          startTransition(async () => {
+            await recordInvoicePayment(invoiceId, Number(amount));
             setOpen(false);
+            toast(`Payment of ${formatGBP(Number(amount) * 100)} recorded`);
           })
         }
-        className="min-h-[32px] rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
+        className="flex min-h-[32px] min-w-[52px] items-center justify-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-70"
       >
-        Save
+        {isPending ? <Spinner className="h-3.5 w-3.5" /> : "Save"}
       </button>
     </div>
   );
@@ -106,6 +110,7 @@ function RecordPaymentButton({ invoiceId, outstanding }: { invoiceId: string; ou
 function SendInvoiceButton({ invoiceId, tenantId, alreadySent }: { invoiceId: string; tenantId: string; alreadySent: boolean }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<"sent" | "no_email" | null>(alreadySent ? "sent" : null);
+  const { toast } = useToast();
 
   if (result === "sent") {
     return <span className="text-xs font-semibold text-good">Sent</span>;
@@ -121,13 +126,18 @@ function SendInvoiceButton({ invoiceId, tenantId, alreadySent }: { invoiceId: st
       onClick={() =>
         startTransition(async () => {
           const res = await sendInvoice(invoiceId, tenantId);
-          if (res.ok) setResult("sent");
-          else if (res.reason === "no_email") setResult("no_email");
+          if (res.ok) {
+            setResult("sent");
+            toast("Invoice sent");
+          } else if (res.reason === "no_email") {
+            setResult("no_email");
+            toast("No email on file for this client", "error");
+          }
         })
       }
-      className="btn-primary min-h-[32px] rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-60"
+      className="btn-primary flex min-h-[32px] min-w-[92px] items-center justify-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-bold text-white hover:bg-brand-strong disabled:opacity-70"
     >
-      Send invoice
+      {isPending ? <Spinner className="h-3.5 w-3.5" /> : "Send invoice"}
     </button>
   );
 }

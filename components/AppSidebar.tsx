@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialsFor } from "@/lib/initials";
 import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconClock, IconSettings } from "@/components/DashboardIcons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Settings and Audit log are owner-only - see the `role === "member"`
 // filter below. Both pages also enforce this themselves server-side
@@ -94,6 +95,22 @@ export function AppSidebar({
           );
         })}
       </nav>
+
+      <div className="flex items-center justify-between gap-1 px-2">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("scalar:open-command-palette"))}
+          className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-white/40 transition-colors hover:bg-white/5 hover:text-white/70"
+        >
+          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 flex-none" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8.5" cy="8.5" r="5.5" />
+            <path d="M17 17l-4-4" />
+          </svg>
+          Quick jump
+          <kbd className="ml-auto rounded border border-white/15 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-white/50">⌘K</kbd>
+        </button>
+        <ThemeToggle />
+      </div>
 
       <form action={signOutAction} className="px-2 pb-1">
         <button

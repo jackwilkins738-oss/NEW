@@ -67,6 +67,42 @@
   }
 }
 
+/* Manual override (components/ThemeToggle.tsx) - identical values to the
+   prefers-color-scheme block above, but unconditional, so someone on a
+   light-mode OS can still choose dark in-app. Kept as a literal duplicate
+   rather than restructured into one shared block: this way each stays a
+   plain, greppable "what dark mode looks like" definition rather than a
+   selector-composition trick that's harder to scan. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #0d1015;
+  --surface: #171c24;
+  --surface-2: #232a37;
+  --ink: #f5f1e6;
+  --ink-2: #c2c6cc;
+  --muted: #838894;
+  --hairline: #2e3542;
+  --brand: #e8935e;
+  --brand-strong: #f5b488;
+  --brand-tint: rgba(232,147,94,0.16);
+
+  --chart-surface: #1a1a19;
+  --chart-ink: #ffffff;
+  --chart-ink-2: #c3c2b7;
+  --chart-muted: #898781;
+  --chart-grid: #2c2c2a;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-other: #5b5b56;
+
+  --card-shadow-tight: rgba(0, 0, 0, 0.35);
+  --card-shadow-ambient: rgba(0, 0, 0, 0.55);
+  --card-highlight: rgba(255, 255, 255, 0.05);
+}
+
 body {
   background-color: var(--page-bg);
   color: var(--ink);
@@ -124,12 +160,39 @@ body {
   transform: translateY(0);
 }
 
+@keyframes login-orb-float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(16px, -22px); }
+}
+.login-orb {
+  animation: login-orb-float 9s ease-in-out infinite;
+}
+.login-orb-delay {
+  animation-delay: -4.5s;
+  animation-direction: reverse;
+}
+
+@keyframes login-preview-enter {
+  from { opacity: 0; transform: translateY(14px) rotate(-2deg) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) rotate(-2deg) scale(1); }
+}
+.login-preview-enter {
+  animation: login-preview-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .login-card-enter {
     animation: none;
   }
   .login-button:hover {
     transform: none;
+  }
+  .login-orb {
+    animation: none;
+  }
+  .login-preview-enter {
+    animation: none;
+    transform: rotate(-2deg);
   }
 }
 
@@ -224,5 +287,60 @@ body {
   .btn-primary,
   .btn-primary:hover {
     transform: none;
+  }
+}
+
+/* Toast stack (components/Toast.tsx) - slide-and-fade up from the edge the
+   stack anchors to (bottom on mobile, bottom-right on larger screens),
+   same easing family as the rest of the app's motion. */
+@keyframes toast-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.toast-enter {
+  animation: toast-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Small inline spinner (components/Spinner.tsx) - used inside buttons while
+   a server action is pending, replacing the old "just dim to 60% opacity"
+   as the only feedback a click did anything. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 0.7s linear infinite;
+}
+
+/* Command palette (components/CommandPalette.tsx) backdrop + panel. */
+@keyframes palette-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes palette-panel-enter {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.palette-backdrop-enter {
+  animation: palette-backdrop-enter 0.15s ease both;
+}
+.palette-panel-enter {
+  animation: palette-panel-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter,
+  .palette-backdrop-enter,
+  .palette-panel-enter {
+    animation: none;
+  }
+  .spinner {
+    animation-duration: 1.4s;
+  }
+  /* Tailwind's animate-pulse (used by components/PageSkeleton.tsx) has no
+     reduced-motion guard of its own - swap the oscillating opacity for a
+     single static dimmed state so a loading boundary doesn't flash. */
+  .animate-pulse {
+    animation: none;
+    opacity: 0.7;
   }
 }

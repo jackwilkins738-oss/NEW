@@ -30,6 +30,8 @@ import { ContactEmailField } from "@/components/ContactEmailField";
 import { AppSidebar } from "@/components/AppSidebar";
 import { getCurrentUserRole } from "@/lib/membershipRole";
 import { Sparkline } from "@/components/Sparkline";
+import { CountUp } from "@/components/CountUp";
+import { Reveal } from "@/components/reveal";
 import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUsers, IconEye } from "@/components/DashboardIcons";
 import { formatGBP } from "@/lib/format";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
@@ -490,14 +492,14 @@ export default async function DashboardPage() {
             five secondary stats as a divided strip below, sharing a single
             border/shadow instead of each competing for attention on their
             own. */}
-        <div className="hero-tile kpi-tile mt-5 rounded-2xl p-5 sm:p-6">
+        <Reveal as="div" className="hero-tile kpi-tile mt-5 rounded-2xl p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
             <div className="sm:col-span-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-brand-strong">Live pipeline value</p>
                   <p className="mt-1 font-sans text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-                    {formatGBP(pipelineValue)}
+                    <CountUp value={pipelineValue / 100} formatted={formatGBP(pipelineValue)} />
                   </p>
                   <p className="mt-1 text-xs text-brand-strong">On track + at risk jobs</p>
                 </div>
@@ -509,7 +511,9 @@ export default async function DashboardPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-ink-2">Revenue</p>
-                  <p className="mt-1 font-mono text-2xl font-bold text-ink">{formatGBP(revenue)}</p>
+                  <p className="mt-1 font-mono text-2xl font-bold text-ink">
+                    <CountUp value={revenue / 100} formatted={formatGBP(revenue)} />
+                  </p>
                   <p className="mt-1 text-xs text-muted">All paid invoices</p>
                 </div>
                 <IconBanknote className="h-6 w-6 flex-none text-muted" />
@@ -522,13 +526,15 @@ export default async function DashboardPage() {
             <div className="sm:pr-4">
               <IconTrophy className="h-4 w-4 text-muted" />
               <p className="mt-1.5 text-xs font-semibold text-ink-2">Won this month</p>
-              <p className="mt-0.5 font-mono text-lg font-bold text-ink">{formatGBP(wonThisMonth)}</p>
+              <p className="mt-0.5 font-mono text-lg font-bold text-ink">
+                <CountUp value={wonThisMonth / 100} formatted={formatGBP(wonThisMonth)} />
+              </p>
             </div>
             <div className="sm:px-4">
               <IconClock className={`h-4 w-4 ${outstandingTotal > 0 ? "text-critical" : "text-muted"}`} />
               <p className="mt-1.5 text-xs font-semibold text-ink-2">Outstanding</p>
               <p className={`mt-0.5 font-mono text-lg font-bold ${outstandingTotal > 0 ? "text-critical" : "text-ink"}`}>
-                {formatGBP(outstandingTotal)}
+                <CountUp value={outstandingTotal / 100} formatted={formatGBP(outstandingTotal)} />
               </p>
             </div>
             <div className="sm:px-4">
@@ -547,11 +553,11 @@ export default async function DashboardPage() {
               <p className="mt-0.5 font-mono text-lg font-bold text-ink">{pageviewCount}</p>
             </div>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="mt-5">
+        <Reveal as="div" className="mt-5">
           <JobsAtRiskPanel risks={jobRisks} />
-        </div>
+        </Reveal>
 
         <DataQualityPanel warnings={dataQualityWarnings} />
 
@@ -654,7 +660,10 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-black/8">
+        <Reveal
+          as="div"
+          className="mt-5 grid grid-cols-1 gap-6 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-black/8"
+        >
           <div className="lg:col-span-2">
             <RevenueTrend
               title="Project value won · trailing 12 months"
@@ -667,7 +676,7 @@ export default async function DashboardPage() {
           <div className="border-t border-black/8 pt-5 lg:border-none lg:pl-6 lg:pt-0">
             <BarChart title="Revenue by project type" note="Trailing 12 months" rows={projectTypeBreakdown} format="gbp" bare />
           </div>
-        </div>
+        </Reveal>
 
         <div className="mt-5">
           <BarChart
