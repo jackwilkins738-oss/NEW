@@ -19,7 +19,7 @@ export default async function CustomersPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
@@ -57,7 +57,7 @@ export default async function CustomersPage() {
           </h1>
           <p className="mt-1 text-sm text-muted">
             Created automatically when a lead or quote converts to a project, or add one by hand below - one
-            record per customer across every job they've had.
+            record per customer across every job they&apos;ve had.
           </p>
         </header>
 

@@ -11,7 +11,7 @@ import { signOut } from "@/app/login/actions";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   if (!(await isPlatformAdmin(userData.user.id))) redirect("/login");

@@ -67,6 +67,11 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
               {data.companyAddress && <Text style={styles.businessMeta}>{data.companyAddress}</Text>}
               {data.vatNumber && <Text style={styles.businessMeta}>VAT: {data.vatNumber}</Text>}
             </View>
+            {/* @react-pdf/renderer's own Image primitive, not next/image or
+                an HTML img - no alt prop exists on its type; PDFs don't have
+                the same accessible-alt-text semantics this jsx-a11y rule
+                assumes. */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
             {data.logoUrl && <Image src={data.logoUrl} style={styles.logo} />}
           </View>
 

@@ -116,7 +116,7 @@ export function ReviewsPanel({
         <IconStar className="h-4 w-4 text-brand" />
         Reviews
       </h2>
-      <p className="text-xs text-muted">Published reviews show on the customer's website via testimonials.js.</p>
+      <p className="text-xs text-muted">Published reviews show on the customer&apos;s website via testimonials.js.</p>
 
       <form action={requestReview} className="mt-3 flex items-end gap-2 rounded-xl border border-black/8 bg-surface-2 p-3">
         <input type="hidden" name="tenantId" value={tenantId} />

@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // @supabase/ssr pattern). Tenant resolution itself happens in lib/tenant.ts,
 // which reads the Host header directly via next/headers() in server
 // components - no need to thread anything through middleware for that.
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
 
   const supabase = createServerClient(

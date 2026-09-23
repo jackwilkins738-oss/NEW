@@ -19,7 +19,7 @@ import { logAudit } from "@/lib/auditLog";
 // session-scoped client so the google_event_id write-back respects the same
 // RLS as everything else in this file.
 async function syncNextVisitToCalendar(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   projectId: string,
   clientName: string,
   nextVisitAt: string | null
@@ -58,7 +58,7 @@ async function syncNextVisitToCalendar(
 }
 
 export async function disconnectGoogleCalendar() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
@@ -77,7 +77,7 @@ const VALID_STATUSES = ["new", "contacted", "survey_booked", "quoted", "won", "l
 export async function updateLeadStatus(leadId: string, status: string) {
   if (!VALID_STATUSES.includes(status)) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("leads")
     .update({ status, status_updated_at: new Date().toISOString() })
@@ -87,7 +87,7 @@ export async function updateLeadStatus(leadId: string, status: string) {
 }
 
 export async function deleteLead(leadId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: lead } = await supabase.from("leads").select("tenant_id, name, email").eq("id", leadId).maybeSingle();
   await supabase.from("leads").delete().eq("id", leadId);
   revalidatePath("/dashboard");
@@ -106,7 +106,7 @@ export async function deleteLead(leadId: string) {
 
 export async function bulkDeleteLeads(leadIds: string[], tenantId: string) {
   if (leadIds.length === 0) return;
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("leads").delete().in("id", leadIds).eq("tenant_id", tenantId);
   revalidatePath("/dashboard");
   const { data: userData } = await supabase.auth.getUser();
@@ -124,7 +124,7 @@ export async function bulkDeleteLeads(leadIds: string[], tenantId: string) {
 // so an unpriced lead reads as "not estimated yet" instead of "worth £0"
 // in the pipeline-value total.
 export async function updateLeadValue(leadId: string, valuePounds: number | null) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const value_pence =
     valuePounds !== null && Number.isFinite(valuePounds) && valuePounds >= 0
       ? Math.round(valuePounds * 100)
@@ -134,7 +134,7 @@ export async function updateLeadValue(leadId: string, valuePounds: number | null
 }
 
 export async function updateLeadDetails(leadId: string, formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("leads")
     .update({
@@ -166,7 +166,7 @@ export async function addInvoice(formData: FormData) {
     return;
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // nextInvoiceNumber() goes through the admin client (tenants' own RLS
   // update policy is platform-admin-only), which bypasses the membership
@@ -205,7 +205,7 @@ export async function addInvoice(formData: FormData) {
 }
 
 export async function markInvoicePaid(invoiceId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: invoice } = await supabase
     .from("invoices")
     .select("amount_pence, project_id, tenant_id, client_name")
@@ -233,7 +233,7 @@ export async function markInvoicePaid(invoiceId: string) {
 export async function recordInvoicePayment(invoiceId: string, amountPounds: number) {
   if (!Number.isFinite(amountPounds) || amountPounds <= 0) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: invoice } = await supabase
     .from("invoices")
     .select("amount_pence, paid_pence, project_id, tenant_id, client_name")
@@ -262,7 +262,7 @@ export async function recordInvoicePayment(invoiceId: string, amountPounds: numb
 }
 
 export async function deleteInvoice(invoiceId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: invoice } = await supabase
     .from("invoices")
     .select("tenant_id, client_name, amount_pence")
@@ -290,7 +290,7 @@ export async function deleteInvoice(invoiceId: string) {
 // older invoices (before addInvoice started copying customer_id at
 // creation) may only have the project link.
 export async function sendInvoice(invoiceId: string, tenantId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: invoice } = await supabase
     .from("invoices")
@@ -388,7 +388,7 @@ export async function addProject(formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) insert.value_pence = Math.round(pounds * 100);
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("projects").insert(insert);
 
   revalidatePath("/dashboard");
@@ -399,7 +399,7 @@ export async function addProject(formData: FormData) {
 // stable identity either a lead form or a quote gives us - otherwise
 // creates one.
 async function findOrCreateCustomer(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   tenantId: string,
   name: string,
   email: string | null,
@@ -429,7 +429,7 @@ async function findOrCreateCustomer(
 // a member of - the lead.tenant_id check below just guards against a
 // mismatched id being passed in from a stale client.
 export async function convertLeadToProject(leadId: string, tenantId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: lead } = await supabase
     .from("leads")
@@ -504,7 +504,7 @@ export async function addQuote(formData: FormData) {
   const lineItems = parseLineItems(String(formData.get("lineItems") ?? "[]"));
   const { costSubtotalPence, vatAmountPence, totalPence } = computeQuoteTotals(lineItems, markupPercent, vatRate);
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // nextQuoteNumber() goes through the admin client (tenants' own RLS
   // update policy is platform-admin-only), which bypasses the membership
@@ -555,13 +555,13 @@ export async function updateQuoteStatus(quoteId: string, status: string) {
   if (status === "accepted") update.accepted_at = new Date().toISOString();
   if (status === "declined") update.declined_at = new Date().toISOString();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("quotes").update(update).eq("id", quoteId);
   revalidatePath("/dashboard");
 }
 
 export async function deleteQuote(quoteId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: quote } = await supabase
     .from("quotes")
     .select("tenant_id, client_name, total_pence")
@@ -584,7 +584,7 @@ export async function deleteQuote(quoteId: string) {
 
 export async function bulkDeleteQuotes(quoteIds: string[], tenantId: string) {
   if (quoteIds.length === 0) return;
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("quotes").delete().in("id", quoteIds).eq("tenant_id", tenantId);
   revalidatePath("/dashboard");
   const { data: userData } = await supabase.auth.getUser();
@@ -604,7 +604,7 @@ export async function bulkDeleteQuotes(quoteIds: string[], tenantId: string) {
 // customer's email, since a quote built straight from a lead often never
 // had its own email typed in separately.
 export async function sendQuote(quoteId: string, tenantId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: quote } = await supabase
     .from("quotes")
@@ -661,7 +661,7 @@ export async function sendQuote(quoteId: string, tenantId: string) {
 // total instead of a lead's estimated value - and it chains back to mark the
 // originating lead "won" too, if this quote came from one.
 export async function convertQuoteToProject(quoteId: string, tenantId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: quote } = await supabase
     .from("quotes")
@@ -741,7 +741,7 @@ export async function updateProject(projectId: string, formData: FormData) {
   const nextVisitAt = nextVisitDate ? new Date(`${nextVisitDate}T${nextVisitTime || "09:00"}`).toISOString() : null;
   update.next_visit_at = nextVisitAt;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("projects").update(update).eq("id", projectId);
   await syncNextVisitToCalendar(supabase, projectId, clientName, nextVisitAt);
 
@@ -749,7 +749,7 @@ export async function updateProject(projectId: string, formData: FormData) {
 }
 
 export async function deleteProject(projectId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Clean up the synced calendar event, if any, before the project row
   // (and its google_event_id with it) disappears.
@@ -806,7 +806,7 @@ export async function setTradeCapacity(formData: FormData) {
   if (!tenantId || !tradeName || !Number.isFinite(percentBooked)) return;
 
   const clamped = Math.max(0, Math.min(100, Math.round(percentBooked)));
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("trade_capacity")
     .upsert(
@@ -818,7 +818,7 @@ export async function setTradeCapacity(formData: FormData) {
 }
 
 export async function deleteTradeCapacity(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("trade_capacity").delete().eq("id", id);
   revalidatePath("/dashboard");
 }
@@ -843,7 +843,7 @@ export async function uploadProjectPhoto(formData: FormData) {
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/heic" ? "heic" : "jpg";
   const path = `${tenantId}/${crypto.randomUUID()}.${ext}`;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error: uploadError } = await supabase.storage.from("project-photos").upload(path, file, {
     contentType: file.type,
     cacheControl: "31536000",
@@ -861,7 +861,7 @@ export async function uploadProjectPhoto(formData: FormData) {
 }
 
 export async function deleteProjectPhoto(photoId: string, storagePath: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.storage.from("project-photos").remove([storagePath]);
   await supabase.from("project_photos").delete().eq("id", photoId);
   revalidatePath("/dashboard");
@@ -879,7 +879,7 @@ export async function addProjectCostItem(formData: FormData) {
   const amountPounds = Number(formData.get("amount"));
   if (!tenantId || !projectId || !Number.isFinite(amountPounds) || amountPounds < 0) return;
 
-  await createClient()
+  await (await createClient())
     .from("project_cost_items")
     .insert({
       tenant_id: tenantId,
@@ -900,13 +900,13 @@ export async function addProjectCostItem(formData: FormData) {
 // .bind(null, project.id) and handed to DeleteButton, which calls its
 // action with a single remaining id argument.
 export async function markCostItemPaid(projectId: string, itemId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("project_cost_items").update({ status: "paid" }).eq("id", itemId);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function deleteProjectCostItem(projectId: string, itemId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("project_cost_items").delete().eq("id", itemId);
   revalidatePath(`/projects/${projectId}`);
 }
@@ -921,7 +921,7 @@ export async function addVariation(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   if (!tenantId || !projectId || !description) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { count } = await supabase
     .from("variations")
     .select("id", { count: "exact", head: true })
@@ -958,7 +958,7 @@ export async function addVariation(formData: FormData) {
 // costs are real committed costs like any other, just triggered by a
 // customer request instead of the original quote.
 export async function approveVariation(projectId: string, variationId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: variation } = await supabase
     .from("variations")
@@ -1008,7 +1008,7 @@ export async function approveVariation(projectId: string, variationId: string) {
 }
 
 export async function declineVariation(projectId: string, variationId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: variation } = await supabase
     .from("variations")
     .select("tenant_id, number, customer_price_pence")
@@ -1030,7 +1030,7 @@ export async function declineVariation(projectId: string, variationId: string) {
 }
 
 export async function deleteVariation(projectId: string, variationId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: variation } = await supabase
     .from("variations")
     .select("tenant_id, number, customer_price_pence")
@@ -1056,7 +1056,7 @@ export async function deleteVariation(projectId: string, variationId: string) {
 // the same project, so extra work doesn't just sit as a bigger project
 // value with nothing actually billed for it.
 export async function createInvoiceFromVariation(projectId: string, variationId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: variation } = await supabase
     .from("variations")
@@ -1099,7 +1099,7 @@ export async function createInvoiceFromVariation(projectId: string, variationId:
 // through the service-role admin client - same pattern already used for
 // calendar_connections and platform_admins.
 export async function updateTenantContactEmail(tenantId: string, email: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
@@ -1120,7 +1120,7 @@ export async function updateTenantContactEmail(tenantId: string, email: string) 
 // above, for the same reason: tenants only has an RLS update policy for
 // platform admins, and this needs to be settable by the business owner.
 export async function updateTenantSettings(tenantId: string, formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
@@ -1180,7 +1180,7 @@ export async function uploadTenantLogo(formData: FormData) {
   if (!tenantId || !(file instanceof File) || file.size === 0) return;
   if (file.size > MAX_LOGO_BYTES || !ALLOWED_LOGO_TYPES.includes(file.type)) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
@@ -1235,7 +1235,7 @@ export async function uploadProjectDocument(formData: FormData) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${tenantId}/${crypto.randomUUID()}-${safeName}`;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error: uploadError } = await supabase.storage.from("project-documents").upload(path, file, {
     contentType: file.type || "application/octet-stream",
   });
@@ -1253,7 +1253,7 @@ export async function uploadProjectDocument(formData: FormData) {
 }
 
 export async function deleteProjectDocument(projectId: string, documentId: string, storagePath: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.storage.from("project-documents").remove([storagePath]);
   await supabase.from("project_documents").delete().eq("id", documentId);
   if (projectId) revalidatePath(`/projects/${projectId}`);
@@ -1267,7 +1267,7 @@ export async function addSnag(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   if (!tenantId || !projectId || !description) return;
 
-  await createClient()
+  await (await createClient())
     .from("snags")
     .insert({
       tenant_id: tenantId,
@@ -1286,13 +1286,13 @@ export async function addSnag(formData: FormData) {
 // pre-bound with .bind(null, project.id) for DeleteButton.
 export async function updateSnagStatus(projectId: string, snagId: string, status: string) {
   if (!SNAG_STATUSES.includes(status)) return;
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("snags").update({ status }).eq("id", snagId);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function deleteSnag(projectId: string, snagId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("snags").delete().eq("id", snagId);
   revalidatePath(`/projects/${projectId}`);
 }
@@ -1315,12 +1315,12 @@ export async function addTeamMember(formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) insert.cost_per_hour_pence = Math.round(pounds * 100);
   }
 
-  await createClient().from("team_members").insert(insert);
+  await (await createClient()).from("team_members").insert(insert);
   revalidatePath("/team");
 }
 
 export async function deleteTeamMember(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("team_members").delete().eq("id", id);
   revalidatePath("/team");
 }
@@ -1329,13 +1329,13 @@ export async function deleteTeamMember(id: string) {
 // assigning someone to a project outside the caller's own tenant - it joins
 // through projects -> memberships rather than trusting the ids passed in.
 export async function assignTeamMemberToProject(projectId: string, teamMemberId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("project_team_members").upsert({ project_id: projectId, team_member_id: teamMemberId });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function unassignTeamMemberFromProject(projectId: string, teamMemberId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("project_team_members")
     .delete()
@@ -1349,7 +1349,7 @@ export async function addSupplier(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!tenantId || !name) return;
 
-  await createClient()
+  await (await createClient())
     .from("suppliers")
     .insert({
       tenant_id: tenantId,
@@ -1365,7 +1365,7 @@ export async function addSupplier(formData: FormData) {
 }
 
 export async function deleteSupplier(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("suppliers").delete().eq("id", id);
   revalidatePath("/suppliers");
 }
@@ -1379,7 +1379,7 @@ export async function addCommunication(formData: FormData) {
   const summary = String(formData.get("summary") ?? "").trim();
   if (!tenantId || !projectId || !summary) return;
 
-  await createClient()
+  await (await createClient())
     .from("communications")
     .insert({
       tenant_id: tenantId,
@@ -1392,7 +1392,7 @@ export async function addCommunication(formData: FormData) {
 }
 
 export async function deleteCommunication(projectId: string, id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("communications").delete().eq("id", id);
   revalidatePath(`/projects/${projectId}`);
 }
@@ -1403,7 +1403,7 @@ export async function requestReview(formData: FormData) {
   const customerName = String(formData.get("customerName") ?? "").trim();
   if (!tenantId || !projectId || !customerName) return;
 
-  await createClient()
+  await (await createClient())
     .from("reviews")
     .insert({ tenant_id: tenantId, project_id: projectId, customer_name: customerName, status: "requested" });
 
@@ -1418,7 +1418,7 @@ export async function recordReview(projectId: string, reviewId: string, formData
   const rating = Number(formData.get("rating") ?? 0);
   const reviewText = String(formData.get("reviewText") ?? "").trim();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("reviews")
     .update({
@@ -1434,14 +1434,14 @@ export async function recordReview(projectId: string, reviewId: string, formData
 }
 
 export async function togglePublishReview(projectId: string, reviewId: string, published: boolean) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("reviews").update({ published }).eq("id", reviewId);
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/reviews");
 }
 
 export async function deleteReview(projectId: string, reviewId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("reviews").delete().eq("id", reviewId);
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/reviews");
@@ -1456,7 +1456,7 @@ export async function deleteReview(projectId: string, reviewId: string) {
 // review row for this project (covers requesting one by hand before
 // marking it complete).
 export async function markProjectComplete(projectId: string, tenantId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: project } = await supabase
     .from("projects")
@@ -1503,7 +1503,7 @@ export async function sendReviewRequestEmail(
   tenantId: string,
   reviewId: string
 ): Promise<{ ok: boolean; reason?: "no_review_link" | "no_email" | "not_found" }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: review } = await supabase
     .from("reviews")
@@ -1575,7 +1575,7 @@ export async function addCustomer(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!tenantId || !name) return;
 
-  await createClient()
+  await (await createClient())
     .from("customers")
     .insert({
       tenant_id: tenantId,
@@ -1593,7 +1593,7 @@ export async function updateCustomer(customerId: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase
     .from("customers")
     .update({

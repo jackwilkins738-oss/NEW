@@ -8,13 +8,14 @@ import { signIn, adminSignIn } from "./actions";
 import { PasswordField } from "./PasswordField";
 import { DashboardPreview } from "./DashboardPreview";
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: { error?: string };
-}) {
+export default async function LoginPage(
+  props: {
+    searchParams: Promise<{ error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
     if (tenant) {

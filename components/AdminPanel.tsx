@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createTenant,
@@ -290,18 +290,6 @@ function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // useState's initial value only runs once, on mount - it doesn't re-sync
-  // if tenant.brand_theme changes from under it (e.g. a router.refresh()
-  // triggered by editing a *different* tenant elsewhere on this same
-  // /admin page re-renders every card with fresh props, but this
-  // component's own local state would otherwise silently keep whatever it
-  // was last set to, drifting from what's actually saved). This keeps the
-  // displayed selection - and what "changed" is computed against - always
-  // anchored to the real saved value.
-  useEffect(() => {
-    setBrandTheme(tenant.brand_theme);
-  }, [tenant.brand_theme]);
-
   const changed = brandTheme !== tenant.brand_theme;
 
   async function handleSave() {
@@ -407,7 +395,16 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
             <DomainEditor tenant={t} />
 
             <p className="mt-3 text-xs font-semibold text-ink-2">Brand color</p>
-            <BrandThemeEditor tenant={t} />
+            {/* Keyed on brand_theme, not just t.id: forces a fresh mount (and
+                so a fresh useState(tenant.brand_theme)) whenever the saved
+                value changes from under it - e.g. a router.refresh()
+                triggered by editing a *different* tenant elsewhere on this
+                page re-renders every card with fresh props, and this is what
+                keeps the displayed selection anchored to the real saved
+                value instead of silently drifting. React's own recommended
+                replacement for a useEffect that just re-syncs state to a
+                changed prop. */}
+            <BrandThemeEditor key={t.brand_theme} tenant={t} />
 
             <p className="mt-3 text-xs font-semibold text-ink-2">Logins</p>
             <MembersEditor members={membersByTenant[t.id] ?? []} />

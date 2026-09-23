@@ -18,11 +18,12 @@ export const dynamic = "force-dynamic";
 
 type SortKey = "newest" | "oldest" | "rating_high" | "rating_low" | "status";
 
-export default async function ReviewsPage({ searchParams }: { searchParams: { sort?: string } }) {
+export default async function ReviewsPage(props: { searchParams: Promise<{ sort?: string }> }) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
@@ -65,7 +66,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
               <IconStar className="h-5 w-5 text-brand" />
               Reviews
             </h1>
-            <p className="mt-1 text-sm text-muted">Every review across every project - request and record from a project's own page.</p>
+            <p className="mt-1 text-sm text-muted">Every review across every project - request and record from a project&apos;s own page.</p>
           </div>
           <ReviewsSortSelect current={sort} />
         </header>
@@ -74,7 +75,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: { so
           {reviews.length === 0 ? (
             <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
               <p className="text-sm font-semibold text-ink">No reviews yet</p>
-              <p className="mt-1 px-2 text-sm text-muted">Request one from a project's page once it's complete.</p>
+              <p className="mt-1 px-2 text-sm text-muted">Request one from a project&apos;s page once it&apos;s complete.</p>
             </div>
           ) : (
             <div className="flex flex-col">

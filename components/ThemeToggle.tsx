@@ -15,12 +15,18 @@ export function ThemeToggle() {
   // client-only UI state.
   const [isDark, setIsDark] = useState(false);
 
+  // Reads state an inline pre-hydration script already wrote to the DOM
+  // (see app/layout.tsx) - genuinely can't be known during the render that
+  // produces the server-matching initial markup the comment above already
+  // explains, so there's no synchronous alternative to an effect here.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const stored = document.documentElement.dataset.theme;
     if (stored === "dark") setIsDark(true);
     else if (stored === "light") setIsDark(false);
     else setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function apply(next: "light" | "dark") {
     document.documentElement.dataset.theme = next;

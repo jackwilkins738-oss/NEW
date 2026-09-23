@@ -14,11 +14,12 @@ const field =
   "mt-1 w-full rounded-lg border border-black/15 bg-surface px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-export default async function SettingsPage({ searchParams }: { searchParams: { stripe?: string } }) {
+export default async function SettingsPage(props: { searchParams: Promise<{ stripe?: string }> }) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
 
@@ -64,7 +65,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
           {tenant.stripe_account_id ? (
             <>
               <p className="mt-1 text-xs text-muted">
-                Connected. Customers see a "Pay now" button on their invoice page - payments go straight to your own
+                Connected. Customers see a &quot;Pay now&quot; button on their invoice page - payments go straight to your own
                 Stripe account, not through Scalar Digital.
               </p>
               <p className="mt-2 font-mono text-xs text-muted">{tenant.stripe_account_id}</p>
@@ -162,7 +163,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { s
               className={field}
             />
             <span className="mt-1 block text-xs font-normal text-muted">
-              From your Google Business Profile ("Get more reviews" / "Ask for reviews"). Once set, marking a
+              From your Google Business Profile (&quot;Get more reviews&quot; / &quot;Ask for reviews&quot;). Once set, marking a
               project complete automatically emails the customer this link.
             </span>
           </label>

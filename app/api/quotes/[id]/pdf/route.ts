@@ -14,10 +14,11 @@ const SELECT =
 // other authenticated read), or a customer following a quote link with its
 // ?token= - checked by hand against accept_token via the service-role
 // client, same trust model as the public quote page itself.
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = new URL(request.url).searchParams.get("token");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
   let quote;

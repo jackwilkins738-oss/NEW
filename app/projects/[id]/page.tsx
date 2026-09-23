@@ -30,11 +30,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 type QuoteLineItem = { category: string; description: string; unit_price_pence: number };
 
-export default async function ProjectPage({ params }: { params: { id: string } }) {
+export default async function ProjectPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
@@ -206,7 +207,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           <h2 className="text-sm font-bold text-ink">Budget vs. actual</h2>
           {!project.quote_id && (
             <p className="mt-1 text-xs text-muted">
-              This project has no linked quote, so there's no budget figure to compare against - only committed/actual are shown.
+              This project has no linked quote, so there&apos;s no budget figure to compare against - only committed/actual are shown.
             </p>
           )}
           <div className="mt-3 overflow-x-auto">

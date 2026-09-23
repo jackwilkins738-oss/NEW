@@ -23,7 +23,7 @@ export default async function CashflowPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);
@@ -79,7 +79,7 @@ export default async function CashflowPage() {
           </h1>
           <p className="mt-1 text-sm text-muted">
             Money coming in (unpaid invoices) against money going out (costs logged but not yet paid) - profit and
-            cash aren't the same thing.
+            cash aren&apos;t the same thing.
           </p>
         </header>
 

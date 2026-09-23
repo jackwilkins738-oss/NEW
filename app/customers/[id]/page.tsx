@@ -18,11 +18,12 @@ const PROJECT_STATUS_LABEL: Record<string, string> = {
   awaiting_decision: "Awaiting decision",
 };
 
-export default async function CustomerPage({ params }: { params: { id: string } }) {
+export default async function CustomerPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);

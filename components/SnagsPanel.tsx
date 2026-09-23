@@ -118,7 +118,7 @@ export function SnagsPanel({ tenantId, projectId, snags }: { tenantId: string; p
         {snags.length === 0 ? (
           <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
             <p className="text-sm font-semibold text-ink">No snags logged</p>
-            <p className="mt-1 px-2 text-sm text-muted">Log one above as they're spotted.</p>
+            <p className="mt-1 px-2 text-sm text-muted">Log one above as they&apos;re spotted.</p>
           </div>
         ) : (
           snags.map((s) => <SnagRow key={s.id} snag={s} projectId={projectId} />)

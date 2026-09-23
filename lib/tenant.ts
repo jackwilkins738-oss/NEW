@@ -41,7 +41,7 @@ const TENANT_COLUMNS =
 // Settings' owner-only gate, signIn()'s membership check) was already
 // independent of which client fetched the row here.
 export async function getCurrentTenant(): Promise<Tenant | null> {
-  const host = headers().get("host")?.split(":")[0] ?? "";
+  const host = (await headers()).get("host")?.split(":")[0] ?? "";
   const admin = createAdminClient();
 
   const byDomain = await admin.from("tenants").select(TENANT_COLUMNS).eq("domain", host).maybeSingle();

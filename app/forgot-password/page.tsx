@@ -2,11 +2,12 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { initialsFor } from "@/lib/initials";
 import { requestPasswordReset } from "./actions";
 
-export default async function ForgotPasswordPage({
-  searchParams,
-}: {
-  searchParams: { sent?: string };
-}) {
+export default async function ForgotPasswordPage(
+  props: {
+    searchParams: Promise<{ sent?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
 
   if (!tenant) {

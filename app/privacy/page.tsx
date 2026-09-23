@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-ink">Where it's stored</h2>
+            <h2 className="text-base font-bold text-ink">Where it&apos;s stored</h2>
             <p className="mt-2">
               Your data is stored with Supabase, in a UK/EU data region. The dashboard application
               itself runs on Vercel, and transactional emails (password resets, lead notifications)

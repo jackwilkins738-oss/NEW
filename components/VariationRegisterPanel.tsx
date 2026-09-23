@@ -8,7 +8,7 @@ export function VariationRegisterPanel({ summary }: { summary: VariationRegister
   return (
     <div>
       <h2 className="text-sm font-bold text-ink">Variation register</h2>
-      <p className="text-xs text-muted">Extra work requested across every project - what's pending, approved, or declined</p>
+      <p className="text-xs text-muted">Extra work requested across every project - what&apos;s pending, approved, or declined</p>
 
       {!hasAnything ? (
         <div className="mt-3 rounded-xl border border-dashed border-black/15 py-6 text-center">
