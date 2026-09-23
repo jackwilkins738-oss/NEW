@@ -7,6 +7,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 
 export async function requestReview(formData: FormData) {
@@ -76,7 +77,12 @@ export async function sendReviewRequestEmail(
     .maybeSingle();
   if (!review || review.tenant_id !== tenantId) return { ok: false, reason: "not_found" };
 
-  const { data: tenant } = await supabase
+  // contact_email isn't in the public tenant columns anon/authenticated can
+  // select (see 039_restrict_tenant_columns.sql) - the review/tenantId match
+  // above already confirms this tenant owns the review being actioned, so
+  // the admin client here isn't widening access, just working around a
+  // column grant that the session-scoped client can no longer see past.
+  const { data: tenant } = await createAdminClient()
     .from("tenants")
     .select("business_name, google_review_url, contact_email")
     .eq("id", tenantId)

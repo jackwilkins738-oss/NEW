@@ -191,7 +191,12 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
   }
   if (!recipient) return { ok: false as const, reason: "no_email" as const };
 
-  const { data: tenant } = await supabase
+  // contact_email isn't in the public tenant columns anon/authenticated can
+  // select (see 039_restrict_tenant_columns.sql) - the invoice fetch above
+  // already proved (via RLS) that the caller is a member of this tenant, so
+  // the admin client here isn't widening access, just working around a
+  // column grant that the session-scoped client can no longer see past.
+  const { data: tenant } = await createAdminClient()
     .from("tenants")
     .select("business_name, domain, contact_email")
     .eq("id", tenantId)
