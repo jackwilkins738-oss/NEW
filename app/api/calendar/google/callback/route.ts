@@ -8,11 +8,12 @@ import { decodeState, exchangeCodeForTokens } from "@/lib/googleCalendar";
 // tenant's own domain - so unlike every other authenticated route in this
 // app, there's no session cookie to check here (cookies set on
 // ridgeview.scalardigital.co.uk aren't sent to a request on
-// admin.scalardigital.co.uk). Identity instead comes from `state`, which
-// this app generated and signed nothing into but itself controls the
-// format of - the actual trust anchor is Google's own `code`, which only
-// exists after whoever owns that Google account completed a real consent
-// screen for it.
+// admin.scalardigital.co.uk). Identity instead comes entirely from `state`,
+// which is why decodeState() HMAC-signs it and checks a 10-minute expiry:
+// without that, anyone could forge their own {userId, returnTo}, complete
+// Google's consent screen with their OWN account, and hit this callback
+// directly to link their Google Calendar to an arbitrary victim's
+// dashboard user.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

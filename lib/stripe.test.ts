@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import crypto from "crypto";
 import { verifyWebhookSignature, encodeState, decodeState } from "./stripe";
 
@@ -37,13 +37,44 @@ describe("verifyWebhookSignature", () => {
 });
 
 describe("encodeState / decodeState", () => {
+  const originalSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  beforeEach(() => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  });
+  afterEach(() => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = originalSecret;
+  });
+
   it("round-trips a state object", () => {
-    const state = { tenantId: "tenant-1", returnTo: "https://example.com/settings" };
+    const state = { tenantId: "tenant-1", userId: "user-1", returnTo: "https://example.com/settings" };
     const encoded = encodeState(state);
     expect(decodeState(encoded)).toEqual(state);
   });
 
   it("returns null for garbage input instead of throwing", () => {
     expect(decodeState("not-valid-base64url-json")).toBeNull();
+  });
+
+  it("rejects a state that's been tampered with after signing", () => {
+    const encoded = encodeState({ tenantId: "tenant-1", userId: "user-1", returnTo: "https://example.com/settings" });
+    const sig = encoded.split(".")[1];
+    const tamperedPayload = Buffer.from(
+      JSON.stringify({ tenantId: "victim-tenant", userId: "user-1", returnTo: "https://example.com/settings", iat: Date.now() })
+    ).toString("base64url");
+    expect(decodeState(`${tamperedPayload}.${sig}`)).toBeNull();
+  });
+
+  it("rejects a state signed with a different secret", () => {
+    const encoded = encodeState({ tenantId: "tenant-1", userId: "user-1", returnTo: "https://example.com/settings" });
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "a-different-secret";
+    expect(decodeState(encoded)).toBeNull();
+  });
+
+  it("rejects an expired state", () => {
+    const stale = Buffer.from(
+      JSON.stringify({ tenantId: "tenant-1", userId: "user-1", returnTo: "https://example.com/settings", iat: Date.now() - 11 * 60 * 1000 })
+    ).toString("base64url");
+    const sig = crypto.createHmac("sha256", "test-service-role-key").update(stale).digest("base64url");
+    expect(decodeState(`${stale}.${sig}`)).toBeNull();
   });
 });
