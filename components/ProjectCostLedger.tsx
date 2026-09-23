@@ -90,7 +90,7 @@ export function ProjectCostLedger({
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Cost ledger</h2>
-      <p className="text-xs text-muted">Log a cost the moment it's committed, mark it paid once it's actually settled.</p>
+      <p className="text-xs text-muted">Log a cost the moment it&apos;s committed, mark it paid once it&apos;s actually settled.</p>
 
       <form
         action={addProjectCostItem}

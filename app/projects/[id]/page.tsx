@@ -207,7 +207,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
           <h2 className="text-sm font-bold text-ink">Budget vs. actual</h2>
           {!project.quote_id && (
             <p className="mt-1 text-xs text-muted">
-              This project has no linked quote, so there's no budget figure to compare against - only committed/actual are shown.
+              This project has no linked quote, so there&apos;s no budget figure to compare against - only committed/actual are shown.
             </p>
           )}
           <div className="mt-3 overflow-x-auto">

@@ -8,7 +8,7 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
   const [result, setResult] = useState<"accepted" | "declined" | null>(null);
 
   if (result === "accepted") {
-    return <p className="rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">Quote accepted - thank you. We'll be in touch shortly.</p>;
+    return <p className="rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">Quote accepted - thank you. We&apos;ll be in touch shortly.</p>;
   }
   if (result === "declined") {
     return <p className="rounded-lg bg-surface-2 p-4 text-sm font-semibold text-ink-2">Quote declined. Thanks for letting us know.</p>;

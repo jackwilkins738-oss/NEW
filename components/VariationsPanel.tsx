@@ -114,7 +114,7 @@ export function VariationsPanel({
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-bold text-ink">Variations</h2>
-      <p className="text-xs text-muted">Extra work the customer's asked for - approving adds it to the project value.</p>
+      <p className="text-xs text-muted">Extra work the customer&apos;s asked for - approving adds it to the project value.</p>
 
       <form
         action={addVariation}

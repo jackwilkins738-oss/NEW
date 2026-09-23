@@ -81,7 +81,7 @@ export default async function TeamPage() {
           {(team ?? []).length === 0 ? (
             <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
               <p className="text-sm font-semibold text-ink">No team members yet</p>
-              <p className="mt-1 px-2 text-sm text-muted">Add one above, then assign them to projects from each project's page.</p>
+              <p className="mt-1 px-2 text-sm text-muted">Add one above, then assign them to projects from each project&apos;s page.</p>
             </div>
           ) : (
             <div className="flex flex-col">

@@ -115,7 +115,7 @@ export default async function PublicInvoicePage(
 
             {searchParams.paid === "1" && invoice.status !== "paid" && (
               <p className="mt-4 rounded-lg bg-[rgba(12,163,12,0.1)] p-3.5 text-sm font-semibold text-good">
-                Thanks - we're confirming your payment now. This page will show as paid shortly.
+                Thanks - we&apos;re confirming your payment now. This page will show as paid shortly.
               </p>
             )}
 

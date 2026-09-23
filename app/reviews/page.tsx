@@ -66,7 +66,7 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
               <IconStar className="h-5 w-5 text-brand" />
               Reviews
             </h1>
-            <p className="mt-1 text-sm text-muted">Every review across every project - request and record from a project's own page.</p>
+            <p className="mt-1 text-sm text-muted">Every review across every project - request and record from a project&apos;s own page.</p>
           </div>
           <ReviewsSortSelect current={sort} />
         </header>
@@ -75,7 +75,7 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
           {reviews.length === 0 ? (
             <div className="rounded-xl border border-dashed border-black/15 py-8 text-center">
               <p className="text-sm font-semibold text-ink">No reviews yet</p>
-              <p className="mt-1 px-2 text-sm text-muted">Request one from a project's page once it's complete.</p>
+              <p className="mt-1 px-2 text-sm text-muted">Request one from a project&apos;s page once it&apos;s complete.</p>
             </div>
           ) : (
             <div className="flex flex-col">

@@ -61,6 +61,12 @@ export function CommandPalette() {
     };
   }, []);
 
+  // Resetting query/active here (rather than wherever setOpen(true) is
+  // called) is what actually needs an effect: focusing the input has to
+  // wait for the panel to exist in the DOM, which only happens after this
+  // same `open` state has already committed and re-rendered - there's no
+  // event handler that could reset+focus in one synchronous step instead.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       setQuery("");
@@ -69,10 +75,7 @@ export function CommandPalette() {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
-
-  useEffect(() => {
-    setActive(0);
-  }, [query]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function go(href: string) {
     setOpen(false);
@@ -97,7 +100,10 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActive(0);
+            }}
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") {
                 e.preventDefault();

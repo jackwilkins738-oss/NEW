@@ -65,7 +65,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
           {tenant.stripe_account_id ? (
             <>
               <p className="mt-1 text-xs text-muted">
-                Connected. Customers see a "Pay now" button on their invoice page - payments go straight to your own
+                Connected. Customers see a &quot;Pay now&quot; button on their invoice page - payments go straight to your own
                 Stripe account, not through Scalar Digital.
               </p>
               <p className="mt-2 font-mono text-xs text-muted">{tenant.stripe_account_id}</p>
@@ -163,7 +163,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
               className={field}
             />
             <span className="mt-1 block text-xs font-normal text-muted">
-              From your Google Business Profile ("Get more reviews" / "Ask for reviews"). Once set, marking a
+              From your Google Business Profile (&quot;Get more reviews&quot; / &quot;Ask for reviews&quot;). Once set, marking a
               project complete automatically emails the customer this link.
             </span>
           </label>

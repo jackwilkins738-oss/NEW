@@ -150,6 +150,12 @@ export default async function DashboardPage() {
     .maybeSingle();
   if (!membership.data) redirect("/login");
 
+  // react-hooks/purity flags Date.now() assuming client-render purity rules
+  // (React Compiler's memoization concerns) - this is a Server Component
+  // computing a query boundary once per request, not a value re-evaluated
+  // across re-renders, so there's nothing for the rule's actual concern to
+  // apply to here.
+  // eslint-disable-next-line react-hooks/purity
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
