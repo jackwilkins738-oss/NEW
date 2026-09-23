@@ -7,7 +7,8 @@ import { createCheckoutSession } from "@/lib/stripe";
 // Creates a fresh Checkout Session every click rather than a stored link,
 // so the amount always reflects the current outstanding balance (a part-
 // payment recorded by hand since the page loaded, say).
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const body = await request.json().catch(() => null);
   const token = body?.token;
   if (!token) return NextResponse.json({ error: "Missing token" }, { status: 400 });

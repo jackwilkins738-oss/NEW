@@ -4,8 +4,10 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 // Server-side Supabase client, scoped to the signed-in visitor via their auth cookies.
 // RLS policies (see supabase/schema.sql) are what actually enforce tenant isolation -
 // this client just carries the visitor's identity into that check.
-export function createClient() {
-  const cookieStore = cookies();
+// Async since Next 15 (cookies() itself returns a Promise now) - every
+// caller was updated to `await createClient()`.
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

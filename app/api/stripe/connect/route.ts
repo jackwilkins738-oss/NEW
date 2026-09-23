@@ -6,7 +6,7 @@ import { buildConnectUrl, encodeState } from "@/lib/stripe";
 // Starts the Stripe Connect OAuth flow - a link a signed-in owner clicks
 // from Settings, same shape as the Google Calendar connect flow.
 export async function GET(request: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.redirect(new URL("/login", request.url));
 

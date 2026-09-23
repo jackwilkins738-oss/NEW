@@ -18,11 +18,12 @@ export const dynamic = "force-dynamic";
 
 type SortKey = "newest" | "oldest" | "rating_high" | "rating_low" | "status";
 
-export default async function ReviewsPage({ searchParams }: { searchParams: { sort?: string } }) {
+export default async function ReviewsPage(props: { searchParams: Promise<{ sort?: string }> }) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);

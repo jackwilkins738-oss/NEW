@@ -6,7 +6,7 @@ import { formatGBP } from "@/lib/format";
 // Same trust model as app/api/export/leads/route.ts - RLS decides what
 // comes back, tenantId just narrows the request.
 export async function GET(request: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.redirect(new URL("/login", request.url));
 

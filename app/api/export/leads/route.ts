@@ -7,7 +7,7 @@ import { toCsv } from "@/lib/csv";
 // narrows which tenant's leads to ask for, same trust model as every
 // other authenticated read in this app.
 export async function GET(request: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.redirect(new URL("/login", request.url));
 

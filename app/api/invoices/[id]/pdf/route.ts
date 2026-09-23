@@ -12,10 +12,11 @@ const SELECT = "id, tenant_id, invoice_number, reference, milestone, client_name
 // scopes this to their own tenant), or a customer following an emailed
 // link with its ?token= - checked against view_token via the service-role
 // client.
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = new URL(request.url).searchParams.get("token");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
   let invoice;

@@ -31,7 +31,8 @@ const VARIATION_STATUS_LABEL: Record<string, string> = {
 // public quote/invoice pages: portal_token in the URL (an unguessable
 // uuid) proves the visitor is the intended recipient, so this reads via
 // the service-role admin client rather than a session-scoped one.
-export default async function ProjectPortalPage({ params }: { params: { id: string; token: string } }) {
+export default async function ProjectPortalPage(props: { params: Promise<{ id: string; token: string }> }) {
+  const params = await props.params;
   const admin = createAdminClient();
   const { data: project } = await admin
     .from("projects")

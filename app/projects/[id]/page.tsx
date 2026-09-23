@@ -30,11 +30,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 type QuoteLineItem = { category: string; description: string; unit_price_pence: number };
 
-export default async function ProjectPage({ params }: { params: { id: string } }) {
+export default async function ProjectPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);

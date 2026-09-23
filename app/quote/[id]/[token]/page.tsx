@@ -21,11 +21,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 // admin client rather than the session-scoped one. Wrong id/token -> 404,
 // same as if the quote never existed - doesn't leak whether a quote id is
 // real.
-export default async function PublicQuotePage({
-  params,
-}: {
-  params: { id: string; token: string };
-}) {
+export default async function PublicQuotePage(
+  props: {
+    params: Promise<{ id: string; token: string }>;
+  }
+) {
+  const params = await props.params;
   const admin = createAdminClient();
   const { data: quote } = await admin
     .from("quotes")

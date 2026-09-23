@@ -14,11 +14,12 @@ const field =
   "mt-1 w-full rounded-lg border border-black/15 bg-surface px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-brand sm:text-sm";
 const label = "text-xs font-semibold text-ink-2";
 
-export default async function SettingsPage({ searchParams }: { searchParams: { stripe?: string } }) {
+export default async function SettingsPage(props: { searchParams: Promise<{ stripe?: string }> }) {
+  const searchParams = await props.searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
 

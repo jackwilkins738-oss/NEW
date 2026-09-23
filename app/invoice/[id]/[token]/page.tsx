@@ -18,13 +18,14 @@ const STATUS_LABEL: Record<string, string> = {
 // tenants.site_key / quotes.accept_token) is what proves the visitor is
 // the intended recipient. Wrong id/token -> 404, same as a non-existent
 // invoice, so this doesn't leak whether an invoice id is real.
-export default async function PublicInvoicePage({
-  params,
-  searchParams,
-}: {
-  params: { id: string; token: string };
-  searchParams: { paid?: string };
-}) {
+export default async function PublicInvoicePage(
+  props: {
+    params: Promise<{ id: string; token: string }>;
+    searchParams: Promise<{ paid?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const admin = createAdminClient();
   const { data: invoice } = await admin
     .from("invoices")

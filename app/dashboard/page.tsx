@@ -137,7 +137,7 @@ export default async function DashboardPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
   const role = await getCurrentUserRole(supabase, tenant.id, userData.user.id);

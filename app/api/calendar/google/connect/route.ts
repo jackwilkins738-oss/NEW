@@ -6,7 +6,7 @@ import { buildAuthUrl, encodeState } from "@/lib/googleCalendar";
 // isn't a public endpoint, it's a link a signed-in user clicks from their
 // own dashboard.
 export async function GET(request: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.redirect(new URL("/login", request.url));
 

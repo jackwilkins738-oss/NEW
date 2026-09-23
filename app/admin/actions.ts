@@ -8,7 +8,7 @@ import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 import { logAudit } from "@/lib/auditLog";
 
 async function requireAdmin() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user || !(await isPlatformAdmin(data.user.id))) {
     throw new Error("Not authorised");

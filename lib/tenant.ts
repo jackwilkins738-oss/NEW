@@ -26,8 +26,8 @@ export type Tenant = {
 //   dashboard.ridgeviewlofts.co.uk  -> tenants.domain match
 //   ridgeview.localhost:3000        -> tenants.slug match (local dev)
 export async function getCurrentTenant(): Promise<Tenant | null> {
-  const host = headers().get("host")?.split(":")[0] ?? "";
-  const supabase = createClient();
+  const host = (await headers()).get("host")?.split(":")[0] ?? "";
+  const supabase = await createClient();
 
   const byDomain = await supabase
     .from("tenants")
