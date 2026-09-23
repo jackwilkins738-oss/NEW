@@ -2,6 +2,7 @@
 // SDK - same call made for Resend (see app/api/leads/route.ts): the surface
 // used here is small enough that a large, version-fragile SDK isn't worth
 // it.
+import crypto from "crypto";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -11,15 +12,39 @@ function redirectUri() {
   return "https://admin.scalardigital.co.uk/api/calendar/google/callback";
 }
 
-// `state` is opaque to Google - just carried through to the callback - so a
-// plain base64 JSON blob is fine, nothing secret goes in it.
+// `state` round-trips through Google's servers with no session of its own at
+// the callback to check it against (same constraint as the Stripe Connect
+// flow) - a plain base64 blob let anyone forge their own {userId, returnTo}
+// and link their own Google account to an arbitrary victim's dashboard user.
+// Signed + time-limited for the same reason as lib/stripe.ts's encodeState.
+const STATE_TTL_MS = 10 * 60 * 1000;
+
+function stateSecret() {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to sign OAuth state");
+  return secret;
+}
+
 export function encodeState(data: { userId: string; returnTo: string }) {
-  return Buffer.from(JSON.stringify(data)).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ ...data, iat: Date.now() })).toString("base64url");
+  const sig = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
 }
 
 export function decodeState(state: string): { userId: string; returnTo: string } | null {
+  const [payload, sig] = state.split(".");
+  if (!payload || !sig) return null;
+
+  const expected = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(sig);
+  if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return null;
+
   try {
-    return JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (typeof data.iat !== "number" || Date.now() - data.iat > STATE_TTL_MS) return null;
+    if (typeof data.userId !== "string" || typeof data.returnTo !== "string") return null;
+    return { userId: data.userId, returnTo: data.returnTo };
   } catch {
     return null;
   }

@@ -17,13 +17,43 @@ function redirectUri() {
   return "https://admin.scalardigital.co.uk/api/stripe/callback";
 }
 
-export function encodeState(data: { tenantId: string; returnTo: string }) {
-  return Buffer.from(JSON.stringify(data)).toString("base64url");
+// The state param round-trips through Stripe's own servers and back to a
+// callback with no session of its own to check it against - so it has to
+// carry its own proof that WE issued it, for THIS user, recently. Without
+// that, anyone can build their own {tenantId, returnTo} blob, complete
+// Stripe's OAuth consent with their own account, and hit the callback
+// directly to re-point a victim tenant's payouts at themselves. Signed with
+// SUPABASE_SERVICE_ROLE_KEY as HMAC key material (not for its DB
+// privileges here, just as an existing server-only secret) rather than
+// adding a new env var for this alone.
+const STATE_TTL_MS = 10 * 60 * 1000;
+
+function stateSecret() {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to sign OAuth state");
+  return secret;
 }
 
-export function decodeState(state: string): { tenantId: string; returnTo: string } | null {
+export function encodeState(data: { tenantId: string; userId: string; returnTo: string }) {
+  const payload = Buffer.from(JSON.stringify({ ...data, iat: Date.now() })).toString("base64url");
+  const sig = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+export function decodeState(state: string): { tenantId: string; userId: string; returnTo: string } | null {
+  const [payload, sig] = state.split(".");
+  if (!payload || !sig) return null;
+
+  const expected = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(sig);
+  if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return null;
+
   try {
-    return JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (typeof data.iat !== "number" || Date.now() - data.iat > STATE_TTL_MS) return null;
+    if (typeof data.tenantId !== "string" || typeof data.userId !== "string" || typeof data.returnTo !== "string") return null;
+    return { tenantId: data.tenantId, userId: data.userId, returnTo: data.returnTo };
   } catch {
     return null;
   }

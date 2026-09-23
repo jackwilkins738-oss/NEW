@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { getCalendarConnection, getValidAccessToken } from "@/lib/calendarConnection";
 import { upsertEvent, deleteEvent } from "@/lib/googleCalendar";
 import { sendEmail } from "@/lib/email";
@@ -167,6 +168,15 @@ export async function addInvoice(formData: FormData) {
 
   const supabase = createClient();
 
+  // nextInvoiceNumber() goes through the admin client (tenants' own RLS
+  // update policy is platform-admin-only), which bypasses the membership
+  // check the insert below gets from RLS - so it needs its own, otherwise
+  // any authenticated user could burn/desync another tenant's invoice
+  // numbering sequence (and read its prefix) just by submitting this form
+  // with a tenantId that isn't theirs, before the insert itself ever runs.
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return;
+
   // A project's customer_id is copied onto the invoice at creation time (not
   // looked up later) so the customer page's invoice list stays correct even
   // if the project's own customer link changes afterwards.
@@ -313,7 +323,12 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
   }
   if (!recipient) return { ok: false as const, reason: "no_email" as const };
 
-  const { data: tenant } = await supabase
+  // contact_email isn't in the public tenant columns anon/authenticated can
+  // select (see 039_restrict_tenant_columns.sql) - the invoice fetch above
+  // already proved (via RLS) that the caller is a member of this tenant, so
+  // the admin client here isn't widening access, just working around a
+  // column grant that the session-scoped client can no longer see past.
+  const { data: tenant } = await createAdminClient()
     .from("tenants")
     .select("business_name, domain, contact_email")
     .eq("id", tenantId)
@@ -489,6 +504,17 @@ export async function addQuote(formData: FormData) {
   const lineItems = parseLineItems(String(formData.get("lineItems") ?? "[]"));
   const { costSubtotalPence, vatAmountPence, totalPence } = computeQuoteTotals(lineItems, markupPercent, vatRate);
 
+  const supabase = createClient();
+
+  // nextQuoteNumber() goes through the admin client (tenants' own RLS
+  // update policy is platform-admin-only), which bypasses the membership
+  // check the insert below gets from RLS - so it needs its own, otherwise
+  // any authenticated user could burn/desync another tenant's quote
+  // numbering sequence (and read its prefix) just by submitting this form
+  // with a tenantId that isn't theirs, before the insert itself ever runs.
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return;
+
   const insert: Record<string, unknown> = {
     tenant_id: tenantId,
     quote_number: await nextQuoteNumber(tenantId),
@@ -513,7 +539,6 @@ export async function addQuote(formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) insert.deposit_pence = Math.round(pounds * 100);
   }
 
-  const supabase = createClient();
   await supabase.from("quotes").insert(insert);
 
   revalidatePath("/dashboard");
@@ -598,7 +623,12 @@ export async function sendQuote(quoteId: string, tenantId: string) {
     recipient = customer?.email ?? null;
   }
 
-  const { data: tenant } = await supabase
+  // contact_email isn't in the public tenant columns anon/authenticated can
+  // select (see 039_restrict_tenant_columns.sql) - the quote fetch above
+  // already proved (via RLS) that the caller is a member of this tenant, so
+  // the admin client here isn't widening access, just working around a
+  // column grant that the session-scoped client can no longer see past.
+  const { data: tenant } = await createAdminClient()
     .from("tenants")
     .select("business_name, domain, contact_email")
     .eq("id", tenantId)
@@ -1482,7 +1512,12 @@ export async function sendReviewRequestEmail(
     .maybeSingle();
   if (!review || review.tenant_id !== tenantId) return { ok: false, reason: "not_found" };
 
-  const { data: tenant } = await supabase
+  // contact_email isn't in the public tenant columns anon/authenticated can
+  // select (see 039_restrict_tenant_columns.sql) - the review/tenantId match
+  // above already confirms this tenant owns the review being actioned, so
+  // the admin client here isn't widening access, just working around a
+  // column grant that the session-scoped client can no longer see past.
+  const { data: tenant } = await createAdminClient()
     .from("tenants")
     .select("business_name, google_review_url, contact_email")
     .eq("id", tenantId)
