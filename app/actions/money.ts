@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { todayInUK } from "@/lib/ukDate";
@@ -44,6 +45,15 @@ export async function addInvoice(formData: FormData) {
   }
 
   const supabase = createClient();
+
+  // nextInvoiceNumber() goes through the admin client (tenants' own RLS
+  // update policy is platform-admin-only), which bypasses the membership
+  // check the insert below gets from RLS - so it needs its own, otherwise
+  // any authenticated user could burn/desync another tenant's invoice
+  // numbering sequence (and read its prefix) just by submitting this form
+  // with a tenantId that isn't theirs, before the insert itself ever runs.
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return;
 
   // A project's customer_id is copied onto the invoice at creation time (not
   // looked up later) so the customer page's invoice list stays correct even

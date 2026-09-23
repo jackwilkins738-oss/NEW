@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUserRole } from "@/lib/membershipRole";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
@@ -197,6 +198,17 @@ export async function addQuote(formData: FormData) {
   const lineItems = parseLineItems(String(formData.get("lineItems") ?? "[]"));
   const { costSubtotalPence, vatAmountPence, totalPence } = computeQuoteTotals(lineItems, markupPercent, vatRate);
 
+  const supabase = createClient();
+
+  // nextQuoteNumber() goes through the admin client (tenants' own RLS
+  // update policy is platform-admin-only), which bypasses the membership
+  // check the insert below gets from RLS - so it needs its own, otherwise
+  // any authenticated user could burn/desync another tenant's quote
+  // numbering sequence (and read its prefix) just by submitting this form
+  // with a tenantId that isn't theirs, before the insert itself ever runs.
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return;
+
   const insert: Record<string, unknown> = {
     tenant_id: tenantId,
     quote_number: await nextQuoteNumber(tenantId),
@@ -221,7 +233,6 @@ export async function addQuote(formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) insert.deposit_pence = Math.round(pounds * 100);
   }
 
-  const supabase = createClient();
   await supabase.from("quotes").insert(insert);
 
   revalidatePath("/dashboard");
