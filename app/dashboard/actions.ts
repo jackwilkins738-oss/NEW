@@ -1119,18 +1119,19 @@ export async function updateTenantContactEmail(tenantId: string, email: string) 
 // Same membership-check-then-admin-write pattern as updateTenantContactEmail
 // above, for the same reason: tenants only has an RLS update policy for
 // platform admins, and this needs to be settable by the business owner.
+//
+// Must be owner, not just any member: this writes bank_details, which is
+// shown verbatim on customer-facing invoices/PDFs. The Settings page that
+// renders this form is already owner-only (app/settings/page.tsx) - this
+// action is reachable directly regardless of what the page shows, so a
+// member could otherwise redirect where customers send bank transfers.
 export async function updateTenantSettings(tenantId: string, formData: FormData) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userData.user.id)
-    .maybeSingle();
-  if (!membership) return;
+  const role = await getCurrentUserRole(supabase, tenantId, userData.user.id);
+  if (role !== "owner") return;
 
   const vatRate = Number(formData.get("defaultVatRate") ?? 20);
   const quoteTerms = String(formData.get("defaultQuoteTerms") ?? "").trim();
@@ -1174,6 +1175,9 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 
+// Owner-only, same reasoning as updateTenantSettings above: this is only
+// ever exposed via the owner-only Settings page, so the action needs its
+// own check rather than trusting the page not to render the form.
 export async function uploadTenantLogo(formData: FormData) {
   const tenantId = String(formData.get("tenantId") ?? "");
   const file = formData.get("logo");
@@ -1183,6 +1187,9 @@ export async function uploadTenantLogo(formData: FormData) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
+
+  const role = await getCurrentUserRole(supabase, tenantId, userData.user.id);
+  if (role !== "owner") return;
 
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/svg+xml" ? "svg" : "jpg";
   const path = `${tenantId}/logo.${ext}`;
