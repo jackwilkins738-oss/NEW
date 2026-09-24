@@ -3,17 +3,30 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Routes reachable with only an aal1 (password-only) session - everything
 // else requires aal2 once a user has a verified TOTP factor. Public token
-// pages (portal/quote/invoice), the OAuth callbacks, cron routes and the
-// webhook aren't gated on a *user* session at all (they have their own,
-// separate auth model - a token, a cron secret, a Stripe signature), so
-// redirecting them into a login/MFA flow would just break them.
+// pages (portal/quote/invoice) and the machine-to-machine API routes below
+// aren't gated on a *user* session at all (they have their own, separate
+// auth model - a token, a cron secret, a Stripe signature), so redirecting
+// them into a login/MFA flow would just break them.
+//
+// This is NOT a blanket "/api/" exemption - routes like /api/export/invoices
+// and /api/*/pdf trust a plain user session (getUser() + RLS) the same way
+// a dashboard page does, so they stay behind the gate. Exempting all of
+// /api/ would let an aal1-only session (e.g. the window between password
+// login and completing the TOTP prompt) reach those directly and skip 2FA
+// entirely - the token-based branch of the dual-mode routes (customer
+// viewing a quote/invoice via ?token=) never hits this check anyway, since
+// it only applies when getUser() actually returns a signed-in user.
 const AAL_EXEMPT_PREFIXES = [
   "/login",
   "/mfa-challenge",
   "/forgot-password",
   "/reset-password",
   "/auth/",
-  "/api/",
+  "/api/webhooks/",
+  "/api/cron/",
+  "/api/stripe/",
+  "/api/calendar/google/",
+  "/api/leads",
   "/invoice/",
   "/quote/",
   "/portal/",

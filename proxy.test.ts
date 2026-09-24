@@ -94,11 +94,29 @@ describe("proxy() - AAL2 gate", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("does NOT redirect an API route (would break webhooks/cron/OAuth callbacks)", async () => {
+  it("does NOT redirect the Stripe OAuth callback (no user-session auth model to gate)", async () => {
     mockedCreateServerClient.mockReturnValue(fakeSupabase({ user: { id: "u1" }, currentLevel: "aal1", nextLevel: "aal2" }));
 
     const res = await proxy(new NextRequest("https://admin.scalardigital.co.uk/api/stripe/callback?code=x&state=y"));
 
     expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("does NOT redirect a webhook or cron route (signature/secret auth, not a user session)", async () => {
+    mockedCreateServerClient.mockReturnValue(fakeSupabase({ user: { id: "u1" }, currentLevel: "aal1", nextLevel: "aal2" }));
+
+    const webhook = await proxy(new NextRequest("https://admin.scalardigital.co.uk/api/webhooks/stripe"));
+    const cron = await proxy(new NextRequest("https://admin.scalardigital.co.uk/api/cron/weekly-digest"));
+
+    expect(webhook.headers.get("location")).toBeNull();
+    expect(cron.headers.get("location")).toBeNull();
+  });
+
+  it("SECURITY: redirects a session-authenticated API route, not just pages - a blanket /api/ exemption would let an aal1-only session skip 2FA entirely to pull tenant data", async () => {
+    mockedCreateServerClient.mockReturnValue(fakeSupabase({ user: { id: "u1" }, currentLevel: "aal1", nextLevel: "aal2" }));
+
+    const res = await proxy(new NextRequest("https://ridgeview.example.com/api/export/invoices?tenantId=t1"));
+
+    expect(res.headers.get("location")).toContain("/mfa-challenge");
   });
 });
