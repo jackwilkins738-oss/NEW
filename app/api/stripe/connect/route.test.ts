@@ -62,6 +62,16 @@ describe("GET /api/stripe/connect", () => {
     expect(res.headers.get("location")).toBe("https://admin.scalardigital.co.uk/login");
   });
 
+  it("SECURITY: redirects to /login when the signed-in user is a member but NOT the owner - a member completing Stripe's own OAuth here would silently redirect every future customer payment to their own Stripe account", async () => {
+    mockedCreateClient.mockResolvedValue(fakeSupabase({ id: "member-user" }));
+    mockedGetCurrentTenant.mockResolvedValue({ id: "real-tenant-id" } as never);
+    mockedGetCurrentUserRole.mockResolvedValue("member");
+
+    const res = await GET(new Request("https://admin.scalardigital.co.uk/api/stripe/connect"));
+
+    expect(res.headers.get("location")).toBe("https://admin.scalardigital.co.uk/login");
+  });
+
   it("mints a state for a real member, and that state decodes back to exactly that tenant+user", async () => {
     mockedCreateClient.mockResolvedValue(fakeSupabase({ id: "real-owner" }));
     mockedGetCurrentTenant.mockResolvedValue({ id: "real-tenant-id" } as never);
