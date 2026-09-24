@@ -14,12 +14,6 @@ const PROJECT_STATUS_LABEL: Record<string, string> = {
   awaiting_decision: "Awaiting decision",
 };
 
-const INVOICE_STATUS_LABEL: Record<string, string> = {
-  unpaid: "Unpaid",
-  part_paid: "Partially paid",
-  paid: "Paid",
-};
-
 const VARIATION_STATUS_LABEL: Record<string, string> = {
   pending: "Awaiting your decision",
   approved: "Approved",
