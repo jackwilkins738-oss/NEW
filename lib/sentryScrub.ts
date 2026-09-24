@@ -1,4 +1,4 @@
-import type { ErrorEvent, EventHint } from "@sentry/nextjs";
+import type { ErrorEvent } from "@sentry/nextjs";
 
 // sendDefaultPii defaults to false in the SDK already (no IP/cookies
 // attached), but that doesn't stop an *error message itself* from
@@ -15,7 +15,7 @@ function scrub(value: string): string {
   return value.replace(EMAIL_RE, "[redacted-email]").replace(BEARER_RE, "Bearer [redacted]").replace(SECRET_KEY_RE, "[redacted-key]");
 }
 
-export function scrubSentryEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent {
+export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
   for (const exception of event.exception?.values ?? []) {
     if (exception.value) exception.value = scrub(exception.value);
   }
