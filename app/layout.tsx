@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SentryInit } from "@/components/SentryInit";
+import { fraunces, publicSans, ibmPlexMono } from "@/lib/fonts";
 import { ToastProvider } from "@/components/Toast";
 import { CommandPalette } from "@/components/CommandPalette";
 import { RevealController } from "@/components/reveal-controller";
@@ -19,17 +19,11 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("scalar-th
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${fraunces.variable} ${publicSans.variable} ${ibmPlexMono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-        />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="font-sans">
-        <SentryInit />
         <ToastProvider>
           {children}
           <CommandPalette />

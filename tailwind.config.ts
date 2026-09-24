@@ -10,9 +10,14 @@ const config: Config = {
         // app-wide - one token swap instead of touching the ~17 files that
         // reference the class, same leverage the shadow/kpi-tile tokens
         // already use elsewhere in this file/globals.css.
-        display: ['"Fraunces"', "ui-serif", "Georgia", "serif"],
-        sans: ['"Public Sans"', "system-ui", "-apple-system", "sans-serif"],
-        mono: ['"IBM Plex Mono"', "monospace"],
+        //
+        // These reference the CSS variables next/font/google generates
+        // (see lib/fonts.ts + app/layout.tsx) rather than the literal family
+        // names - the fonts are self-hosted at build time now, not fetched
+        // from fonts.googleapis.com at request time.
+        display: ["var(--font-fraunces)", "ui-serif", "Georgia", "serif"],
+        sans: ["var(--font-public-sans)", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["var(--font-ibm-plex-mono)", "monospace"],
       },
       colors: {
         page: "var(--page-bg)",
