@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialsFor } from "@/lib/initials";
-import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconClock, IconSettings } from "@/components/DashboardIcons";
+import { IconFolder, IconWallet, IconUsers, IconHardHat, IconTruck, IconStar, IconClock, IconSettings, IconShield } from "@/components/DashboardIcons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Settings and Audit log are owner-only - see the `role === "member"`
@@ -21,6 +21,10 @@ const LINKS = [
   { href: "/reviews", label: "Reviews", Icon: IconStar },
   { href: "/audit", label: "Audit log", Icon: IconClock },
   { href: "/settings", label: "Settings", Icon: IconSettings },
+  // Deliberately NOT in OWNER_ONLY_HREFS below - two-factor is a per-account
+  // security setting, not a tenant config, so a 'member' needs to reach it
+  // for their own login just as much as an 'owner' does.
+  { href: "/account", label: "Security", Icon: IconShield },
 ];
 
 // Always a dark, brand-tinted panel regardless of the site's own light/dark

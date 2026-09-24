@@ -136,3 +136,12 @@ export function IconSettings({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconShield({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} {...shared}>
+      <path d="M10 2.5l6.5 2.3v4.8c0 4-2.7 6.9-6.5 8.4-3.8-1.5-6.5-4.4-6.5-8.4V4.8L10 2.5z" />
+      <path d="M7.3 10l1.9 1.9 3.5-3.9" />
+    </svg>
+  );
+}
