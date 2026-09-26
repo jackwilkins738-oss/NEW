@@ -88,6 +88,10 @@ describe("normaliseTeardown", () => {
     });
   });
 
+  it("accepts the insecure-files check", () => {
+    expect(normaliseTeardown({ checks: { secureAssets: false } })).toEqual({ v: 1, checks: { secureAssets: false } });
+  });
+
   it("rejects an unknown platform and an empty teardown", () => {
     expect(normaliseTeardown({ checks: {}, platform: "myspace" })).toBe(null);
     expect(normaliseTeardown("nope")).toBe(null);
