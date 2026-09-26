@@ -27,6 +27,17 @@ export default async function AdminPage() {
   // the /admin actions (and the isPlatformAdmin check above, for this page
   // itself) is the actual authorization gate, not RLS, for anything in here.
   const admin = createAdminClient();
+
+  // Aftercare columns (migration 041) sit outside the session client's
+  // column grant, so they're read here with the service role and merged in.
+  const { data: aftercareRows } = await admin.from("tenants").select("id, launched_on, free_hosting_months");
+  const aftercareById = new Map((aftercareRows ?? []).map((r) => [r.id, r]));
+  const tenantsWithAftercare = (tenants ?? []).map((t) => ({
+    ...t,
+    launched_on: aftercareById.get(t.id)?.launched_on ?? null,
+    free_hosting_months: aftercareById.get(t.id)?.free_hosting_months ?? 12,
+  }));
+
   const { data: memberships } = await admin.from("memberships").select("id, tenant_id, user_id, role");
   const { data: usersPage } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const emailById = new Map(usersPage?.users.map((u) => [u.id, u.email ?? "(no email)"]) ?? []);
@@ -54,7 +65,7 @@ export default async function AdminPage() {
             </button>
           </form>
         </header>
-        <AdminPanel tenants={tenants ?? []} membersByTenant={membersByTenant} />
+        <AdminPanel tenants={tenantsWithAftercare} membersByTenant={membersByTenant} />
       </div>
     </main>
   );

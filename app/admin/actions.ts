@@ -168,6 +168,30 @@ export async function updateTenantDomain(formData: FormData) {
   return { tenant: data };
 }
 
+// Aftercare dates (migration 041). These columns aren't in the anon/
+// authenticated column grant, so the write goes through the service-role
+// client - requireAdmin() is the authorization, same as removeMembership.
+export async function updateTenantAftercare(formData: FormData) {
+  await requireAdmin();
+
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const launchedOnInput = String(formData.get("launchedOn") ?? "").trim();
+  const months = Number(formData.get("freeHostingMonths"));
+  if (!tenantId) return { error: "Missing tenant." };
+  if (launchedOnInput && !/^\d{4}-\d{2}-\d{2}$/.test(launchedOnInput)) return { error: "Invalid date." };
+  if (!Number.isInteger(months) || months < 0 || months > 60) return { error: "Invalid hosting length." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("tenants")
+    .update({ launched_on: launchedOnInput || null, free_hosting_months: months })
+    .eq("id", tenantId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
 export async function updateTenantBrandTheme(formData: FormData) {
   const { supabase } = await requireAdmin();
 

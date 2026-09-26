@@ -9,6 +9,7 @@ import { computeReceivablesAging } from "@/lib/receivablesAging";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { deriveBrandTheme } from "@/lib/theme";
+import { computePipelineSummary, renderPipelineHtml } from "@/lib/pipeline";
 
 const SEVERITY_COLOR: Record<Alert["severity"], string> = {
   critical: "#d03b3b",
@@ -51,9 +52,9 @@ async function sendDigestForTenant(
   admin: ReturnType<typeof createAdminClient>,
   tenant: { id: string; business_name: string; slug: string; domain: string | null; brand_theme: string }
 ): Promise<boolean> {
-  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes, teamAssignmentsRes] =
+  const [leadsRes, invoicesRes, projectsRes, quotesRes, variationsRes, costItemsRes, reviewsRes, teamAssignmentsRes, prospectsRes] =
     await Promise.all([
-      admin.from("leads").select("id, name, email, status, created_at").eq("tenant_id", tenant.id),
+      admin.from("leads").select("id, name, email, status, source, created_at").eq("tenant_id", tenant.id),
       admin
         .from("invoices")
         .select("id, client_name, amount_pence, paid_pence, due_date, status, project_id")
@@ -81,6 +82,7 @@ async function sendDigestForTenant(
         .from("project_team_members")
         .select("project_id, team_member_id, team_members!inner(id, name, tenant_id)")
         .eq("team_members.tenant_id", tenant.id),
+      admin.from("prospects").select("business_name, status, view_count, last_viewed_at").eq("tenant_id", tenant.id),
     ]);
 
   const projects = projectsRes.data ?? [];
@@ -145,9 +147,12 @@ async function sendDigestForTenant(
     reviewAlerts,
     scheduleConflicts
   );
+  const pipeline = computePipelineSummary(leadsRes.data ?? [], prospectsRes.data ?? [], new Date());
+
   // A "nothing to report" email every Monday is noise, not help - only
-  // send when there's actually something worth a tenant's attention.
-  if (alerts.length === 0) return false;
+  // send when there's actually something worth a tenant's attention: an
+  // alert, or pipeline movement (new leads, prospects opening previews).
+  if (alerts.length === 0 && !pipeline.hasActivity) return false;
 
   // Same pure functions the dashboard's own "Projects at risk", forecast
   // margin and receivables ageing cards use - a compact snapshot instead
@@ -199,12 +204,16 @@ async function sendDigestForTenant(
 
   await sendEmail({
     to: emails,
-    subject: `This week: ${alerts.length} thing${alerts.length === 1 ? "" : "s"} need${alerts.length === 1 ? "s" : ""} attention`,
+    subject:
+      alerts.length > 0
+        ? `This week: ${alerts.length} thing${alerts.length === 1 ? "" : "s"} need${alerts.length === 1 ? "s" : ""} attention`
+        : `This week: ${pipeline.newLeads} new lead${pipeline.newLeads === 1 ? "" : "s"}, ${pipeline.viewedThisWeek.length} preview${pipeline.viewedThisWeek.length === 1 ? "" : "s"} opened`,
     html: `
       <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
         <p style="font-size:16px;">Your Monday check-in for <strong>${tenant.business_name}</strong>:</p>
         ${snapshot}
-        <ul style="padding-left:18px;">${rows}</ul>
+        ${renderPipelineHtml(pipeline)}
+        ${rows ? `<ul style="padding-left:18px;">${rows}</ul>` : ""}
         <p style="margin-top:20px;">
           <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">Open your dashboard</a>
         </p>
