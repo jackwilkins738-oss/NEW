@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { BarChart, RevenueTrend } from "@/components/Charts";
 import { LeadsPanel } from "@/components/LeadsPanel";
+import { ProspectsPanel } from "@/components/ProspectsPanel";
 import { InvoicesPanel } from "@/components/InvoicesPanel";
 import { QuotesPanel } from "@/components/QuotesPanel";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
@@ -156,7 +157,8 @@ export default async function DashboardPage() {
   // across re-renders, so there's nothing for the rule's actual concern to
   // apply to here.
   // eslint-disable-next-line react-hooks/purity
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const renderedAt = Date.now();
+  const thirtyDaysAgo = new Date(renderedAt - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     leadsRes,
@@ -171,6 +173,7 @@ export default async function DashboardPage() {
     pendingReviewsRes,
     snagsRes,
     teamAssignmentsRes,
+    prospectsRes,
   ] = await Promise.all([
     supabase
       .from("leads")
@@ -239,9 +242,16 @@ export default async function DashboardPage() {
       .from("project_team_members")
       .select("project_id, team_member_id, team_members!inner(id, name, tenant_id)")
       .eq("team_members.tenant_id", tenant.id),
+    // Outreach prospects (migration 041) - only tenants that import any
+    // (Scalar Digital's own) ever get rows, and the panel only renders then.
+    supabase
+      .from("prospects")
+      .select("id, slug, business_name, trade, area, website, mobile_score, channel, status, view_count, last_viewed_at")
+      .eq("tenant_id", tenant.id),
   ]);
 
   const leads = leadsRes.data ?? [];
+  const prospects = prospectsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
   const projects = projectsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
@@ -772,6 +782,16 @@ export default async function DashboardPage() {
             convertedLeadIds={projects.map((p) => p.lead_id).filter((id): id is string => !!id)}
           />
         </div>
+
+        {prospects.length > 0 && (
+          <div className="mt-5">
+            <ProspectsPanel
+              prospects={prospects}
+              previewBaseUrl={process.env.PROSPECT_PREVIEW_BASE_URL ?? null}
+              now={renderedAt}
+            />
+          </div>
+        )}
 
         <div className="mt-5">
           <ProjectPhotosPanel

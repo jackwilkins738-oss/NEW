@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConnection";
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
+import { sendAftercareReminders } from "@/lib/aftercare";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
 // Google already happens instantly (syncNextVisitToCalendar in
@@ -93,6 +94,13 @@ export async function GET(request: Request) {
   }
 
   const reminders = await sendPaymentReminders();
+  // Scalar's own aftercare steps for its customers (lib/aftercare.ts) - a
+  // failure here must not fail the calendar sync and payment reminders.
+  const aftercare = await sendAftercareReminders().catch((err) => {
+    console.error("Aftercare reminders failed:", err);
+    Sentry.captureException(err);
+    return { sent: 0 };
+  });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare });
 }

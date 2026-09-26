@@ -7,6 +7,7 @@ import {
   inviteTeammate,
   updateTenantDomain,
   updateTenantBrandTheme,
+  updateTenantAftercare,
   removeMembership,
   updateMembershipRole,
   deleteTenant,
@@ -23,6 +24,10 @@ type Tenant = {
   site_key: string;
   brand_theme: string;
   created_at: string;
+  // Read through the admin client on /admin only (migration 041) - absent
+  // on the row createTenant hands back, hence optional.
+  launched_on?: string | null;
+  free_hosting_months?: number;
 };
 
 type Member = { membershipId: string; email: string; role: "owner" | "member" };
@@ -284,6 +289,72 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
   );
 }
 
+function AftercareEditor({ tenant }: { tenant: Tenant }) {
+  const router = useRouter();
+  const [launchedOn, setLaunchedOn] = useState(tenant.launched_on ?? "");
+  const [months, setMonths] = useState(String(tenant.free_hosting_months ?? 12));
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(null);
+    setSaved(false);
+    const formData = new FormData();
+    formData.set("tenantId", tenant.id);
+    formData.set("launchedOn", launchedOn);
+    formData.set("freeHostingMonths", months);
+    const res = await updateTenantAftercare(formData);
+    setPending(false);
+    if (res.error) {
+      setError(res.error);
+    } else {
+      setSaved(true);
+      router.refresh();
+    }
+  }
+
+  const changed = launchedOn !== (tenant.launched_on ?? "") || months !== String(tenant.free_hosting_months ?? 12);
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        type="date"
+        value={launchedOn}
+        onChange={(e) => {
+          setLaunchedOn(e.target.value);
+          setSaved(false);
+        }}
+        aria-label="Site launched on"
+        className="rounded-lg border border-black/15 bg-page px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-xs"
+      />
+      <select
+        value={months}
+        onChange={(e) => {
+          setMonths(e.target.value);
+          setSaved(false);
+        }}
+        aria-label="Free dashboard hosting"
+        className="rounded-lg border border-black/15 bg-page px-2.5 py-2 text-base text-ink outline-none focus:border-brand sm:text-xs"
+      >
+        <option value="12">12 months free hosting</option>
+        <option value="24">24 months (founding client)</option>
+      </select>
+      <button
+        type="submit"
+        disabled={pending || !changed}
+        className="min-h-[38px] rounded-lg border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+      {saved && !changed && <span className="text-xs font-semibold text-good">Saved</span>}
+      {error && <span className="text-xs font-semibold text-critical">{error}</span>}
+    </form>
+  );
+}
+
 function BrandThemeEditor({ tenant }: { tenant: Tenant }) {
   const router = useRouter();
   const [brandTheme, setBrandTheme] = useState(tenant.brand_theme);
@@ -393,6 +464,11 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
             </p>
             <p className="mt-2 text-xs font-semibold text-ink-2">Domain</p>
             <DomainEditor tenant={t} />
+
+            <p className="mt-3 text-xs font-semibold text-ink-2">
+              Aftercare <span className="font-normal text-muted">- day 7/21/30 and hosting-end reminders email you once a launch date is set</span>
+            </p>
+            <AftercareEditor key={`${t.launched_on ?? ""}-${t.free_hosting_months ?? 12}`} tenant={t} />
 
             <p className="mt-3 text-xs font-semibold text-ink-2">Brand color</p>
             {/* Keyed on brand_theme, not just t.id: forces a fresh mount (and

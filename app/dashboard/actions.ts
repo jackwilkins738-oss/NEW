@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { PROSPECT_STATUSES } from "@/lib/prospects";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -82,6 +83,20 @@ export async function updateLeadStatus(leadId: string, status: string) {
     .from("leads")
     .update({ status, status_updated_at: new Date().toISOString() })
     .eq("id", leadId);
+
+  revalidatePath("/dashboard");
+}
+
+// Prospect statuses (migration 041). RLS's "member can update own
+// prospects" policy is the boundary, same as for leads above.
+export async function updateProspectStatus(prospectId: string, status: string) {
+  if (!(PROSPECT_STATUSES as readonly string[]).includes(status)) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("prospects")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", prospectId);
 
   revalidatePath("/dashboard");
 }
