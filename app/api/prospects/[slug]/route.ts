@@ -16,7 +16,7 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
   const admin = createAdminClient();
   const { data } = await admin
     .from("prospects")
-    .select("slug, business_name, trade, area, website, mobile_score, lcp_s, updated_at")
+    .select("slug, business_name, trade, area, website, mobile_score, lcp_s, teardown, teardown_at, updated_at")
     .eq("slug", slug)
     .maybeSingle();
 

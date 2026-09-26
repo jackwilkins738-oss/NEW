@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidProspectSlug, normaliseProspect } from "./prospects";
+import { isValidProspectSlug, normaliseProspect, normaliseTeardown } from "./prospects";
 
 describe("isValidProspectSlug", () => {
   it("accepts lowercase hyphenated slugs", () => {
@@ -61,5 +61,48 @@ describe("normaliseProspect", () => {
   it("rejects a website that isn't a real host", () => {
     const res = normaliseProspect({ ...base, website: "not a site" });
     expect("row" in res && res.row.website).toBe(null);
+  });
+});
+
+describe("normaliseTeardown", () => {
+  it("keeps known checks and in-range numbers, drops everything else", () => {
+    expect(
+      normaliseTeardown({
+        checks: { tapToCall: false, https: true, madeUp: false, whatsapp: "no" },
+        seoScore: 78.4,
+        imageSavingsKb: 1400,
+        copyrightYear: 2019,
+        platform: "wordpress",
+        wpPluginCount: 23,
+        notes: "<script>",
+        accessibilityScore: 140,
+      })
+    ).toEqual({
+      v: 1,
+      checks: { tapToCall: false, https: true },
+      seoScore: 78,
+      imageSavingsKb: 1400,
+      copyrightYear: 2019,
+      platform: "wordpress",
+      wpPluginCount: 23,
+    });
+  });
+
+  it("rejects an unknown platform and an empty teardown", () => {
+    expect(normaliseTeardown({ checks: {}, platform: "myspace" })).toBe(null);
+    expect(normaliseTeardown("nope")).toBe(null);
+  });
+});
+
+describe("normaliseProspect with a teardown", () => {
+  const base = { slug: "smith-roofing-3f9a2", business_name: "Smith Roofing" };
+
+  it("attaches it only with a valid check date", () => {
+    const withDate = normaliseProspect({ ...base, teardown: { checks: { tapToCall: false } }, teardown_at: "2026-09-26T09:00:00Z" });
+    expect("row" in withDate && withDate.row.teardown?.checks.tapToCall).toBe(false);
+    expect("row" in withDate && withDate.row.teardown_at).toBe("2026-09-26T09:00:00.000Z");
+
+    const noDate = normaliseProspect({ ...base, teardown: { checks: { tapToCall: false } } });
+    expect("row" in noDate && "teardown" in noDate.row).toBe(false);
   });
 });

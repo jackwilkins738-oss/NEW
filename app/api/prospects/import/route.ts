@@ -12,7 +12,8 @@ import { MAX_IMPORT_ROWS, normaliseProspect, type ProspectRow } from "@/lib/pros
 //
 // Re-importing is safe: rows are matched on slug, and only the public
 // facts are refreshed. Status, view counts and view dates are never sent
-// from here, so a re-import can't undo "viewed" or "replied".
+// from here, so a re-import can't undo "viewed" or "replied" - and a
+// teardown is only replaced when the import carries a new one.
 export async function POST(request: Request) {
   if (!hasServiceSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -63,14 +64,30 @@ export async function POST(request: Request) {
   const toWrite = rows.filter((r) => !clashing.has(r.slug));
   for (const slug of clashing) rejected.push({ index: -1, error: `slug taken by another tenant: ${slug}` });
 
+  // Two batches: rows carrying a fresh teardown, and rows without one. A
+  // bulk upsert sets any column missing from a row to null, so mixing them
+  // would wipe the saved teardown of every prospect imported without
+  // --teardown this time. Keeping each batch's columns identical avoids it.
   const now = new Date().toISOString();
-  const { error } = await admin
-    .from("prospects")
-    .upsert(
-      toWrite.map((r) => ({ ...r, tenant_id: tenantId, updated_at: now })),
-      { onConflict: "slug" }
-    );
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const withTeardown = toWrite.filter((r) => r.teardown);
+  const withoutTeardown = toWrite
+    .filter((r) => !r.teardown)
+    .map((r) => {
+      const rest = { ...r };
+      delete rest.teardown;
+      delete rest.teardown_at;
+      return rest;
+    });
+  for (const batch of [withTeardown, withoutTeardown]) {
+    if (batch.length === 0) continue;
+    const { error } = await admin
+      .from("prospects")
+      .upsert(
+        batch.map((r) => ({ ...r, tenant_id: tenantId, updated_at: now })),
+        { onConflict: "slug" }
+      );
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, upserted: toWrite.length, rejected });
 }
