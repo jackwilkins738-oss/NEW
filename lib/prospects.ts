@@ -44,6 +44,7 @@ export const TEARDOWN_CHECKS = [
   "pageTitle",
   "metaDescription",
   "https",
+  "secureAssets",
 ] as const;
 export const TEARDOWN_PLATFORMS = ["wordpress", "wix", "squarespace", "godaddy", "webflow", "weebly", "duda", "shopify"] as const;
 
