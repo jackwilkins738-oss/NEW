@@ -13,6 +13,7 @@ import { formatGBP } from "@/lib/format";
 import { todayInUK } from "@/lib/ukDate";
 import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 import { logAudit } from "@/lib/auditLog";
+import { tenantOrigin } from "@/lib/tenantOrigin";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -345,11 +346,11 @@ export async function sendInvoice(invoiceId: string, tenantId: string) {
   // column grant that the session-scoped client can no longer see past.
   const { data: tenant } = await createAdminClient()
     .from("tenants")
-    .select("business_name, domain, contact_email")
+    .select("business_name, domain, slug, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
   const businessName = tenant?.business_name ?? "your contractor";
-  const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
+  const origin = tenantOrigin(tenant);
   const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
   const portalUrl = invoice.project_id && portalToken ? `${origin}/portal/${invoice.project_id}/${portalToken}` : null;
 
@@ -645,11 +646,11 @@ export async function sendQuote(quoteId: string, tenantId: string) {
   // column grant that the session-scoped client can no longer see past.
   const { data: tenant } = await createAdminClient()
     .from("tenants")
-    .select("business_name, domain, contact_email")
+    .select("business_name, domain, slug, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
   const businessName = tenant?.business_name ?? "your contractor";
-  const origin = tenant?.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
+  const origin = tenantOrigin(tenant);
   const acceptUrl = `${origin}/quote/${quote.id}/${quote.accept_token}`;
 
   if (recipient) {
