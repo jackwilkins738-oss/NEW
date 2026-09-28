@@ -8,6 +8,7 @@ import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 import { logAudit } from "@/lib/auditLog";
 import { resetDemo } from "@/lib/demo";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { ensureRedirectUrl, redirectUrlFor } from "@/lib/supabaseRedirects";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -44,8 +45,9 @@ export async function createTenant(formData: FormData) {
     return { error: error.message.includes("duplicate") ? "That slug or domain is already taken." : error.message };
   }
 
+  const redirect = await ensureRedirectUrl(redirectUrlFor(data));
   revalidatePath("/admin");
-  return { tenant: data };
+  return { tenant: data, redirect };
 }
 
 // Uses generateLink rather than sending an email through Supabase (which
@@ -166,8 +168,9 @@ export async function updateTenantDomain(formData: FormData) {
     return { error: error.message.includes("duplicate") ? "That domain is already in use." : error.message };
   }
 
+  const redirect = await ensureRedirectUrl(redirectUrlFor(data));
   revalidatePath("/admin");
-  return { tenant: data };
+  return { tenant: data, redirect };
 }
 
 // Aftercare dates (migration 041). These columns aren't in the anon/
