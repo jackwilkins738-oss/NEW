@@ -37,6 +37,12 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
     .eq("id", tenant.id)
     .maybeSingle();
   const showAutomations = !automationsError && !!automations;
+  const { data: depositRow, error: depositError } = await createAdminClient()
+    .from("tenants")
+    .select("auto_send_deposit")
+    .eq("id", tenant.id)
+    .maybeSingle();
+  const showDepositSwitch = !depositError && !!depositRow;
 
   return (
     <main className="min-h-screen bg-page sm:pl-64">
@@ -209,6 +215,27 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
                   <span className="mt-0.5 block text-xs text-muted">
                     A short, polite follow-up 3 days after a quote is sent, and one more 4 days later - stops as soon as
                     they accept or decline.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
+
+          {showDepositSwitch && (
+            <>
+              <input type="hidden" name="depositAutomation" value="1" />
+              <label className="flex items-start gap-3 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="autoSendDeposit"
+                  defaultChecked={!!depositRow.auto_send_deposit}
+                  className="mt-0.5 h-4 w-4 accent-brand"
+                />
+                <span>
+                  <span className="font-semibold">Send the deposit invoice when a quote is accepted</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    When a customer accepts online, the job is always created and you&apos;re emailed straight away. With
+                    this on, their deposit invoice is emailed to them at the same moment too.
                   </span>
                 </span>
               </label>
