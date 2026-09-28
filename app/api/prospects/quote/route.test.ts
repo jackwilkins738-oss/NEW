@@ -76,6 +76,9 @@ describe("POST /api/prospects/quote", () => {
     expect(quote.values).toMatchObject({ lead_id: "lead-1", status: "sent", vat_rate: 0, total_pence: 250000, deposit_pence: 125000, customer_email: "info@kerrroofing.co.uk" });
     const prospect = writes.find((w) => w.table === "prospects")!;
     expect(prospect.values).toMatchObject({ status: "replied" });
+    const onboarding = writes.find((w) => w.table === "onboarding")!;
+    expect(onboarding.values).toMatchObject({ quote_id: "quote-1", client_name: "Kerr Roofing", prospect_slug: "kerr-roofing-4a7bc2" });
+    expect(String(onboarding.values!.token).length).toBeGreaterThanOrEqual(32);
     expect(prospect.filters).toContainEqual(["slug", "kerr-roofing-4a7bc2"]);
   });
 

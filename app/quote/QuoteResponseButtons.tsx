@@ -6,9 +6,15 @@ import { acceptQuote, declineQuote } from "@/app/quote/actions";
 export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; token: string }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<"accepted" | "declined" | null>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
 
   if (result === "accepted") {
-    return <p className="rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">Quote accepted - thank you. We&apos;ll be in touch shortly.</p>;
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">Quote accepted - thank you. We&apos;ll be in touch shortly.</p>
+        {onboardingUrl && <OnboardingNextStep url={onboardingUrl} />}
+      </div>
+    );
   }
   if (result === "declined") {
     return <p className="rounded-lg bg-surface-2 p-4 text-sm font-semibold text-ink-2">Quote declined. Thanks for letting us know.</p>;
@@ -22,7 +28,10 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
         onClick={() =>
           startTransition(async () => {
             const res = await acceptQuote(quoteId, token);
-            if (res.ok) setResult("accepted");
+            if (res.ok) {
+              setOnboardingUrl(res.onboardingUrl ?? null);
+              setResult("accepted");
+            }
           })
         }
         className="btn-primary flex-1 rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white hover:bg-brand-strong disabled:opacity-60"
@@ -43,6 +52,21 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
       >
         Decline
       </button>
+    </div>
+  );
+}
+
+/** Shown once a website client accepts: the one link to hand over everything the build needs. */
+export function OnboardingNextStep({ url }: { url: string }) {
+  return (
+    <div className="rounded-lg border border-black/8 bg-surface-2 p-4">
+      <p className="text-sm font-semibold text-ink">Next step: tell us about your business</p>
+      <p className="mt-1 text-sm text-ink-2">
+        About ten minutes - your services, the areas you cover, your logo and a few photos of your work. We&apos;ve emailed you the link too.
+      </p>
+      <a href={url} className="btn-primary mt-3 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong">
+        Start now
+      </a>
     </div>
   );
 }

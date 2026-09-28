@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasServiceSecret } from "@/lib/serviceAuth";
 import { isValidProspectSlug } from "@/lib/prospects";
 import { computeQuoteTotals, parseLineItems } from "@/lib/quoteMath";
+import { randomBytes } from "node:crypto";
 
 // "They're interested - send them a quote." Called by the owner's local
 // control panel (never a browser), behind the same service secret as the
@@ -114,6 +115,16 @@ export async function POST(request: Request) {
     .select("id, accept_token")
     .single();
   if (quoteError || !quote) return NextResponse.json({ error: "Could not save the quote" }, { status: 500 });
+
+  // Their private onboarding page, offered once they accept (app/quote/actions.ts).
+  const onboardingToken = randomBytes(24).toString("base64url");
+  await admin.from("onboarding").insert({
+    tenant_id: tenantId,
+    quote_id: quote.id,
+    token: onboardingToken,
+    client_name: clientName,
+    prospect_slug: slug,
+  });
 
   if (slug) {
     await admin

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Routes reachable with only an aal1 (password-only) session - everything
 // else requires aal2 once a user has a verified TOTP factor. Public token
-// pages (portal/quote/invoice) and the machine-to-machine API routes below
+// pages (portal/quote/invoice/welcome) and the machine-to-machine API routes below
 // aren't gated on a *user* session at all (they have their own, separate
 // auth model - a token, a cron secret, a Stripe signature), so redirecting
 // them into a login/MFA flow would just break them.
@@ -31,6 +31,7 @@ const AAL_EXEMPT_PREFIXES = [
   "/invoice/",
   "/quote/",
   "/portal/",
+  "/welcome/",
   "/track.js",
   "/gallery.js",
   "/portfolio.js",

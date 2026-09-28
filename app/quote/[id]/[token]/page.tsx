@@ -4,7 +4,8 @@ import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
 import { isPastUK } from "@/lib/ukDate";
-import { QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
+import { OnboardingNextStep, QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
+import { tenantOrigin } from "@/lib/tenantOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +41,14 @@ export default async function PublicQuotePage(
 
   const { data: tenant } = await admin
     .from("tenants")
-    .select("business_name, brand_theme, logo_url")
+    .select("business_name, brand_theme, logo_url, domain, slug")
     .eq("id", quote.tenant_id)
     .maybeSingle();
+  // Website clients (quotes from Scalar's outreach) get their onboarding link back here once accepted.
+  const { data: onboarding } =
+    quote.status === "accepted"
+      ? await admin.from("onboarding").select("id, token").eq("quote_id", quote.id).maybeSingle()
+      : { data: null };
 
   const expired = quote.expires_at ? isPastUK(quote.expires_at) : false;
   const decided = quote.status === "accepted" || quote.status === "declined";
@@ -147,13 +153,20 @@ export default async function PublicQuotePage(
 
             <div className="mt-5">
               {decided ? (
-                <p
-                  className={`rounded-lg p-3.5 text-sm font-semibold ${
-                    quote.status === "accepted" ? "bg-[rgba(12,163,12,0.1)] text-good" : "bg-surface-2 text-ink-2"
-                  }`}
-                >
-                  {quote.status === "accepted" ? "You accepted this quote." : "You declined this quote."}
-                </p>
+                <>
+                  <p
+                    className={`rounded-lg p-3.5 text-sm font-semibold ${
+                      quote.status === "accepted" ? "bg-[rgba(12,163,12,0.1)] text-good" : "bg-surface-2 text-ink-2"
+                    }`}
+                  >
+                    {quote.status === "accepted" ? "You accepted this quote." : "You declined this quote."}
+                  </p>
+                  {onboarding && (
+                    <div className="mt-3">
+                      <OnboardingNextStep url={`${tenantOrigin(tenant)}/welcome/${onboarding.id}/${onboarding.token}`} />
+                    </div>
+                  )}
+                </>
               ) : expired ? (
                 <p className="rounded-lg bg-[rgba(208,59,59,0.08)] p-3.5 text-sm font-semibold text-critical">
                   This quote has expired. Get in touch for an updated quote.
