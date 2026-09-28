@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { startNewQuote } from "@/components/QuotesPanel";
+import { fromEnquiry } from "@/lib/quoteLibrary";
 import {
   updateLeadStatus,
   updateLeadValue,
@@ -227,6 +229,15 @@ function LeadRow({
           ))}
         </select>
         <LeadValueInput leadId={lead.id} valuePence={lead.value_pence} />
+        {status !== "won" && status !== "lost" && (
+          <button
+            type="button"
+            onClick={() => startNewQuote({ details: { ...fromEnquiry(lead), leadId: lead.id } })}
+            className="min-h-[32px] rounded-lg border border-brand/30 bg-brand-tint px-2.5 py-1.5 text-xs font-semibold text-brand-strong hover:bg-brand-tint/80"
+          >
+            Quote this
+          </button>
+        )}
         {status === "won" && !converted && <ConvertButton leadId={lead.id} tenantId={tenantId} />}
         <DeleteButton
           action={deleteLead}
