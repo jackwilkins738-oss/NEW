@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
+import { tenantOrigin } from "@/lib/tenantOrigin";
 
 // Called once a day from the calendar-sync cron rather than getting its own
 // vercel.json entry - Vercel's free Hobby plan caps a project at 2 cron
@@ -57,13 +58,13 @@ export async function sendPaymentReminders(): Promise<{ checked: number; sent: n
 
       const { data: tenant } = await admin
         .from("tenants")
-        .select("business_name, domain, contact_email")
+        .select("business_name, domain, slug, contact_email")
         .eq("id", invoice.tenant_id)
         .maybeSingle();
       if (!tenant) continue;
 
       const outstanding = invoice.amount_pence - (invoice.paid_pence ?? 0);
-      const origin = tenant.domain ? `https://${tenant.domain}` : "https://scalardigital.co.uk";
+      const origin = tenantOrigin(tenant);
       const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
       const daysOverdue = daysBetweenUK(invoice.due_date, todayInUK());
 
