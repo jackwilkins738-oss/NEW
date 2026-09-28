@@ -99,7 +99,9 @@ function liveColumns(): Map<string, Set<string>> {
       } else {
         for (const part of m[4].split(/,\s*(?=(?:add|drop) column)/i)) {
           const hit = /(add|drop) column (?:if (?:not )?exists )?(\w+)/i.exec(part);
-          if (hit) hit[1].toLowerCase() === "add" ? cols(m[3]).add(hit[2]) : cols(m[3]).delete(hit[2]);
+          if (!hit) continue;
+          if (hit[1].toLowerCase() === "add") cols(m[3]).add(hit[2]);
+          else cols(m[3]).delete(hit[2]);
         }
       }
     }
