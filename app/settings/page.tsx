@@ -43,6 +43,12 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
     .eq("id", tenant.id)
     .maybeSingle();
   const showDepositSwitch = !depositError && !!depositRow;
+  const { data: dailyRow, error: dailyError } = await createAdminClient()
+    .from("tenants")
+    .select("visit_reminders, morning_brief")
+    .eq("id", tenant.id)
+    .maybeSingle();
+  const showDailySwitches = !dailyError && !!dailyRow;
 
   return (
     <main className="min-h-screen bg-page sm:pl-64">
@@ -236,6 +242,30 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
                   <span className="mt-0.5 block text-xs text-muted">
                     When a customer accepts online, the job is always created and you&apos;re emailed straight away. With
                     this on, their deposit invoice is emailed to them at the same moment too.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
+          {showDailySwitches && (
+            <>
+              <input type="hidden" name="dailyHelpers" value="1" />
+              <label className="flex items-start gap-3 text-sm text-ink">
+                <input type="checkbox" name="visitReminders" defaultChecked={!!dailyRow.visit_reminders} className="mt-0.5 h-4 w-4 accent-brand" />
+                <span>
+                  <span className="font-semibold">Remind customers the day before a visit</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    The morning before a booked visit, the customer is emailed the day and time, and can reply to rearrange.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-ink">
+                <input type="checkbox" name="morningBrief" defaultChecked={!!dailyRow.morning_brief} className="mt-0.5 h-4 w-4 accent-brand" />
+                <span>
+                  <span className="font-semibold">Morning brief</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    About 7am: today&apos;s visits with directions, enquiries waiting for a reply, overdue money and quotes to
+                    chase. Only sent when there&apos;s something on.
                   </span>
                 </span>
               </label>

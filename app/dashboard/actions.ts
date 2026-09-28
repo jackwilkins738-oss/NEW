@@ -1138,6 +1138,13 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
       .eq("id", tenantId);
   }
 
+  if (formData.get("dailyHelpers") === "1") {
+    await admin
+      .from("tenants")
+      .update({ visit_reminders: formData.get("visitReminders") === "on", morning_brief: formData.get("morningBrief") === "on" })
+      .eq("id", tenantId);
+  }
+
   if (formData.get("depositAutomation") === "1") {
     await admin.from("tenants").update({ auto_send_deposit: formData.get("autoSendDeposit") === "on" }).eq("id", tenantId);
   }
