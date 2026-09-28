@@ -58,7 +58,16 @@ export type Teardown = {
   copyrightYear?: number;
   platform?: (typeof TEARDOWN_PLATFORMS)[number];
   wpPluginCount?: number;
+  /** 2-3 service names from their own homepage, shown in the preview's concept. */
+  services?: string[];
+  /** Their brand colour (#rrggbb), already darkened to take white text. */
+  brandColour?: string;
 };
+
+// A service name reaches a public page, so only short, plain wording gets
+// through: letters, digits, spaces and a little punctuation - no markup.
+const SERVICE_RE = /^[A-Za-z0-9 &'/,+-]{2,24}$/;
+const COLOUR_RE = /^#[0-9a-f]{6}$/;
 
 function intIn(value: unknown, min: number, max: number): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
@@ -86,6 +95,17 @@ export function normaliseTeardown(input: unknown): Teardown | null {
   put("wpPluginCount", intIn(t.wpPluginCount, 0, 500));
   if (TEARDOWN_PLATFORMS.includes(t.platform as Teardown["platform"] & string)) {
     out.platform = t.platform as Teardown["platform"];
+  }
+  if (Array.isArray(t.services)) {
+    const services = t.services
+      .filter((x): x is string => typeof x === "string")
+      .map((x) => x.replace(/\s+/g, " ").trim())
+      .filter((x) => SERVICE_RE.test(x))
+      .slice(0, 3);
+    if (services.length >= 2) out.services = services;
+  }
+  if (typeof t.brandColour === "string" && COLOUR_RE.test(t.brandColour.toLowerCase())) {
+    out.brandColour = t.brandColour.toLowerCase();
   }
   const hasAnything = Object.keys(checks).length > 0 || Object.keys(out).length > 2;
   return hasAnything ? out : null;

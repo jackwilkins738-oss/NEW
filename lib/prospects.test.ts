@@ -92,6 +92,29 @@ describe("normaliseTeardown", () => {
     expect(normaliseTeardown({ checks: { secureAssets: false } })).toEqual({ v: 1, checks: { secureAssets: false } });
   });
 
+  it("keeps 2-3 plain service names and a #rrggbb brand colour, nothing else", () => {
+    expect(
+      normaliseTeardown({
+        checks: { https: true },
+        services: ["Flat Roofs", "  Roof   Repairs ", "<b>x</b>", 7, "Chimney & Leadwork", "Guttering"],
+        brandColour: "#B3261E",
+      }),
+    ).toEqual({
+      v: 1,
+      checks: { https: true },
+      services: ["Flat Roofs", "Roof Repairs", "Chimney & Leadwork"],
+      brandColour: "#b3261e",
+    });
+    expect(normaliseTeardown({ checks: { https: true }, services: ["Only one"], brandColour: "red" })).toEqual({
+      v: 1,
+      checks: { https: true },
+    });
+    expect(normaliseTeardown({ checks: { https: true }, brandColour: "url(javascript:x)" })).toEqual({
+      v: 1,
+      checks: { https: true },
+    });
+  });
+
   it("rejects an unknown platform and an empty teardown", () => {
     expect(normaliseTeardown({ checks: {}, platform: "myspace" })).toBe(null);
     expect(normaliseTeardown("nope")).toBe(null);
