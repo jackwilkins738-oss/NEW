@@ -37,8 +37,11 @@ function quoteTotals(items: QuoteLineItem[], markup: number) {
 
 type Admin = SupabaseClient;
 
+// defaultToNull: false - in a multi-row insert, a field one row leaves out would
+// otherwise be sent as null for that row (not the column's default), and a
+// NOT NULL column like reviews.published then rejects the whole insert.
 async function insert(admin: Admin, table: string, rows: Record<string, unknown>[]) {
-  const { data, error } = await admin.from(table).insert(rows).select("id");
+  const { data, error } = await admin.from(table).insert(rows, { defaultToNull: false }).select("id");
   if (error) throw new Error(`demo ${table}: ${error.message}`);
   return (data ?? []).map((r: { id: string }) => r.id);
 }
@@ -275,7 +278,7 @@ export async function resetDemo(admin: Admin): Promise<string> {
       review_text: "Clear fixed price and no surprises. Would use again for our extension.", requested_at: at(-70), received_at: at(-66) },
     { ...t, customer_name: "R. Patel", rating: 4, status: "received", published: true,
       review_text: "Great build quality. A week longer than planned, but they told us early.", requested_at: at(-95), received_at: at(-90) },
-    { ...t, project_id: projectIds[3], customer_name: "Sinclair household", status: "requested", requested_at: at(-1) },
+    { ...t, project_id: projectIds[3], customer_name: "Sinclair household", status: "requested", published: false, requested_at: at(-1) },
   ]);
 
   // ---- website visits for the last 30 days (the dashboard's traffic chart)

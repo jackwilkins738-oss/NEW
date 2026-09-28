@@ -23,8 +23,9 @@ function fakeAdmin(demoExists = true) {
         single: async () => ({ data: { id: "demo-tenant", site_key: "demo-key" }, error: null }),
         delete: () => ((call.op = "delete"), chain),
         update: () => ((call.op = "update"), chain),
-        insert: (rows: Record<string, unknown> | Record<string, unknown>[]) => {
+        insert: (rows: Record<string, unknown> | Record<string, unknown>[], options?: { defaultToNull?: boolean }) => {
           call.op = "insert";
+          (call as { defaultToNull?: boolean }).defaultToNull = options?.defaultToNull;
           call.rows = Array.isArray(rows) ? rows : [rows];
           const ids = call.rows.map(() => ({ id: `id-${++n}` }));
           return { select: () => Promise.resolve({ data: ids, error: null }), then: (r: (v: unknown) => void) => r({ error: null }) };
@@ -110,6 +111,18 @@ function liveColumns(): Map<string, Set<string>> {
 }
 
 describe("demo data matches the real database", () => {
+  it("multi-row inserts use column defaults for fields a row leaves out, not null", async () => {
+    const { admin, calls } = fakeAdmin();
+    await resetDemo(admin);
+    // A field missing from one row of a batch is otherwise sent as null - which is how
+    // reviews.published (NOT NULL, default false) rejected the whole demo reset.
+    for (const c of calls.filter((c) => c.op === "insert" && (c.rows?.length ?? 0) > 1 && c.table !== "project_team_members")) {
+      const keys = new Set(c.rows!.flatMap((r) => Object.keys(r)));
+      const ragged = c.rows!.some((r) => Object.keys(r).length !== keys.size);
+      if (ragged) expect((c as { defaultToNull?: boolean }).defaultToNull, c.table).toBe(false);
+    }
+  });
+
   it("only writes columns that exist today", async () => {
     const { admin, calls } = fakeAdmin();
     await resetDemo(admin);
