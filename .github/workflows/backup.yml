@@ -1,0 +1,68 @@
+# Nightly database backup, kept for 30 days as an encrypted file on this
+# repository's Actions page. Supabase's free plan keeps no backups you can
+# restore yourself, and this repository is public - so the dump is encrypted
+# with a passphrase only you know before it leaves the runner. Without the
+# passphrase the file is useless to anyone who downloads it.
+#
+# Setup and restore: docs/backups.md. Until both secrets are set, the job
+# skips quietly instead of failing.
+name: Database backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # 02:17 UTC every night
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check the secrets are set
+        id: ready
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::notice::Backups aren't set up yet - add SUPABASE_DB_URL and BACKUP_PASSPHRASE (docs/backups.md)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          elif [ "${#BACKUP_PASSPHRASE}" -lt 20 ]; then
+            echo "::error::BACKUP_PASSPHRASE must be at least 20 characters - this repository is public."
+            exit 1
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dump, compress and encrypt
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          stamp=$(date -u +%Y-%m-%d)
+          # pg_dump must be at least as new as the server; the postgres:17
+          # image matches Supabase. Nothing unencrypted is ever written to disk.
+          docker run --rm -e SUPABASE_DB_URL postgres:17 \
+            sh -c 'pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public' \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --pinentry-mode loopback \
+                  --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" \
+                  -o "backup-$stamp.sql.gz.gpg"
+          size=$(stat -c %s "backup-$stamp.sql.gz.gpg")
+          if [ "$size" -lt 2000 ]; then
+            echo "::error::The backup is only $size bytes - the dump probably failed."
+            exit 1
+          fi
+          echo "Backup $stamp: $size bytes, encrypted"
+
+      - name: Keep for 30 days
+        if: steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup
+          path: backup-*.sql.gz.gpg
+          retention-days: 30
+          if-no-files-found: error
