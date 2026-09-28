@@ -157,15 +157,20 @@ export async function resetDemo(admin: Admin): Promise<string> {
     quote("RL-0113", { client_name: "Daniel Price" }, 0, dormer, "draft", 0),
   ]);
 
-  // ---- projects
+  // ---- projects. Costs aren't columns on a project any more (migration 034) -
+  // they're cost items, so each project's [materials, labour, subcontractors]
+  // becomes a set of paid cost items below, alongside the named ones.
+  const projectCosts: [number, number, number][] = [];
   const project = (
     ref: string, who: { client_name: string; customer_id?: string }, location: string, type: string, stage: string,
     value: number, pm: string, start: number, target: number, status: string, costs: [number, number, number], extra: Record<string, unknown> = {}
-  ) => ({
-    ...t, ...who, ref, location, project_type: type, stage, value_pence: pounds(value), pm, start_date: on(start),
-    target_date: on(target), status, materials_cost_pence: pounds(costs[0]), labour_cost_pence: pounds(costs[1]),
-    subcontractor_cost_pence: pounds(costs[2]), payment_type: "Stage payments", created_at: at(start - 14), ...extra,
-  });
+  ) => {
+    projectCosts.push(costs);
+    return {
+      ...t, ...who, ref, location, project_type: type, stage, value_pence: pounds(value), pm, start_date: on(start),
+      target_date: on(target), status, payment_type: "Stage payments", created_at: at(start - 14), ...extra,
+    };
+  };
   const projectIds = await insert(admin, "projects", [
     project("LC-041", customer(0), "Guildford", "Hip-to-gable loft", "On site - first fix", 58400, "Sam O.", -21, 34, "on_track",
       [9800, 12400, 3100], { next_visit_at: at(1, 8) }),
@@ -206,7 +211,20 @@ export async function resetDemo(admin: Admin): Promise<string> {
   ]);
 
   // ---- cost items, snags, communications
+  const running: Record<string, unknown>[] = projectCosts.flatMap(([materials, labour, subs], i) =>
+    [
+      ["materials", "Materials to date", "Travis Perkins Guildford", materials],
+      ["labour", "Labour to date", "", labour],
+      ["subcontractors", "Subcontractors to date", "", subs],
+    ]
+      .filter(([, , , amount]) => (amount as number) > 0)
+      .map(([category, description, supplier, amount]) => ({
+        ...t, project_id: projectIds[i], category, description, supplier: supplier || null,
+        amount_pence: pounds(amount as number), status: "paid", cost_date: on(-7 - i),
+      }))
+  );
   await insert(admin, "project_cost_items", [
+    ...running,
     { ...t, project_id: projectIds[0], category: "materials", description: "Steel beams x3", supplier: "Surrey Steel Ltd", amount_pence: pounds(2860), status: "paid", cost_date: on(-15) },
     { ...t, project_id: projectIds[0], category: "materials", description: "Timber and insulation", supplier: "Travis Perkins Guildford", amount_pence: pounds(3940), status: "paid", cost_date: on(-12) },
     { ...t, project_id: projectIds[0], category: "subcontractors", description: "First fix electrics", supplier: "Brightline Electrical", amount_pence: pounds(1850), status: "committed", cost_date: on(3) },

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { resetDemo, resetDemoIfPresent, DEMO_SLUG } from "./demo";
 
 // A fake admin client that records every call, so the test can prove the
@@ -72,5 +74,51 @@ describe("resetDemo", () => {
     const { admin, calls } = fakeAdmin(false);
     expect(await resetDemoIfPresent(admin)).toBe(false);
     expect(calls.filter((c) => c.op !== "select")).toHaveLength(0);
+  });
+});
+
+// The columns each table really has today, worked out from schema.sql and every
+// migration in order - including the ones that dropped columns (034 removed the
+// project cost columns, which is exactly what an earlier version of the demo
+// still wrote to, and Supabase refused).
+function liveColumns(): Map<string, Set<string>> {
+  const dir = join(process.cwd(), "supabase");
+  const files = [join(dir, "schema.sql"), ...readdirSync(join(dir, "migrations")).sort().map((f) => join(dir, "migrations", f))];
+  const tables = new Map<string, Set<string>>();
+  const cols = (t: string) => tables.get(t) ?? tables.set(t, new Set()).get(t)!;
+  const skip = new Set(["unique", "primary", "constraint", "check", "foreign", "exclude"]);
+  for (const file of files) {
+    const sql = readFileSync(file, "utf8").replace(/--[^\n]*/g, "");
+    const re = /create table (?:if not exists )?(\w+)\s*\(([\s\S]*?)\n\);|alter table (?:if exists )?(\w+)\s+((?:add|drop) column[\s\S]*?);/gi;
+    for (const m of sql.matchAll(re)) {
+      if (m[1]) {
+        for (const line of m[2].split("\n")) {
+          const word = line.trim().split(/\s+/)[0]?.replace(/,$/, "");
+          if (word && !skip.has(word.toLowerCase())) cols(m[1]).add(word);
+        }
+      } else {
+        for (const part of m[4].split(/,\s*(?=(?:add|drop) column)/i)) {
+          const hit = /(add|drop) column (?:if (?:not )?exists )?(\w+)/i.exec(part);
+          if (hit) hit[1].toLowerCase() === "add" ? cols(m[3]).add(hit[2]) : cols(m[3]).delete(hit[2]);
+        }
+      }
+    }
+  }
+  return tables;
+}
+
+describe("demo data matches the real database", () => {
+  it("only writes columns that exist today", async () => {
+    const { admin, calls } = fakeAdmin();
+    await resetDemo(admin);
+    const live = liveColumns();
+    expect(live.get("projects")?.has("labour_cost_pence")).toBe(false); // dropped in 034 - the parser must know
+    for (const c of calls.filter((c) => c.op === "insert")) {
+      const known = live.get(c.table);
+      expect(known, `table ${c.table}`).toBeTruthy();
+      for (const row of c.rows ?? []) {
+        for (const key of Object.keys(row)) expect(known!.has(key), `${c.table}.${key}`).toBe(true);
+      }
+    }
   });
 });
