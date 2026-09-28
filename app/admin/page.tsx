@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { AdminPanel } from "@/components/AdminPanel";
 import { signOut } from "@/app/login/actions";
+import { DemoResetButton } from "@/app/admin/DemoResetButton";
 
 // Customer/membership lists change from this same page's own actions
 // (create tenant, invite, remove) - never let Next.js serve a cached
@@ -59,11 +60,14 @@ export default async function AdminPage() {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">Scalar Digital</p>
             <h1 className="font-display text-2xl font-extrabold text-ink">Customer admin</h1>
           </div>
-          <form action={signOut}>
-            <button className="w-full rounded-lg border border-black/8 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
-              Sign out
-            </button>
-          </form>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+            <DemoResetButton />
+            <form action={signOut}>
+              <button className="w-full rounded-lg border border-black/8 bg-surface-2 px-3 py-2.5 text-sm font-semibold text-ink sm:w-auto sm:py-2">
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
         <AdminPanel tenants={tenantsWithAftercare} membersByTenant={membersByTenant} />
       </div>

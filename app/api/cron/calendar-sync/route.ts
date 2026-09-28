@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConnection";
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
+import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
@@ -102,5 +103,12 @@ export async function GET(request: Request) {
     return { sent: 0 };
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare });
+  // The sales demo's data, fresh every morning (lib/demo.ts) - same rule: never fails the rest.
+  const demo = await resetDemoIfPresent(admin).catch((err) => {
+    console.error("Demo reset failed:", err);
+    Sentry.captureException(err);
+    return false;
+  });
+
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, demo });
 }
