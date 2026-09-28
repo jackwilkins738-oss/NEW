@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import { OnMyWayButton } from "@/components/OnMyWayButton";
+import { customerContact, mapsLink, ukVisitTime } from "@/lib/contact";
 import { JobInvoiceButtons } from "@/components/JobInvoiceButtons";
 import { balanceToInvoice, depositToInvoice } from "@/lib/jobs";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -45,7 +47,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, completed_at, created_at, portal_token"
+      "id, ref, client_name, location, project_type, stage, value_pence, pm, start_date, target_date, status, quote_id, completed_at, created_at, portal_token, next_visit_at, customer_id, lead_id"
     )
     .eq("id", params.id)
     .eq("tenant_id", tenant.id)
@@ -105,6 +107,8 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
       .eq("project_id", project.id)
       .order("requested_at", { ascending: false }),
   ]);
+
+  const contact = project.completed_at ? { email: null, phone: null } : await customerContact(supabase, project);
 
   const costItems = costItemsRes.data ?? [];
   const variations = variationsRes.data ?? [];
@@ -191,6 +195,32 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
             </div>
           </div>
         </header>
+
+        {!project.completed_at && (contact.phone || project.next_visit_at || project.location) && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
+            <div>
+              <p className="text-sm font-bold text-ink">
+                {project.next_visit_at
+                  ? `Next visit: ${ukVisitTime(project.next_visit_at).day}, ${ukVisitTime(project.next_visit_at).time}`
+                  : "Getting there"}
+              </p>
+              <p className="text-xs text-muted">
+                {project.location && (
+                  <a href={mapsLink(project.location)} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
+                    Directions
+                  </a>
+                )}
+                {project.location && contact.phone ? " · " : ""}
+                {contact.phone && (
+                  <a href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`} className="font-semibold text-brand hover:underline">
+                    Call {contact.phone}
+                  </a>
+                )}
+              </p>
+            </div>
+            <OnMyWayButton phone={contact.phone} customerName={project.client_name} businessName={tenant.business_name} />
+          </div>
+        )}
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/8 bg-surface px-5 py-4 shadow-sm">
           <div>

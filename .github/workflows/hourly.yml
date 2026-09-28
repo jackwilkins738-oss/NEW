@@ -1,0 +1,32 @@
+# Runs the dashboard's hourly jobs (app/api/cron/hourly) - today, nudging a
+# business about an enquiry nobody has answered after an hour. A GitHub
+# schedule instead of a Vercel cron because Vercel's free plan only allows
+# daily ones. Skips quietly until DASHBOARD_URL and CRON_SECRET are set as
+# repository secrets (the same CRON_SECRET as in Vercel).
+name: Hourly jobs
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Call the hourly route
+        run: |
+          if [ -z "$DASHBOARD_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::notice::Not set up yet - add DASHBOARD_URL and CRON_SECRET as repository secrets."
+            exit 0
+          fi
+          curl --fail-with-body -sS --max-time 120 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${DASHBOARD_URL%/}/api/cron/hourly"
