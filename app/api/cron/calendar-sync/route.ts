@@ -5,6 +5,7 @@ import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConn
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
 import { sendQuoteChasers } from "@/lib/quoteChasers";
+import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
@@ -109,5 +110,12 @@ export async function GET(request: Request) {
     return { checked: 0, sent: 0 };
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers });
+  // The sales demo's data, fresh every morning (lib/demo.ts) - same rule: never fails the rest.
+  const demo = await resetDemoIfPresent(admin).catch((err) => {
+    console.error("Demo reset failed:", err);
+    Sentry.captureException(err);
+    return false;
+  });
+
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, demo });
 }

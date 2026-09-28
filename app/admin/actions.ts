@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 import { logAudit } from "@/lib/auditLog";
+import { resetDemo } from "@/lib/demo";
+import { tenantOrigin } from "@/lib/tenantOrigin";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -253,4 +255,22 @@ export async function deleteTenant(tenantId: string) {
   if (error) return { error: error.message };
   revalidatePath("/admin");
   return { success: true };
+}
+
+// Sets up (first time) and refreshes the sales demo (lib/demo.ts): a made-up
+// firm's dashboard to screen-share on calls. Also makes sure the admin who
+// pressed it can sign in to it.
+export async function resetDemoTenant() {
+  const { userId } = await requireAdmin();
+  const admin = createAdminClient();
+  try {
+    const tenantId = await resetDemo(admin);
+    await admin
+      .from("memberships")
+      .upsert({ tenant_id: tenantId, user_id: userId, role: "owner" }, { onConflict: "tenant_id,user_id" });
+    const { data: tenant } = await admin.from("tenants").select("domain, slug").eq("id", tenantId).maybeSingle();
+    return { ok: true as const, url: `${tenantOrigin(tenant)}/login` };
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : "Reset failed" };
+  }
 }
