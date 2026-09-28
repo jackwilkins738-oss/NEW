@@ -16,6 +16,7 @@ import {
 import { CopyButton } from "@/components/CopyButton";
 import { DeleteButton } from "@/components/DeleteButton";
 import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
+import { redirectUrlFor } from "@/lib/supabaseRedirects";
 
 type Tenant = {
   id: string;
@@ -73,10 +74,6 @@ function snippetFor(tenant: Tenant) {
   return `<script src="${TRACK_SCRIPT_HOST}/track.js" data-tenant="${tenant.id}" data-site-key="${tenant.site_key}" defer></script>`;
 }
 
-function redirectUrlFor(tenant: Tenant) {
-  const host = tenant.domain || `${tenant.slug}.scalardigital.co.uk`;
-  return `https://${host}/**`;
-}
 
 const LEAD_FORM_SNIPPET = `<form data-lead-form>
   <input name="name" />
@@ -89,7 +86,7 @@ const LEAD_FORM_SNIPPET = `<form data-lead-form>
 function CreateTenantForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<{ error?: string; tenant?: Tenant } | null>(null);
+  const [result, setResult] = useState<{ error?: string; tenant?: Tenant; redirect?: "added" | "present" | "manual" } | null>(null);
   const [brandTheme, setBrandTheme] = useState(DEFAULT_BRAND_THEME);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -152,6 +149,8 @@ function CreateTenantForm() {
             <CopyButton text={snippetFor(result.tenant)} />
           </div>
 
+          {result.redirect === "manual" ? (
+            <>
           <p className="mt-3 text-xs font-semibold text-ink-2">
             Add this to Supabase &rarr; Authentication &rarr; URL Configuration &rarr; Redirect URLs (the
             wildcard alone doesn&apos;t cover it - confirmed the hard way):
@@ -162,6 +161,13 @@ function CreateTenantForm() {
             </code>
             <CopyButton text={redirectUrlFor(result.tenant)} />
           </div>
+
+            </>
+          ) : (
+            <p className="mt-3 text-xs font-semibold text-good">
+              Login address {redirectUrlFor(result.tenant)} added to Supabase automatically.
+            </p>
+          )}
 
           <p className="mt-2 text-xs text-ink-2">
             If they don&apos;t have their own domain yet, point their DNS at this app and add the domain in
@@ -244,6 +250,7 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [manualRedirect, setManualRedirect] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -259,6 +266,7 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
       setError(res.error);
     } else {
       setSaved(true);
+      setManualRedirect(res.redirect === "manual" && !!domain);
       router.refresh();
     }
   }
@@ -285,7 +293,11 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
       >
         {pending ? "Saving…" : "Save"}
       </button>
-      {saved && !changed && <span className="text-xs font-semibold text-good">Saved</span>}
+      {saved && !changed && (
+        <span className="text-xs font-semibold text-good">
+          {manualRedirect ? "Saved - now add its login address in Supabase (under \"Get website snippet\")" : "Saved"}
+        </span>
+      )}
       {error && <span className="text-xs font-semibold text-critical">{error}</span>}
     </form>
   );

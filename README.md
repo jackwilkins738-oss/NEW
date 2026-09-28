@@ -72,6 +72,9 @@ no SQL needed for any of this:
    invite and password-reset links won't work without this exact entry.
    The success box after creating a customer (and the "Get website
    snippet" toggle on existing ones) shows this URL ready to copy.
+   **Automatic** when `SUPABASE_ACCESS_TOKEN` is set (see `.env.example`):
+   creating a customer or changing their domain adds it for you, and the
+   success box says so.
 4. **Paste the tracking snippet** onto their site, once, near `</body>`.
 5. **Mark their lead form** so submissions get captured — the snippet
    behind "Get website snippet" shows this too: add `data-lead-form` to the
