@@ -444,6 +444,7 @@ export async function addQuote(formData: FormData) {
   const markupPercent = Number(formData.get("markupPercent") ?? 0) || 0;
   const vatRate = Number(formData.get("vatRate") ?? 20) || 0;
   const depositPounds = formData.get("deposit");
+  const leadId = String(formData.get("leadId") ?? "").trim();
 
   const lineItems = parseLineItems(String(formData.get("lineItems") ?? "[]"));
   const { costSubtotalPence, vatAmountPence, totalPence } = computeQuoteTotals(lineItems, markupPercent, vatRate);
@@ -483,8 +484,69 @@ export async function addQuote(formData: FormData) {
     if (Number.isFinite(pounds) && pounds >= 0) insert.deposit_pence = Math.round(pounds * 100);
   }
 
+  // Quoting an enquiry: link it (RLS only lets a member read their own
+  // tenant's leads, so a foreign id simply isn't found) and move a new or
+  // contacted (or surveyed) enquiry on to "quoted".
+  if (leadId) {
+    const { data: lead } = await supabase.from("leads").select("id, tenant_id, status").eq("id", leadId).maybeSingle();
+    if (lead && lead.tenant_id === tenantId) {
+      insert.lead_id = lead.id;
+      if (["new", "contacted", "survey_booked"].includes(lead.status)) {
+        await supabase.from("leads").update({ status: "quoted", status_updated_at: new Date().toISOString() }).eq("id", lead.id);
+      }
+    }
+  }
+
   await supabase.from("quotes").insert(insert);
 
+  revalidatePath("/dashboard");
+}
+
+// A quote's lines, markup and wording saved under a name, for the "Start
+// from" picker on the new-quote form (migration 047). RLS scopes it to the
+// member's own tenant; the membership check is for a clear answer.
+export async function saveQuoteTemplate(
+  tenantId: string,
+  input: {
+    name: string;
+    lineItems: unknown;
+    markupPercent: number;
+    vatRate: number;
+    depositPounds: string;
+    paymentTerms: string;
+    exclusions: string;
+    terms: string;
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const name = String(input.name ?? "").trim().slice(0, 80);
+  if (!name) return { ok: false, error: "Give the template a name." };
+  const lineItems = parseLineItems(JSON.stringify(input.lineItems ?? []));
+  if (lineItems.length === 0) return { ok: false, error: "Add at least one line first." };
+
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return { ok: false, error: "Not allowed." };
+
+  const deposit = Number(input.depositPounds);
+  const { error } = await supabase.from("quote_templates").insert({
+    tenant_id: tenantId,
+    name,
+    line_items: lineItems,
+    markup_percent: Number.isFinite(input.markupPercent) && input.markupPercent >= 0 ? input.markupPercent : 0,
+    vat_rate: Number.isFinite(input.vatRate) && input.vatRate >= 0 ? input.vatRate : 20,
+    deposit_pence: String(input.depositPounds ?? "").trim() && Number.isFinite(deposit) && deposit > 0 ? Math.round(deposit * 100) : null,
+    payment_terms: String(input.paymentTerms ?? "").trim() || null,
+    exclusions: String(input.exclusions ?? "").trim() || null,
+    terms: String(input.terms ?? "").trim() || null,
+  });
+  if (error) return { ok: false, error: "Couldn't save the template - try again." };
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deleteQuoteTemplate(templateId: string) {
+  const supabase = await createClient();
+  await supabase.from("quote_templates").delete().eq("id", templateId);
   revalidatePath("/dashboard");
 }
 

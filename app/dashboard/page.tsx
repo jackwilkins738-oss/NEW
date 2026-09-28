@@ -250,6 +250,16 @@ export default async function DashboardPage() {
       .eq("tenant_id", tenant.id),
   ]);
 
+  // Separate from the batch above: the table arrives with migration 047, and
+  // before then the quote form just works without templates.
+  const templatesRes = await supabase
+    .from("quote_templates")
+    .select("id, name, line_items, markup_percent, vat_rate, deposit_pence, payment_terms, exclusions, terms")
+    .eq("tenant_id", tenant.id)
+    .order("name", { ascending: true });
+  const quoteTemplates = templatesRes.data ?? [];
+  const templatesEnabled = !templatesRes.error;
+
   const leads = leadsRes.data ?? [];
   const prospects = prospectsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
@@ -813,6 +823,8 @@ export default async function DashboardPage() {
             defaultVatRate={tenant.default_vat_rate}
             defaultQuoteTerms={tenant.default_quote_terms}
             defaultPaymentTerms={tenant.default_payment_terms}
+            templates={quoteTemplates}
+            templatesEnabled={templatesEnabled}
           />
         </div>
 
