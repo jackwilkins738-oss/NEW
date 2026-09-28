@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { ServiceRemindersPanel } from "@/components/ServiceRemindersPanel";
 import { OnMyWayButton } from "@/components/OnMyWayButton";
 import { customerContact, mapsLink, ukVisitTime } from "@/lib/contact";
 import { JobInvoiceButtons } from "@/components/JobInvoiceButtons";
@@ -109,6 +110,13 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
   ]);
 
   const contact = project.completed_at ? { email: null, phone: null } : await customerContact(supabase, project);
+
+  // Its own query: the table arrives with migration 049, and before then the panel just doesn't show.
+  const serviceRes = await supabase
+    .from("service_reminders")
+    .select("id, label, due_on, repeat_months, sent_at")
+    .eq("project_id", project.id)
+    .order("due_on", { ascending: true });
 
   const costItems = costItemsRes.data ?? [];
   const variations = variationsRes.data ?? [];
@@ -375,6 +383,12 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
         <div className="mt-2">
           <CommunicationsPanel tenantId={tenant.id} projectId={project.id} communications={communications} />
         </div>
+
+        {!serviceRes.error && (
+          <div className="mt-5">
+            <ServiceRemindersPanel projectId={project.id} tenantId={tenant.id} reminders={serviceRes.data ?? []} />
+          </div>
+        )}
 
         <div className="mt-5">
           <ReviewsPanel tenantId={tenant.id} projectId={project.id} reviews={reviews} />
