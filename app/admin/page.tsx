@@ -31,12 +31,13 @@ export default async function AdminPage() {
 
   // Aftercare columns (migration 041) sit outside the session client's
   // column grant, so they're read here with the service role and merged in.
-  const { data: aftercareRows } = await admin.from("tenants").select("id, launched_on, free_hosting_months");
+  const { data: aftercareRows } = await admin.from("tenants").select("id, launched_on, free_hosting_months, contact_email");
   const aftercareById = new Map((aftercareRows ?? []).map((r) => [r.id, r]));
   const tenantsWithAftercare = (tenants ?? []).map((t) => ({
     ...t,
     launched_on: aftercareById.get(t.id)?.launched_on ?? null,
     free_hosting_months: aftercareById.get(t.id)?.free_hosting_months ?? 12,
+    contact_email: aftercareById.get(t.id)?.contact_email ?? null,
   }));
 
   const { data: memberships } = await admin.from("memberships").select("id, tenant_id, user_id, role");

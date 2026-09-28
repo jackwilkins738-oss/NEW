@@ -173,6 +173,22 @@ export async function updateTenantDomain(formData: FormData) {
 // Aftercare dates (migration 041). These columns aren't in the anon/
 // authenticated column grant, so the write goes through the service-role
 // client - requireAdmin() is the authorization, same as removeMembership.
+// Where a business's enquiry alerts go (as well as to anyone with a login) -
+// for a landing-page client with no dashboard login, it's the only place.
+// contact_email isn't in the session client's column grant (migration 039),
+// so this writes with the service role after the platform-admin check.
+export async function updateTenantContactEmailAdmin(formData: FormData) {
+  await requireAdmin();
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const email = String(formData.get("contactEmail") ?? "").trim().toLowerCase() || null;
+  if (!tenantId) return { error: "Missing tenant." };
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "That doesn't look like an email address." };
+  const { error } = await createAdminClient().from("tenants").update({ contact_email: email }).eq("id", tenantId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 export async function updateTenantAftercare(formData: FormData) {
   await requireAdmin();
 

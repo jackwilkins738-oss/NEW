@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deriveBrandTheme } from "@/lib/theme";
@@ -91,22 +91,29 @@ export async function POST(request: Request) {
   }
 
   // Both best-effort: a failure here shouldn't make the lead capture itself
-  // look like it failed to whoever's site just submitted it.
-  notifyNewLead(admin, tenant, {
+  // look like it failed to whoever's site just submitted it. Run with after()
+  // rather than left floating: on Vercel a promise still running when the
+  // response goes out can be frozen with the function, and the owner's alert
+  // (or the enquirer's auto-reply) silently never sends.
+  const leadDetails = {
     name: body.name ? String(body.name) : null,
     email: body.email ? String(body.email) : null,
+    phone: body.phone ? String(body.phone) : null,
+    message: body.message ? String(body.message) : null,
     source: body.source ? String(body.source) : null,
-  }).catch((err) => {
-    console.error("Lead notification failed:", err);
-    Sentry.captureException(err);
-  });
-
-  if (body.email) {
-    sendLeadAutoReply(tenant, String(body.name ?? ""), String(body.email)).catch((err) => {
-      console.error("Lead auto-reply failed:", err);
+  };
+  after(async () => {
+    await notifyNewLead(admin, tenant, leadDetails).catch((err) => {
+      console.error("Lead notification failed:", err);
       Sentry.captureException(err);
     });
-  }
+    if (body.email) {
+      await sendLeadAutoReply(tenant, String(body.name ?? ""), String(body.email)).catch((err) => {
+        console.error("Lead auto-reply failed:", err);
+        Sentry.captureException(err);
+      });
+    }
+  });
 
   return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
 }
@@ -137,37 +144,50 @@ async function sendLeadAutoReply(
   });
 }
 
+// Tells the business straight away, with everything they need to reply from
+// their phone - name, a tap-to-call number, email and the message itself -
+// so a tradesperson on a roof doesn't have to log in to act on it. Goes to
+// everyone with a dashboard login and to the business's contact email; for a
+// landing-page client with no login, the contact email is the whole alert.
 async function notifyNewLead(
   admin: ReturnType<typeof createAdminClient>,
-  tenant: { id: string; business_name: string; domain: string | null; slug: string; brand_theme: string },
-  lead: { name: string | null; email: string | null; source: string | null }
+  tenant: { id: string; business_name: string; domain: string | null; slug: string; brand_theme: string; contact_email?: string | null },
+  lead: { name: string | null; email: string | null; phone: string | null; message: string | null; source: string | null }
 ) {
   const { data: memberships } = await admin.from("memberships").select("user_id").eq("tenant_id", tenant.id);
-  if (!memberships || memberships.length === 0) return;
-
-  const emails: string[] = [];
-  for (const m of memberships) {
+  const emails = new Set<string>();
+  for (const m of memberships ?? []) {
     const { data } = await admin.auth.admin.getUserById(m.user_id);
-    if (data.user?.email) emails.push(data.user.email);
+    if (data.user?.email) emails.add(data.user.email.toLowerCase());
   }
-  if (emails.length === 0) return;
+  if (tenant.contact_email) emails.add(tenant.contact_email.toLowerCase());
+  if (emails.size === 0) return;
 
+  const esc = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
   const dashboardUrl = `https://${tenant.domain || `${tenant.slug}.scalardigital.co.uk`}/dashboard`;
-  const who = lead.name || lead.email || "Someone";
+  const who = lead.name || lead.email || lead.phone || "Someone";
   const brandColor = deriveBrandTheme(tenant.brand_theme).light.brand;
+  const tel = (lead.phone ?? "").replace(/[^\d+]/g, "");
+  const button = (href: string, label: string) =>
+    `<a href="${href}" style="display:inline-block;margin:0 8px 8px 0;background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">${label}</a>`;
 
   await sendEmail({
-    to: emails,
-    subject: `New lead: ${who}`,
+    to: [...emails],
+    subject: `New enquiry: ${who}`,
+    replyTo: lead.email ?? undefined,
     html: `
       <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
-        <p style="font-size:16px;"><strong>${who}</strong> just enquired via ${tenant.business_name}'s website${
-      lead.source ? ` (${lead.source})` : ""
+        <p style="font-size:16px;"><strong>${esc(who)}</strong> just enquired via ${esc(tenant.business_name)}'s website${
+      lead.source ? ` (${esc(lead.source)})` : ""
     }.</p>
-        ${lead.email ? `<p>Email: ${lead.email}</p>` : ""}
+        ${lead.phone ? `<p>Phone: <a href="tel:${esc(tel)}">${esc(lead.phone)}</a></p>` : ""}
+        ${lead.email ? `<p>Email: ${esc(lead.email)}</p>` : ""}
+        ${lead.message ? `<p style="white-space:pre-line;border-left:3px solid ${brandColor};padding-left:12px;">${esc(lead.message.slice(0, 2000))}</p>` : ""}
         <p style="margin-top:20px;">
-          <a href="${dashboardUrl}" style="background:${brandColor};color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">View on your dashboard</a>
+          ${tel ? button(`tel:${esc(tel)}`, "Call them now") : ""}
+          ${memberships && memberships.length > 0 ? button(dashboardUrl, "View on your dashboard") : ""}
         </p>
+        <p style="color:#6b6255;font-size:13px;">Reply to this email to answer them directly. People who hear back within the hour are far more likely to book.</p>
       </div>
     `,
   });

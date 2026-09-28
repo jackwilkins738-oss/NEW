@@ -8,6 +8,7 @@ import {
   updateTenantDomain,
   updateTenantBrandTheme,
   updateTenantAftercare,
+  updateTenantContactEmailAdmin,
   removeMembership,
   updateMembershipRole,
   deleteTenant,
@@ -28,6 +29,7 @@ type Tenant = {
   // on the row createTenant hands back, hence optional.
   launched_on?: string | null;
   free_hosting_months?: number;
+  contact_email?: string | null;
 };
 
 type Member = { membershipId: string; email: string; role: "owner" | "member" };
@@ -289,6 +291,58 @@ function DomainEditor({ tenant }: { tenant: Tenant }) {
   );
 }
 
+function ContactEmailEditor({ tenant }: { tenant: Tenant }) {
+  const router = useRouter();
+  const [email, setEmail] = useState(tenant.contact_email ?? "");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(null);
+    setSaved(false);
+    const formData = new FormData();
+    formData.set("tenantId", tenant.id);
+    formData.set("contactEmail", email);
+    const res = await updateTenantContactEmailAdmin(formData);
+    setPending(false);
+    if (res.error) {
+      setError(res.error);
+    } else {
+      setSaved(true);
+      router.refresh();
+    }
+  }
+
+  const changed = email !== (tenant.contact_email ?? "");
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          setSaved(false);
+        }}
+        placeholder="office@theirdomain.co.uk"
+        className="w-full max-w-[280px] rounded-lg border border-black/15 bg-page px-2.5 py-2 font-mono text-base text-ink outline-none focus:border-brand sm:text-xs"
+      />
+      <button
+        type="submit"
+        disabled={pending || !changed}
+        className="min-h-[38px] rounded-lg border border-black/8 bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-brand-tint disabled:cursor-default disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+      {saved && !changed && <span className="text-xs font-semibold text-good">Saved</span>}
+      {error && <span className="text-xs font-semibold text-critical">{error}</span>}
+    </form>
+  );
+}
+
 function AftercareEditor({ tenant }: { tenant: Tenant }) {
   const router = useRouter();
   const [launchedOn, setLaunchedOn] = useState(tenant.launched_on ?? "");
@@ -464,6 +518,11 @@ function TenantList({ tenants, membersByTenant }: { tenants: Tenant[]; membersBy
             </p>
             <p className="mt-2 text-xs font-semibold text-ink-2">Domain</p>
             <DomainEditor tenant={t} />
+
+            <p className="mt-3 text-xs font-semibold text-ink-2">
+              Enquiry alerts <span className="font-normal text-muted">- every website enquiry is emailed here in full, as well as to anyone with a login</span>
+            </p>
+            <ContactEmailEditor key={t.contact_email ?? ""} tenant={t} />
 
             <p className="mt-3 text-xs font-semibold text-ink-2">
               Aftercare <span className="font-normal text-muted">- day 7/21/30 and hosting-end reminders email you once a launch date is set</span>
