@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConnection";
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
+import { sendQuoteChasers } from "@/lib/quoteChasers";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
@@ -102,5 +103,11 @@ export async function GET(request: Request) {
     return { sent: 0 };
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare });
+  const chasers = await sendQuoteChasers().catch((err) => {
+    console.error("Quote chasers failed:", err);
+    Sentry.captureException(err);
+    return { checked: 0, sent: 0 };
+  });
+
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers });
 }
