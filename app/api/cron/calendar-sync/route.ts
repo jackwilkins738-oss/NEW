@@ -5,6 +5,7 @@ import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConn
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
 import { sendQuoteChasers } from "@/lib/quoteChasers";
+import { sendReviewRequests } from "@/lib/reviewRequests";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
@@ -38,10 +39,13 @@ export async function GET(request: Request) {
     .select("id, tenant_id, client_name, next_visit_at, google_event_id")
     .not("google_event_id", "is", null);
 
-  if (!projects || projects.length === 0) return NextResponse.json({ ok: true, checked: 0, updated: 0 });
-
-  const tenantIds = [...new Set(projects.map((p) => p.tenant_id))];
-  const { data: memberships } = await admin.from("memberships").select("tenant_id, user_id").in("tenant_id", tenantIds);
+  // No early return when nothing is linked to Google Calendar: the daily
+  // emails below run from this same cron and must still go out.
+  const linked = projects ?? [];
+  const tenantIds = [...new Set(linked.map((p) => p.tenant_id))];
+  const { data: memberships } = tenantIds.length
+    ? await admin.from("memberships").select("tenant_id, user_id").in("tenant_id", tenantIds)
+    : { data: [] };
 
   // One connection per tenant (first member who has one), cached so a
   // tenant with many projects doesn't re-fetch/refresh the same token
@@ -65,7 +69,7 @@ export async function GET(request: Request) {
   let checked = 0;
   let updated = 0;
 
-  for (const project of projects) {
+  for (const project of linked) {
     try {
       const connection = await connectionFor(project.tenant_id);
       if (!connection) continue;
@@ -95,7 +99,11 @@ export async function GET(request: Request) {
     }
   }
 
-  const reminders = await sendPaymentReminders();
+  const reminders = await sendPaymentReminders().catch((err) => {
+    console.error("Payment reminders failed:", err);
+    Sentry.captureException(err);
+    return null;
+  });
   // Scalar's own aftercare steps for its customers (lib/aftercare.ts) - a
   // failure here must not fail the calendar sync and payment reminders.
   const aftercare = await sendAftercareReminders().catch((err) => {
@@ -110,6 +118,12 @@ export async function GET(request: Request) {
     return { checked: 0, sent: 0 };
   });
 
+  const reviews = await sendReviewRequests().catch((err) => {
+    console.error("Review requests failed:", err);
+    Sentry.captureException(err);
+    return { checked: 0, sent: 0 };
+  });
+
   // The sales demo's data, fresh every morning (lib/demo.ts) - same rule: never fails the rest.
   const demo = await resetDemoIfPresent(admin).catch((err) => {
     console.error("Demo reset failed:", err);
@@ -117,5 +131,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, demo });
 }

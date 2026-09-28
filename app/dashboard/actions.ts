@@ -14,6 +14,7 @@ import { todayInUK } from "@/lib/ukDate";
 import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 import { logAudit } from "@/lib/auditLog";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { reviewEmail, reviewRecipient } from "@/lib/reviewRequests";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -1175,6 +1176,18 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
     })
     .eq("id", tenantId);
 
+  // The automatic emails (migrations 044/045) - only touched when the page
+  // showed the switches, so a save before 045 is applied can't fail the rest.
+  if (formData.get("automations") === "1") {
+    await admin
+      .from("tenants")
+      .update({
+        quote_chasers: formData.get("quoteChasers") === "on",
+        auto_review_requests: formData.get("autoReviewRequests") === "on",
+      })
+      .eq("id", tenantId);
+  }
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 
@@ -1553,31 +1566,24 @@ export async function sendReviewRequestEmail(
     .eq("id", projectId)
     .maybeSingle();
 
-  let recipient: string | null = null;
-  if (project?.customer_id) {
-    const { data: customer } = await supabase.from("customers").select("email").eq("id", project.customer_id).maybeSingle();
-    recipient = customer?.email ?? null;
-  }
-  if (!recipient && project?.lead_id) {
-    const { data: lead } = await supabase.from("leads").select("email").eq("id", project.lead_id).maybeSingle();
-    recipient = lead?.email ?? null;
-  }
-  if (!recipient && project?.quote_id) {
-    const { data: quote } = await supabase.from("quotes").select("customer_email").eq("id", project.quote_id).maybeSingle();
-    recipient = quote?.customer_email ?? null;
-  }
+  const recipient = await reviewRecipient(supabase, project);
   if (!recipient) return { ok: false, reason: "no_email" };
 
   await sendEmail({
     to: [recipient],
-    subject: `How did we do, ${review.customer_name}?`,
-    html: `
-      <p>Hi ${review.customer_name},</p>
-      <p>Your project with ${tenant.business_name} is complete - thanks for choosing us.</p>
-      <p>If you have a minute, a review would mean a lot: <a href="${tenant.google_review_url}">Leave us a Google review</a></p>
-    `,
+    ...reviewEmail(review.customer_name, tenant.business_name, tenant.google_review_url, false),
     replyTo: tenant.contact_email ?? undefined,
   });
+
+  // Counts as the first ask, so the automatic requests (lib/reviewRequests.ts)
+  // only send the one reminder after this, never a second "how did we do".
+  // Admin client and ignored errors: the columns only exist once migration
+  // 045 has run, and a missing column mustn't undo an email already sent.
+  await createAdminClient()
+    .from("reviews")
+    .update({ ask_count: 1, last_asked_at: new Date().toISOString() })
+    .eq("id", review.id)
+    .eq("ask_count", 0);
 
   await supabase.from("communications").insert({
     tenant_id: tenantId,

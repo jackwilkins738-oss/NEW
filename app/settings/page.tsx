@@ -7,6 +7,7 @@ import { signOut } from "@/app/login/actions";
 import { IconSettings } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
 import { getCurrentUserRole } from "@/lib/membershipRole";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,15 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
   // Settings holds bank details, VAT, the Stripe connection - the one page
   // a 'member' shouldn't reach, even though they can see everything else.
   if (role === "member") redirect("/dashboard");
+
+  // The automatic-email switches (migrations 044/045). Read separately so a
+  // database without 045 yet just hides them instead of breaking Settings.
+  const { data: automations, error: automationsError } = await createAdminClient()
+    .from("tenants")
+    .select("quote_chasers, auto_review_requests")
+    .eq("id", tenant.id)
+    .maybeSingle();
+  const showAutomations = !automationsError && !!automations;
 
   return (
     <main className="min-h-screen bg-page sm:pl-64">
@@ -163,10 +173,47 @@ export default async function SettingsPage(props: { searchParams: Promise<{ stri
               className={field}
             />
             <span className="mt-1 block text-xs font-normal text-muted">
-              From your Google Business Profile (&quot;Get more reviews&quot; / &quot;Ask for reviews&quot;). Once set, marking a
-              project complete automatically emails the customer this link.
+              From your Google Business Profile (&quot;Get more reviews&quot; / &quot;Ask for reviews&quot;). Used by the
+              &quot;Send request&quot; button on a review, and by the automatic requests below.
             </span>
           </label>
+
+          {showAutomations && (
+            <>
+              <h2 className="mt-2 text-sm font-bold text-ink border-t border-black/8 pt-4">Automatic follow-ups</h2>
+              <input type="hidden" name="automations" value="1" />
+              <label className="flex items-start gap-3 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="autoReviewRequests"
+                  defaultChecked={!!automations.auto_review_requests}
+                  className="mt-0.5 h-4 w-4 accent-brand"
+                />
+                <span>
+                  <span className="font-semibold">Ask for Google reviews automatically</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    2 days after you mark a job complete, the customer is emailed your review link, with one reminder a week
+                    later - never more. Needs the review link above. Sending one yourself counts as the first ask.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="quoteChasers"
+                  defaultChecked={!!automations.quote_chasers}
+                  className="mt-0.5 h-4 w-4 accent-brand"
+                />
+                <span>
+                  <span className="font-semibold">Chase unanswered quotes</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    A short, polite follow-up 3 days after a quote is sent, and one more 4 days later - stops as soon as
+                    they accept or decline.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
           <button
             type="submit"
             className="btn-primary self-start rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-strong"
