@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { formatGBP } from "@/lib/format";
 import { sendEmail } from "@/lib/email";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { businessRecipients, emailInvoice, jobFromQuote, raiseJobInvoice } from "@/lib/jobs";
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -20,7 +23,7 @@ export async function acceptQuote(quoteId: string, token: string) {
   const admin = createAdminClient();
   const { data: quote } = await admin
     .from("quotes")
-    .select("id, accept_token, status, tenant_id, client_name, total_pence, customer_email")
+    .select("id, accept_token, status, tenant_id, client_name, total_pence, customer_email, quote_number")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote || quote.accept_token !== token || quote.status === "declined") {
@@ -29,6 +32,16 @@ export async function acceptQuote(quoteId: string, token: string) {
   const firstAccept = quote.status !== "accepted";
   await admin.from("quotes").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", quoteId);
   const onboardingUrl = await afterAccept(quote, firstAccept);
+  // The business's side runs after the customer's page has answered, and a
+  // failure in it never turns their "accepted" into an error.
+  if (firstAccept) {
+    after(() =>
+      startJob(quote).catch((err) => {
+        console.error(`After-accept steps failed for quote ${quote.id}:`, err);
+        Sentry.captureException(err);
+      })
+    );
+  }
   revalidatePath(`/quote/${quoteId}/${token}`);
   // No signed-in user here - a customer action, not staff, so userId is
   // deliberately omitted rather than attributed to nobody in particular.
@@ -84,6 +97,60 @@ async function afterAccept(
     });
   }
   return url;
+}
+
+// A yes from the customer, turned straight into work: the job is created
+// (the same one "Convert to project" would make, never a second), the deposit
+// invoice is emailed to them if the business switched that on in Settings
+// (otherwise the alert says what to invoice, one tap away) - and everyone at the
+// business is told at once instead of finding out next time they log in.
+async function startJob(quote: { id: string; tenant_id: string; client_name: string; total_pence: number; quote_number: string | null }) {
+  const admin = createAdminClient();
+  const { data: tenant } = await admin
+    .from("tenants")
+    .select("business_name, domain, slug, contact_email")
+    .eq("id", quote.tenant_id)
+    .maybeSingle();
+  if (!tenant) return;
+  // Its own read: the column arrives with migration 046, and a database
+  // without it yet should just behave as "switched off".
+  const { data: autoSendRow } = await admin.from("tenants").select("auto_send_deposit").eq("id", quote.tenant_id).maybeSingle();
+  const autoSend = !!(autoSendRow as { auto_send_deposit?: boolean } | null)?.auto_send_deposit;
+
+  const projectId = await jobFromQuote(admin, quote.id, quote.tenant_id);
+  let depositLine = "";
+  if (projectId && autoSend) {
+    const deposit = await raiseJobInvoice(admin, projectId, quote.tenant_id, "deposit");
+    if (deposit) {
+      const sent = await emailInvoice(admin, deposit.id, quote.tenant_id);
+      depositLine = sent.ok
+        ? `The deposit invoice (${formatGBP(deposit.amountPence)}) has been emailed to them.`
+        : `The deposit invoice (${formatGBP(deposit.amountPence)}) is raised, but there's no email address for them - send it another way.`;
+    }
+  } else if (projectId) {
+    const { data: q } = await admin.from("quotes").select("deposit_pence").eq("id", quote.id).maybeSingle();
+    if (q?.deposit_pence && q.deposit_pence > 0) {
+      depositLine = `Their deposit is ${formatGBP(q.deposit_pence)} - one tap on "Invoice the deposit" on the job sends it.`;
+    }
+  }
+
+  const to = await businessRecipients(admin, quote.tenant_id, tenant.contact_email);
+  if (to.length === 0) return;
+  const origin = tenantOrigin(tenant);
+  const jobUrl = projectId ? `${origin}/projects/${projectId}` : `${origin}/dashboard`;
+  await sendEmail({
+    to,
+    subject: `Quote accepted: ${quote.client_name} (${formatGBP(quote.total_pence)})`,
+    html: `
+      <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
+        <p style="font-size:16px;"><strong>${escapeHtml(quote.client_name)}</strong> has accepted your quote${
+          quote.quote_number ? ` ${escapeHtml(quote.quote_number)}` : ""
+        } for <strong>${formatGBP(quote.total_pence)}</strong>.</p>
+        <p>${projectId ? "It's on your dashboard as a job now." : ""} ${depositLine}</p>
+        <p><a href="${jobUrl}" style="display:inline-block;background:#17140f;color:#fff;text-decoration:none;font-weight:bold;padding:10px 20px;border-radius:8px;">Open the job</a></p>
+        <p style="color:#6b6255;font-size:13px;">Next: give them a call to book the start date.</p>
+      </div>`,
+  });
 }
 
 export async function declineQuote(quoteId: string, token: string) {

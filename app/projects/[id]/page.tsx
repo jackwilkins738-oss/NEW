@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import { JobInvoiceButtons } from "@/components/JobInvoiceButtons";
+import { balanceToInvoice, depositToInvoice } from "@/lib/jobs";
 import { getCurrentTenant } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formatGBP } from "@/lib/format";
@@ -68,7 +70,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
       .eq("project_id", project.id)
       .order("cost_date", { ascending: false }),
     project.quote_id
-      ? supabase.from("quotes").select("line_items").eq("id", project.quote_id).maybeSingle()
+      ? supabase.from("quotes").select("line_items, deposit_pence").eq("id", project.quote_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase
       .from("variations")
@@ -271,8 +273,18 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
         <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Payment schedule</h2>
           <p className="text-xs text-muted">
-            Add or manage these from the Invoices panel on the dashboard - pick this project when adding one.
+            Invoice the deposit or the balance in one tap below - or add any other stage from the Invoices panel on the
+            dashboard.
           </p>
+          <JobInvoiceButtons
+            projectId={project.id}
+            tenantId={tenant.id}
+            depositPence={Math.min(
+              depositToInvoice((quoteRes.data as { deposit_pence?: number | null } | null)?.deposit_pence ?? null, invoices),
+              balanceToInvoice(project.value_pence, invoices)
+            )}
+            balancePence={balanceToInvoice(project.value_pence, invoices)}
+          />
           {invoices.length === 0 ? (
             <p className="mt-3 text-sm text-muted">No invoices raised against this project yet.</p>
           ) : (

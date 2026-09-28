@@ -15,6 +15,7 @@ import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 import { logAudit } from "@/lib/auditLog";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { reviewEmail, reviewRecipient } from "@/lib/reviewRequests";
+import { emailInvoice, findOrCreateCustomer, generateRef, jobFromQuote, nextInvoiceNumber, raiseJobInvoice, type JobInvoiceKind } from "@/lib/jobs";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -308,76 +309,36 @@ export async function deleteInvoice(invoiceId: string) {
 // creation) may only have the project link.
 export async function sendInvoice(invoiceId: string, tenantId: string) {
   const supabase = await createClient();
-
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select("id, tenant_id, client_name, invoice_number, amount_pence, view_token, customer_id, lead_id, project_id")
-    .eq("id", invoiceId)
-    .maybeSingle();
-  if (!invoice || invoice.tenant_id !== tenantId) return { ok: false as const, reason: "not_found" as const };
-
-  let recipient: string | null = null;
-  if (invoice.customer_id) {
-    const { data: customer } = await supabase.from("customers").select("email").eq("id", invoice.customer_id).maybeSingle();
-    recipient = customer?.email ?? null;
-  }
-  if (!recipient && invoice.lead_id) {
-    const { data: lead } = await supabase.from("leads").select("email").eq("id", invoice.lead_id).maybeSingle();
-    recipient = lead?.email ?? null;
-  }
-  let portalToken: string | null = null;
-  if (invoice.project_id) {
-    const { data: project } = await supabase
-      .from("projects")
-      .select("customer_id, portal_token")
-      .eq("id", invoice.project_id)
-      .maybeSingle();
-    portalToken = project?.portal_token ?? null;
-    if (!recipient && project?.customer_id) {
-      const { data: customer } = await supabase.from("customers").select("email").eq("id", project.customer_id).maybeSingle();
-      recipient = customer?.email ?? null;
-    }
-  }
-  if (!recipient) return { ok: false as const, reason: "no_email" as const };
-
-  // contact_email isn't in the public tenant columns anon/authenticated can
-  // select (see 039_restrict_tenant_columns.sql) - the invoice fetch above
-  // already proved (via RLS) that the caller is a member of this tenant, so
-  // the admin client here isn't widening access, just working around a
-  // column grant that the session-scoped client can no longer see past.
-  const { data: tenant } = await createAdminClient()
-    .from("tenants")
-    .select("business_name, domain, slug, contact_email")
-    .eq("id", tenantId)
-    .maybeSingle();
-  const businessName = tenant?.business_name ?? "your contractor";
-  const origin = tenantOrigin(tenant);
-  const viewUrl = `${origin}/invoice/${invoice.id}/${invoice.view_token}`;
-  const portalUrl = invoice.project_id && portalToken ? `${origin}/portal/${invoice.project_id}/${portalToken}` : null;
-
-  await sendEmail({
-    to: [recipient],
-    subject: `Invoice from ${businessName}${invoice.invoice_number ? ` (${invoice.invoice_number})` : ""}`,
-    html: `
-      <p>Hi ${invoice.client_name},</p>
-      <p>${businessName} has sent you an invoice for ${formatGBP(invoice.amount_pence)}.</p>
-      <p><a href="${viewUrl}">View and download your invoice</a></p>
-      ${portalUrl ? `<p><a href="${portalUrl}">View your full project</a></p>` : ""}
-    `,
-    replyTo: tenant?.contact_email ?? undefined,
-  });
-
-  await supabase.from("invoices").update({ sent_at: new Date().toISOString() }).eq("id", invoiceId);
+  const result = await emailInvoice(supabase, invoiceId, tenantId);
+  if (!result.ok) return result;
   revalidatePath("/dashboard");
-  if (invoice.project_id) revalidatePath(`/projects/${invoice.project_id}`);
-  return { ok: true as const };
+  const { data: invoice } = await supabase.from("invoices").select("project_id").eq("id", invoiceId).maybeSingle();
+  if (invoice?.project_id) revalidatePath(`/projects/${invoice.project_id}`);
+  return result;
 }
 
-function generateRef() {
-  const now = new Date();
-  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `P-${stamp}-${suffix}`;
+// One tap from a job: the deposit on its quote, or everything still to bill
+// (quote + approved variations - invoices already raised), emailed straight
+// to the customer. Created even when there's no email on file, so it can be
+// sent another way.
+export async function raiseProjectInvoice(projectId: string, tenantId: string, kind: JobInvoiceKind) {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return { ok: false as const, reason: "not_found" as const };
+  const invoice = await raiseJobInvoice(supabase, projectId, tenantId, kind);
+  if (!invoice) return { ok: false as const, reason: "nothing_to_invoice" as const };
+  const sent = await emailInvoice(supabase, invoice.id, tenantId);
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${projectId}`);
+  await logAudit({
+    tenantId,
+    userId: userData.user.id,
+    action: "invoice.raised_from_job",
+    entityType: "invoice",
+    entityId: invoice.id,
+    summary: `Raised ${kind === "deposit" ? "the deposit" : "the balance"} invoice (${formatGBP(invoice.amountPence)})${sent.ok ? " and emailed it" : ""}`,
+  });
+  return { ok: true as const, amountPence: invoice.amountPence, emailed: sent.ok };
 }
 
 // Same trust model as addInvoice: RLS checks the signed-in user's own
@@ -409,34 +370,6 @@ export async function addProject(formData: FormData) {
   await supabase.from("projects").insert(insert);
 
   revalidatePath("/dashboard");
-}
-
-// Shared by both conversion paths below (lead -> project, quote -> project).
-// Matches an existing customer by email first - the closest thing to a
-// stable identity either a lead form or a quote gives us - otherwise
-// creates one.
-async function findOrCreateCustomer(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  tenantId: string,
-  name: string,
-  email: string | null,
-  phone: string | null
-) {
-  if (email) {
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("email", email)
-      .maybeSingle();
-    if (existing) return existing.id as string;
-  }
-  const { data: created } = await supabase
-    .from("customers")
-    .insert({ tenant_id: tenantId, name, email, phone })
-    .select("id")
-    .single();
-  return (created?.id as string | undefined) ?? null;
 }
 
 // Converts a won lead into a project (and a matching customer record),
@@ -492,12 +425,6 @@ async function nextQuoteNumber(tenantId: string): Promise<string> {
   return `${tenant?.quote_number_prefix ?? "Q"}-${String(n ?? 1).padStart(4, "0")}`;
 }
 
-async function nextInvoiceNumber(tenantId: string): Promise<string> {
-  const admin = createAdminClient();
-  const { data: tenant } = await admin.from("tenants").select("invoice_number_prefix").eq("id", tenantId).maybeSingle();
-  const { data: n } = await admin.rpc("increment_invoice_number", { p_tenant_id: tenantId });
-  return `${tenant?.invoice_number_prefix ?? "INV"}-${String(n ?? 1).padStart(4, "0")}`;
-}
 
 // Line items are stored as-typed (owner controls both sides), so this only
 // guards shape/type, not authenticity - RLS is still what stops a cross-tenant
@@ -679,46 +606,7 @@ export async function sendQuote(quoteId: string, tenantId: string) {
 // originating lead "won" too, if this quote came from one.
 export async function convertQuoteToProject(quoteId: string, tenantId: string) {
   const supabase = await createClient();
-
-  const { data: quote } = await supabase
-    .from("quotes")
-    .select("id, client_name, total_pence, lead_id, customer_email, customer_phone, tenant_id")
-    .eq("id", quoteId)
-    .maybeSingle();
-  if (!quote || quote.tenant_id !== tenantId) return;
-
-  let leadEmail: string | null = quote.customer_email;
-  let leadPhone: string | null = quote.customer_phone;
-  if (!leadEmail && quote.lead_id) {
-    const { data: lead } = await supabase
-      .from("leads")
-      .select("email, phone")
-      .eq("id", quote.lead_id)
-      .maybeSingle();
-    leadEmail = lead?.email ?? null;
-    leadPhone = lead?.phone ?? null;
-  }
-  const customerId = await findOrCreateCustomer(supabase, tenantId, quote.client_name, leadEmail, leadPhone);
-
-  await supabase.from("projects").insert({
-    tenant_id: tenantId,
-    ref: generateRef(),
-    client_name: quote.client_name,
-    quote_id: quote.id,
-    lead_id: quote.lead_id,
-    customer_id: customerId,
-    value_pence: quote.total_pence,
-    stage: "Enquiry",
-    status: "on_track",
-  });
-
-  if (quote.lead_id) {
-    await supabase
-      .from("leads")
-      .update({ status: "won", status_updated_at: new Date().toISOString() })
-      .eq("id", quote.lead_id);
-  }
-
+  await jobFromQuote(supabase, quoteId, tenantId);
   revalidatePath("/dashboard");
 }
 
@@ -1186,6 +1074,10 @@ export async function updateTenantSettings(tenantId: string, formData: FormData)
         auto_review_requests: formData.get("autoReviewRequests") === "on",
       })
       .eq("id", tenantId);
+  }
+
+  if (formData.get("depositAutomation") === "1") {
+    await admin.from("tenants").update({ auto_send_deposit: formData.get("autoSendDeposit") === "on" }).eq("id", tenantId);
   }
 
   revalidatePath("/settings");
