@@ -15,6 +15,7 @@ import { parseLineItems, computeQuoteTotals } from "@/lib/quoteMath";
 import { logAudit } from "@/lib/auditLog";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { reviewEmail, reviewRecipient } from "@/lib/reviewRequests";
+import { addMonths } from "@/lib/serviceReminders";
 import { emailInvoice, findOrCreateCustomer, generateRef, jobFromQuote, nextInvoiceNumber, raiseJobInvoice, type JobInvoiceKind } from "@/lib/jobs";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
@@ -1598,4 +1599,39 @@ export async function updateCustomer(customerId: string, formData: FormData) {
 
   revalidatePath(`/customers/${customerId}`);
   revalidatePath("/customers");
+}
+
+// Service reminders (migration 049) - "remind this customer in 12 months".
+// RLS scopes the rows to the member's tenant; the project check keeps the
+// reminder on a job that belongs to it.
+export async function addServiceReminder(
+  projectId: string,
+  tenantId: string,
+  formData: FormData
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const label = String(formData.get("label") ?? "").trim().slice(0, 120);
+  const months = Number(formData.get("months"));
+  if (!label) return { ok: false, error: "Say what the reminder is for." };
+  if (!Number.isInteger(months) || months < 1 || months > 120) return { ok: false, error: "Pick when to remind them." };
+
+  const supabase = await createClient();
+  const { data: project } = await supabase.from("projects").select("id, tenant_id").eq("id", projectId).maybeSingle();
+  if (!project || project.tenant_id !== tenantId) return { ok: false, error: "Job not found." };
+
+  const { error } = await supabase.from("service_reminders").insert({
+    tenant_id: tenantId,
+    project_id: projectId,
+    label,
+    due_on: addMonths(todayInUK(), months),
+    repeat_months: formData.get("repeat") === "on" ? months : null,
+  });
+  if (error) return { ok: false, error: "Couldn't save the reminder - try again." };
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
+}
+
+export async function deleteServiceReminder(reminderId: string, projectId: string) {
+  const supabase = await createClient();
+  await supabase.from("service_reminders").delete().eq("id", reminderId);
+  revalidatePath(`/projects/${projectId}`);
 }

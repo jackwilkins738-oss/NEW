@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { AccountsExportMenu } from "@/components/AccountsExportMenu";
 import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
@@ -273,12 +274,7 @@ export function InvoicesPanel({
           Invoices
         </h2>
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/export/invoices?tenantId=${tenantId}`}
-            className="whitespace-nowrap text-xs font-semibold text-muted hover:text-brand hover:underline"
-          >
-            Export CSV
-          </a>
+          <AccountsExportMenu tenantId={tenantId} />
           {invoices.length > 0 && (
             <PanelSearchInput
               value={query}

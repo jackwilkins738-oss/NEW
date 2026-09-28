@@ -8,6 +8,7 @@ import { sendQuoteChasers } from "@/lib/quoteChasers";
 import { sendReviewRequests } from "@/lib/reviewRequests";
 import { sendVisitReminders } from "@/lib/visitReminders";
 import { sendMorningBriefs } from "@/lib/morningBrief";
+import { sendServiceReminders } from "@/lib/serviceReminders";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
@@ -132,6 +133,12 @@ export async function GET(request: Request) {
     return { checked: 0, sent: 0 };
   });
 
+  const services = await sendServiceReminders().catch((err) => {
+    console.error("Service reminders failed:", err);
+    Sentry.captureException(err);
+    return { checked: 0, sent: 0 };
+  });
+
   // Last of the emails, so it reflects anything the steps above changed.
   const briefs = await sendMorningBriefs().catch((err) => {
     console.error("Morning briefs failed:", err);
@@ -146,5 +153,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, visits, briefs, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, visits, services, briefs, demo });
 }
