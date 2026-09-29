@@ -114,6 +114,47 @@ export async function createCheckoutSession(
   return res.json();
 }
 
+// A monthly subscription on the PLATFORM account (Scalar Digital's own
+// Stripe - no Stripe-Account header), for the dashboard fee. trial_end, when
+// given, delays the first charge; the card is collected now either way.
+// Payment methods come from the Stripe dashboard's settings, so turning on
+// Bacs Direct Debit there offers it here with no code change.
+export async function createSubscriptionCheckout(params: {
+  amountPence: number;
+  productName: string;
+  customerEmail: string | null;
+  trialEnd: number | null;
+  successUrl: string;
+  cancelUrl: string;
+  metadata: Record<string, string>;
+}): Promise<{ id: string; url: string }> {
+  const body = new URLSearchParams();
+  body.set("mode", "subscription");
+  body.set("success_url", params.successUrl);
+  body.set("cancel_url", params.cancelUrl);
+  body.set("line_items[0][price_data][currency]", "gbp");
+  body.set("line_items[0][price_data][unit_amount]", String(params.amountPence));
+  body.set("line_items[0][price_data][recurring][interval]", "month");
+  body.set("line_items[0][price_data][product_data][name]", params.productName);
+  body.set("line_items[0][quantity]", "1");
+  if (params.customerEmail) body.set("customer_email", params.customerEmail);
+  if (params.trialEnd) body.set("subscription_data[trial_end]", String(params.trialEnd));
+  for (const [key, value] of Object.entries(params.metadata)) {
+    body.set(`metadata[${key}]`, value);
+    body.set(`subscription_data[metadata][${key}]`, value);
+  }
+  const res = await fetch(`${STRIPE_API}/checkout/sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY ?? ""}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`Stripe subscription checkout failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
 // Manual signature check (Stripe's own documented algorithm) rather than
 // the SDK's Webhook.constructEvent - `t=<timestamp>,v1=<hex hmac>` in the
 // Stripe-Signature header, HMAC-SHA256 of "<timestamp>.<raw body>" against
