@@ -57,9 +57,18 @@ export default async function AdminPage() {
   // Client care (migration 051) - each read on its own, so /admin still works before it runs.
   const { data: billingRows, error: billingError } = await admin.from("tenants").select("id, billing_status");
   const billingById = new Map((billingRows ?? []).map((r) => [r.id, r.billing_status as string | null]));
+  const { data: siteRows, error: siteError } = await admin.from("tenants").select("id, website_url, site_status");
+  const siteById = new Map((siteRows ?? []).map((r) => [r.id, r]));
   const careTenants = tenantsWithAftercare
     .filter((t) => t.launched_on && t.slug !== "demo")
-    .map((t) => ({ id: t.id, business_name: t.business_name, launched_on: t.launched_on, billing_status: billingById.get(t.id) ?? null }));
+    .map((t) => ({
+      id: t.id,
+      business_name: t.business_name,
+      launched_on: t.launched_on,
+      billing_status: billingById.get(t.id) ?? null,
+      website_url: siteById.get(t.id)?.website_url ?? null,
+      site_status: siteById.get(t.id)?.site_status ?? null,
+    }));
   const { data: requestRows, error: requestsError } = await admin
     .from("change_requests")
     .select("id, tenant_id, message, created_at")
@@ -85,7 +94,7 @@ export default async function AdminPage() {
             </form>
           </div>
         </header>
-        <ClientCarePanel tenants={careTenants} requests={changeRequests} billingReady={!billingError} requestsReady={!requestsError} />
+        <ClientCarePanel tenants={careTenants} requests={changeRequests} billingReady={!billingError} requestsReady={!requestsError} monitorReady={!siteError} />
         <div className="mt-5">
           <AdminPanel tenants={tenantsWithAftercare} membersByTenant={membersByTenant} />
         </div>
