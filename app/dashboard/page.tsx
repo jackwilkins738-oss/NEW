@@ -261,6 +261,25 @@ export default async function DashboardPage() {
   const templatesEnabled = !templatesRes.error;
 
   const leads = leadsRes.data ?? [];
+
+  // Photos sent with website enquiries (migration 053) - read on their own so
+  // the enquiry list still loads before it runs. Signed through the member's
+  // own session, so storage RLS still applies.
+  const leadPhotos: Record<string, string[]> = {};
+  const { data: photoRows, error: photoError } = await supabase
+    .from("leads")
+    .select("id, photo_paths")
+    .eq("tenant_id", tenant.id)
+    .gte("created_at", thirtyDaysAgo)
+    .neq("photo_paths", "{}");
+  if (!photoError && photoRows && photoRows.length > 0) {
+    const paths = photoRows.flatMap((r) => (r.photo_paths as string[]) ?? []);
+    const { data: signed } = await supabase.storage.from("lead-photos").createSignedUrls(paths, 3600);
+    const urlByPath = new Map((signed ?? []).map((x) => [x.path, x.signedUrl]));
+    for (const r of photoRows) {
+      leadPhotos[r.id] = ((r.photo_paths as string[]) ?? []).map((p) => urlByPath.get(p)).filter((u): u is string => !!u);
+    }
+  }
   const prospects = prospectsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
   const projects = projectsRes.data ?? [];
@@ -787,7 +806,7 @@ export default async function DashboardPage() {
           </div>
 
           <LeadsPanel
-            leads={leads}
+            leads={leads.map((l) => ({ ...l, photos: leadPhotos[l.id] ?? [] }))}
             tenantId={tenant.id}
             convertedLeadIds={projects.map((p) => p.lead_id).filter((id): id is string => !!id)}
           />

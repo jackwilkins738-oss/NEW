@@ -31,6 +31,7 @@ type Lead = {
   job_type: string | null;
   notes: string | null;
   created_at: string;
+  photos?: string[];
 };
 
 const STATUS_OPTIONS = [
@@ -198,6 +199,16 @@ function LeadRow({
             </div>
           )}
           {lead.notes && <p className="mt-1 text-xs text-ink-2">{lead.notes}</p>}
+          {lead.photos && lead.photos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {lead.photos.map((url, i) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer" title={`Photo ${i + 1} - open full size`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Photo ${i + 1} of the job`} className="h-16 w-16 rounded-lg border border-black/8 object-cover" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
           <LeadDetails lead={lead} />
           </div>
         </div>

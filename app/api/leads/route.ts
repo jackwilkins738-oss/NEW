@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deriveBrandTheme } from "@/lib/theme";
 import { sendEmail } from "@/lib/email";
+import { claimablePaths, LEAD_PHOTO_BUCKET } from "@/lib/leadPhotos";
 
 // Leads used to be written straight from the customer's browser to
 // Supabase's REST API - which meant there was no code of ours in that path
@@ -90,6 +91,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save lead" }, { status: 500, headers: CORS_HEADERS });
   }
 
+  // Photos uploaded first by track.js (app/api/leads/uploads): only this
+  // tenant's own pending uploads that really arrived. Saved in a second
+  // step, so a database before migration 053 still keeps the enquiry.
+  const photoPaths: string[] = [];
+  for (const path of claimablePaths(tenantId, body.photos)) {
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    const { data: found } = await admin.storage.from(LEAD_PHOTO_BUCKET).list(`${tenantId}/pending`, { search: name, limit: 1 });
+    if (found?.some((o) => o.name === name)) photoPaths.push(path);
+  }
+  let photoLinks: string[] = [];
+  if (photoPaths.length > 0) {
+    await admin.from("leads").update({ photo_paths: photoPaths }).eq("id", lead.id);
+    const { data: signed } = await admin.storage.from(LEAD_PHOTO_BUCKET).createSignedUrls(photoPaths, 7 * 86_400);
+    photoLinks = (signed ?? []).map((s) => s.signedUrl).filter((u): u is string => !!u);
+  }
+
   // Both best-effort: a failure here shouldn't make the lead capture itself
   // look like it failed to whoever's site just submitted it. Run with after()
   // rather than left floating: on Vercel a promise still running when the
@@ -103,7 +120,7 @@ export async function POST(request: Request) {
     source: body.source ? String(body.source) : null,
   };
   after(async () => {
-    await notifyNewLead(admin, tenant, leadDetails).catch((err) => {
+    await notifyNewLead(admin, tenant, leadDetails, photoLinks).catch((err) => {
       console.error("Lead notification failed:", err);
       Sentry.captureException(err);
     });
@@ -152,7 +169,8 @@ async function sendLeadAutoReply(
 async function notifyNewLead(
   admin: ReturnType<typeof createAdminClient>,
   tenant: { id: string; business_name: string; domain: string | null; slug: string; brand_theme: string; contact_email?: string | null },
-  lead: { name: string | null; email: string | null; phone: string | null; message: string | null; source: string | null }
+  lead: { name: string | null; email: string | null; phone: string | null; message: string | null; source: string | null },
+  photoLinks: string[] = []
 ) {
   const { data: memberships } = await admin.from("memberships").select("user_id").eq("tenant_id", tenant.id);
   const emails = new Set<string>();
@@ -183,6 +201,13 @@ async function notifyNewLead(
         ${lead.phone ? `<p>Phone: <a href="tel:${esc(tel)}">${esc(lead.phone)}</a></p>` : ""}
         ${lead.email ? `<p>Email: ${esc(lead.email)}</p>` : ""}
         ${lead.message ? `<p style="white-space:pre-line;border-left:3px solid ${brandColor};padding-left:12px;">${esc(lead.message.slice(0, 2000))}</p>` : ""}
+        ${
+          photoLinks.length > 0
+            ? `<p><strong>${photoLinks.length} photo${photoLinks.length === 1 ? "" : "s"} of the job:</strong> ${photoLinks
+                .map((u, i) => `<a href="${esc(u)}">photo ${i + 1}</a>`)
+                .join(" &middot; ")} <span style="color:#6b6255;font-size:12px;">(links work for 7 days; always on your dashboard)</span></p>`
+            : ""
+        }
         <p style="margin-top:20px;">
           ${tel ? button(`tel:${esc(tel)}`, "Call them now") : ""}
           ${memberships && memberships.length > 0 ? button(dashboardUrl, "View on your dashboard") : ""}
