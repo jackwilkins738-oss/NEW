@@ -33,6 +33,7 @@ const AAL_EXEMPT_PREFIXES = [
   "/portal/",
   "/welcome/",
   "/track.js",
+  "/sw.js",
   "/gallery.js",
   "/portfolio.js",
   "/testimonials.js",

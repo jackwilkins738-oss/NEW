@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { deriveBrandTheme } from "@/lib/theme";
 import { sendEmail } from "@/lib/email";
 import { claimablePaths, LEAD_PHOTO_BUCKET } from "@/lib/leadPhotos";
+import { sendPush } from "@/lib/push";
 
 // Leads used to be written straight from the customer's browser to
 // Supabase's REST API - which meant there was no code of ours in that path
@@ -124,6 +125,11 @@ export async function POST(request: Request) {
       console.error("Lead notification failed:", err);
       Sentry.captureException(err);
     });
+    await sendPush(admin, tenant.id, {
+      title: `New enquiry: ${leadDetails.name || leadDetails.email || leadDetails.phone || "someone"}`,
+      body: `${leadDetails.message ?? ""}${photoLinks.length ? ` (${photoLinks.length} photo${photoLinks.length === 1 ? "" : "s"})` : ""}` || "Tap to see it",
+      url: "/dashboard",
+    }).catch((err) => Sentry.captureException(err));
     if (body.email) {
       await sendLeadAutoReply(tenant, String(body.name ?? ""), String(body.email)).catch((err) => {
         console.error("Lead auto-reply failed:", err);

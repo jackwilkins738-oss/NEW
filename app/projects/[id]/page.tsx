@@ -109,7 +109,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
       .order("requested_at", { ascending: false }),
   ]);
 
-  const contact = project.completed_at ? { email: null, phone: null } : await customerContact(supabase, project);
+  const contact = await customerContact(supabase, project);
 
   // Its own query: the table arrives with migration 049, and before then the panel just doesn't show.
   const serviceRes = await supabase
@@ -391,7 +391,12 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
         )}
 
         <div className="mt-5">
-          <ReviewsPanel tenantId={tenant.id} projectId={project.id} reviews={reviews} />
+          <ReviewsPanel
+            tenantId={tenant.id}
+            projectId={project.id}
+            reviews={reviews}
+            askBy={{ phone: contact.phone, reviewUrl: tenant.google_review_url, businessName: tenant.business_name }}
+          />
         </div>
       </div>
     </main>

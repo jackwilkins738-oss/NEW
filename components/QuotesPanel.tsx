@@ -13,6 +13,8 @@ import {
 } from "@/app/dashboard/actions";
 import { lineSuggestions, matchSuggestion, startFrom, type QuoteStart } from "@/lib/quoteLibrary";
 import { useToast } from "@/components/Toast";
+import { MessageButtons } from "@/components/MessageButtons";
+import { chaseText } from "@/lib/contact";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
@@ -512,12 +514,14 @@ function NewQuoteForm({
 function QuoteRow({
   quote,
   tenantId,
+  businessName,
   converted,
   selected,
   onToggleSelect,
 }: {
   quote: Quote;
   tenantId: string;
+  businessName: string;
   converted: boolean;
   selected: boolean;
   onToggleSelect: () => void;
@@ -601,6 +605,14 @@ function QuoteRow({
           Copy
         </button>
 
+        {status === "sent" && (
+          <MessageButtons
+            phone={quote.customer_phone}
+            label="Chase"
+            text={(origin) => chaseText.quote(quote.client_name, businessName, formatGBP(quote.total_pence), `${origin}/quote/${quote.id}/${quote.accept_token}`)}
+          />
+        )}
+
         <a
           href={`/api/quotes/${quote.id}/pdf?token=${quote.accept_token}`}
           target="_blank"
@@ -653,7 +665,9 @@ export function QuotesPanel({
   defaultPaymentTerms,
   templates,
   templatesEnabled,
+  businessName = "",
 }: {
+  businessName?: string;
   tenantId: string;
   quotes: Quote[];
   convertedQuoteIds: string[];
@@ -740,6 +754,7 @@ export function QuotesPanel({
               key={q.id}
               quote={q}
               tenantId={tenantId}
+              businessName={businessName}
               converted={converted.has(q.id)}
               selected={selected.has(q.id)}
               onToggleSelect={() =>

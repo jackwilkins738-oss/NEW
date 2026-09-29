@@ -7,6 +7,7 @@ import { businessRecipients } from "@/lib/jobs";
 import { customerContact, escapeHtml, mapsLink, ukVisitTime } from "@/lib/contact";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { DEMO_SLUG } from "@/lib/demo";
+import { atVisit, forecastFor, weatherLine } from "@/lib/weather";
 
 // The business's day on one screen, in their inbox at about 7am: today's
 // visits (tap for directions, tap to call), enquiries nobody has answered,
@@ -14,11 +15,20 @@ import { DEMO_SLUG } from "@/lib/demo";
 // email. On by default, off in Settings (migration 048). Runs from the daily
 // calendar-sync cron.
 
-export type BriefVisit = { client: string; at: string; location: string | null; phone: string | null; jobUrl: string };
+export type BriefVisit = {
+  client: string;
+  at: string;
+  location: string | null;
+  phone: string | null;
+  jobUrl: string;
+  weather?: { text: string; bad: boolean } | null;
+};
 export type BriefInput = {
   businessName: string;
   dashboardUrl: string;
   visits: BriefVisit[];
+  /** Tomorrow's visits with rain or wind bad enough to think about rebooking today. */
+  tomorrowWarnings?: BriefVisit[];
   newEnquiries: { name: string; jobType: string | null }[];
   overdue: { count: number; pence: number };
   quotesWaiting: { count: number; pence: number };
@@ -26,7 +36,8 @@ export type BriefInput = {
 
 /** The brief's subject and body, or null when there's nothing worth an email. */
 export function briefEmail(b: BriefInput): { subject: string; html: string } | null {
-  if (b.visits.length === 0 && b.newEnquiries.length === 0 && b.overdue.count === 0 && b.quotesWaiting.count === 0) return null;
+  const warnings = b.tomorrowWarnings ?? [];
+  if (b.visits.length === 0 && warnings.length === 0 && b.newEnquiries.length === 0 && b.overdue.count === 0 && b.quotesWaiting.count === 0) return null;
 
   const parts: string[] = [];
   const summary: string[] = [];
@@ -41,12 +52,30 @@ export function briefEmail(b: BriefInput): { subject: string; html: string } | n
           tel ? `<a href="tel:${escapeHtml(tel)}">call</a>` : "",
           `<a href="${v.jobUrl}">job</a>`,
         ].filter(Boolean);
+        const weather = v.weather
+          ? `<br><span style="font-size:13px;${v.weather.bad ? "color:#b3261e;font-weight:bold;" : "color:#56534a;"}">${v.weather.bad ? "Weather: " : ""}${escapeHtml(v.weather.text)}</span>`
+          : "";
         return `<li style="margin-bottom:8px;"><strong>${ukVisitTime(v.at).time}</strong> ${escapeHtml(v.client)}${
           v.location ? `, ${escapeHtml(v.location)}` : ""
-        }<br><span style="font-size:13px;">${links.join(" &middot; ")}</span></li>`;
+        }${weather}<br><span style="font-size:13px;">${links.join(" &middot; ")}</span></li>`;
       })
       .join("");
     parts.push(`<h3 style="margin:18px 0 6px;">Today's visits</h3><ul style="padding-left:18px;">${rows}</ul>`);
+  }
+  if (warnings.length > 0) {
+    summary.push(`weather warning for tomorrow`);
+    const rows = [...warnings]
+      .sort((x, y) => x.at.localeCompare(y.at))
+      .map(
+        (v) =>
+          `<li style="margin-bottom:6px;"><strong>${ukVisitTime(v.at).time}</strong> ${escapeHtml(v.client)} - <span style="color:#b3261e;">${escapeHtml(
+            v.weather?.text ?? ""
+          )}</span> <a href="${v.jobUrl}">job</a></li>`
+      )
+      .join("");
+    parts.push(
+      `<h3 style="margin:18px 0 6px;">Tomorrow's weather</h3><p style="margin:0 0 6px;font-size:13px;">Worth deciding today whether these go ahead - a quick message now beats a wasted trip.</p><ul style="padding-left:18px;">${rows}</ul>`
+    );
   }
   if (b.newEnquiries.length > 0) {
     summary.push(`${b.newEnquiries.length} to reply to`);
@@ -105,7 +134,7 @@ export async function sendMorningBriefs(now = new Date()): Promise<{ sent: numbe
           .eq("tenant_id", tenant.id)
           .is("completed_at", null)
           .gte("next_visit_at", new Date(now.getTime() - 12 * 3_600_000).toISOString())
-          .lte("next_visit_at", new Date(now.getTime() + 36 * 3_600_000).toISOString()),
+          .lte("next_visit_at", new Date(now.getTime() + 60 * 3_600_000).toISOString()),
         admin
           .from("leads")
           .select("name, email, phone, job_type")
@@ -116,18 +145,50 @@ export async function sendMorningBriefs(now = new Date()): Promise<{ sent: numbe
         admin.from("quotes").select("total_pence").eq("tenant_id", tenant.id).eq("status", "sent"),
       ]);
 
-      const todays = (visitsRes.data ?? []).filter((p) => p.next_visit_at && todayInUK(new Date(p.next_visit_at)) === today);
+      const tomorrow = todayInUK(new Date(now.getTime() + 86_400_000));
+      const upcoming = visitsRes.data ?? [];
+      const todays = upcoming.filter((p) => p.next_visit_at && todayInUK(new Date(p.next_visit_at)) === today);
+      const tomorrows = upcoming.filter((p) => p.next_visit_at && todayInUK(new Date(p.next_visit_at)) === tomorrow);
+      // One forecast per location, fetched in parallel; a failure is just "no weather line".
+      const forecasts = new Map(
+        await Promise.all(
+          [...new Set([...todays, ...tomorrows].map((p) => p.location ?? ""))].filter(Boolean).map(async (loc) => [loc, await forecastFor(loc)] as const)
+        )
+      );
+      const weatherAt = (location: string | null, at: string) => {
+        const f = location ? forecasts.get(location) : null;
+        const w = f ? atVisit(f, at) : null;
+        return w ? weatherLine(w) : null;
+      };
       const visits: BriefVisit[] = [];
       for (const p of todays) {
         const { phone } = await customerContact(admin, p);
-        visits.push({ client: p.client_name, at: p.next_visit_at!, location: p.location, phone, jobUrl: `${origin}/projects/${p.id}` });
+        visits.push({
+          client: p.client_name,
+          at: p.next_visit_at!,
+          location: p.location,
+          phone,
+          jobUrl: `${origin}/projects/${p.id}`,
+          weather: weatherAt(p.location, p.next_visit_at!),
+        });
       }
+      const tomorrowWarnings: BriefVisit[] = tomorrows
+        .map((p) => ({
+          client: p.client_name,
+          at: p.next_visit_at!,
+          location: p.location,
+          phone: null,
+          jobUrl: `${origin}/projects/${p.id}`,
+          weather: weatherAt(p.location, p.next_visit_at!),
+        }))
+        .filter((v) => v.weather?.bad);
       const overdue = invoicesRes.data ?? [];
       const quotes = quotesRes.data ?? [];
       const email = briefEmail({
         businessName: tenant.business_name,
         dashboardUrl: `${origin}/dashboard`,
         visits,
+        tomorrowWarnings,
         newEnquiries: (leadsRes.data ?? []).map((l) => ({ name: l.name || l.email || l.phone || "Someone", jobType: l.job_type })),
         overdue: { count: overdue.length, pence: overdue.reduce((s, i) => s + i.amount_pence - (i.paid_pence ?? 0), 0) },
         quotesWaiting: { count: quotes.length, pence: quotes.reduce((s, q) => s + q.total_pence, 0) },

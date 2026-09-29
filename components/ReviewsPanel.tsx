@@ -5,6 +5,8 @@ import { requestReview, recordReview, deleteReview } from "@/app/dashboard/actio
 import { DeleteButton } from "@/components/DeleteButton";
 import { ReviewPublishToggle } from "@/components/ReviewPublishToggle";
 import { ReviewSendRequestButton } from "@/components/ReviewSendRequestButton";
+import { MessageButtons } from "@/components/MessageButtons";
+import { chaseText } from "@/lib/contact";
 import { IconStar } from "@/components/DashboardIcons";
 
 type Review = {
@@ -25,7 +27,9 @@ export function Stars({ rating }: { rating: number | null }) {
   return <span className="text-[#e0a400]">{"★".repeat(rating)}{"☆".repeat(5 - rating)}</span>;
 }
 
-function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId: string; tenantId: string }) {
+type AskBy = { phone: string | null; reviewUrl: string | null; businessName: string };
+
+function ReviewRow({ review, projectId, tenantId, askBy }: { review: Review; projectId: string; tenantId: string; askBy?: AskBy }) {
   const [recording, setRecording] = useState(false);
 
   return (
@@ -86,6 +90,13 @@ function ReviewRow({ review, projectId, tenantId }: { review: Review; projectId:
           ) : (
             <div className="flex items-center gap-3">
               <ReviewSendRequestButton projectId={projectId} tenantId={tenantId} reviewId={review.id} />
+              {askBy?.reviewUrl && (
+                <MessageButtons
+                  phone={askBy.phone}
+                  label="Ask"
+                  text={() => chaseText.review(review.customer_name, askBy.businessName, askBy.reviewUrl!)}
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setRecording(true)}
@@ -105,10 +116,12 @@ export function ReviewsPanel({
   tenantId,
   projectId,
   reviews,
+  askBy,
 }: {
   tenantId: string;
   projectId: string;
   reviews: Review[];
+  askBy?: AskBy;
 }) {
   return (
     <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
@@ -134,7 +147,7 @@ export function ReviewsPanel({
         {reviews.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">No reviews requested yet.</p>
         ) : (
-          reviews.map((r) => <ReviewRow key={r.id} review={r} projectId={projectId} tenantId={tenantId} />)
+          reviews.map((r) => <ReviewRow key={r.id} review={r} projectId={projectId} tenantId={tenantId} askBy={askBy} />)
         )}
       </div>
     </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { MessageButtons } from "@/components/MessageButtons";
+import { chaseText } from "@/lib/contact";
 import { AccountsExportMenu } from "@/components/AccountsExportMenu";
 import { addInvoice, markInvoicePaid, recordInvoicePayment, deleteInvoice, sendInvoice } from "@/app/dashboard/actions";
 import { formatGBP } from "@/lib/format";
@@ -26,6 +28,7 @@ type Invoice = {
   status: string;
   view_token: string;
   sent_at: string | null;
+  phone?: string | null;
 };
 
 type ProjectOption = { id: string; client_name: string };
@@ -242,7 +245,9 @@ export function InvoicesPanel({
   invoices,
   projects,
   leads,
+  businessName = "",
 }: {
+  businessName?: string;
   tenantId: string;
   invoices: Invoice[];
   projects: ProjectOption[];
@@ -334,6 +339,15 @@ export function InvoicesPanel({
                   PDF
                 </a>
                 <SendInvoiceButton invoiceId={inv.id} tenantId={tenantId} alreadySent={!!inv.sent_at} />
+                {inv.status !== "paid" && inv.sent_at && (
+                  <MessageButtons
+                    phone={inv.phone ?? null}
+                    label="Nudge"
+                    text={(origin) =>
+                      chaseText.payment(inv.client_name, businessName, inv.invoice_number ?? "", formatGBP(outstanding), `${origin}/invoice/${inv.id}/${inv.view_token}`)
+                    }
+                  />
+                )}
                 {inv.status !== "paid" && (
                   <>
                     <RecordPaymentButton invoiceId={inv.id} outstanding={outstanding} />

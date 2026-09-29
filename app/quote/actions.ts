@@ -10,6 +10,7 @@ import { formatGBP } from "@/lib/format";
 import { sendEmail } from "@/lib/email";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { cleanSignature } from "@/lib/signature";
+import { sendPush } from "@/lib/push";
 import { businessRecipients, emailInvoice, jobFromQuote, raiseJobInvoice } from "@/lib/jobs";
 
 const escapeHtml = (s: string) =>
@@ -215,6 +216,12 @@ async function startJob(
       replyTo: tenant.contact_email ?? undefined,
     });
   }
+
+  await sendPush(admin, quote.tenant_id, {
+    title: `Quote accepted: ${quote.client_name}`,
+    body: `${formatGBP(quote.total_pence)}${quote.quote_number ? ` (${quote.quote_number})` : ""} - it's on your dashboard as a job.`,
+    url: projectId ? `/projects/${projectId}` : "/dashboard",
+  }).catch((err) => Sentry.captureException(err));
 
   const to = await businessRecipients(admin, quote.tenant_id, tenant.contact_email);
   if (to.length === 0) return;

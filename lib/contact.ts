@@ -35,6 +35,33 @@ export function whatsappNumber(phone: string | null): string | null {
   return null;
 }
 
+/** Links that open WhatsApp or the phone's Messages with `text` ready to send. */
+export function messageLinks(phone: string | null, text: string): { whatsapp: string | null; sms: string | null } {
+  const tel = (phone ?? "").replace(/[^\d+]/g, "");
+  const wa = whatsappNumber(phone);
+  return {
+    whatsapp: wa ? `https://wa.me/${wa}?text=${encodeURIComponent(text)}` : null,
+    // "?&body=" is the form both iOS and Android Messages accept.
+    sms: tel.length >= 10 ? `sms:${tel}?&body=${encodeURIComponent(text)}` : null,
+  };
+}
+
+/** First name for a greeting: "Sarah Kerr" -> "Sarah"; nothing usable -> "there". */
+export function greetingName(name: string | null | undefined): string {
+  const first = (name ?? "").trim().split(/\s+/)[0] ?? "";
+  return /\p{L}{2,}/u.test(first) ? first : "there";
+}
+
+/** The ready-written chasers: a quote, a payment, a review. */
+export const chaseText = {
+  quote: (name: string, business: string, total: string, url: string) =>
+    `Hi ${greetingName(name)}, just checking the quote I sent reached you (${total}). You can see it and accept it here: ${url} - any questions, just ask. ${business}`,
+  payment: (name: string, business: string, invoice: string, amount: string, url: string) =>
+    `Hi ${greetingName(name)}, a quick reminder about invoice ${invoice} for ${amount} - you can view and pay it here: ${url}. Thanks, ${business}`,
+  review: (name: string, business: string, url: string) =>
+    `Hi ${greetingName(name)}, thanks again for choosing ${business}. If you've a minute, a quick Google review would really help us: ${url}`,
+};
+
 /** The "on my way" message and the links that open it ready to send. */
 export function onMyWay(phone: string | null, customerName: string, businessName: string, minutes: number) {
   const first = customerName.trim().split(/\s+/)[0] || "there";
