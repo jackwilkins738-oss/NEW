@@ -4,7 +4,7 @@ import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
 import { isPastUK } from "@/lib/ukDate";
-import { OnboardingNextStep, QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
+import { DepositNextStep, OnboardingNextStep, QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 
 export const dynamic = "force-dynamic";
@@ -41,9 +41,30 @@ export default async function PublicQuotePage(
 
   const { data: tenant } = await admin
     .from("tenants")
-    .select("business_name, brand_theme, logo_url, domain, slug")
+    .select("business_name, brand_theme, logo_url, domain, slug, stripe_account_id")
     .eq("id", quote.tenant_id)
     .maybeSingle();
+  // Who signed, and a deposit still to pay by card - each read on its own, so
+  // a database without migration 050 (or a quote with no job yet) just shows less.
+  const { data: signedRow } =
+    quote.status === "accepted"
+      ? await admin.from("quotes").select("accepted_name, accepted_at").eq("id", quote.id).maybeSingle()
+      : { data: null };
+  const signed = signedRow as { accepted_name?: string | null; accepted_at?: string | null } | null;
+  let depositUrl: string | null = null;
+  if (quote.status === "accepted" && tenant?.stripe_account_id && (quote.deposit_pence ?? 0) > 0) {
+    const { data: project } = await admin.from("projects").select("id").eq("quote_id", quote.id).limit(1).maybeSingle();
+    const { data: deposit } = project
+      ? await admin
+          .from("invoices")
+          .select("id, view_token, status")
+          .eq("project_id", project.id)
+          .ilike("milestone", "deposit")
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+    if (deposit && deposit.status !== "paid") depositUrl = `${tenantOrigin(tenant)}/invoice/${deposit.id}/${deposit.view_token}`;
+  }
   // Website clients (quotes from Scalar's outreach) get their onboarding link back here once accepted.
   const { data: onboarding } =
     quote.status === "accepted"
@@ -159,8 +180,21 @@ export default async function PublicQuotePage(
                       quote.status === "accepted" ? "bg-[rgba(12,163,12,0.1)] text-good" : "bg-surface-2 text-ink-2"
                     }`}
                   >
-                    {quote.status === "accepted" ? "You accepted this quote." : "You declined this quote."}
+                    {quote.status === "accepted"
+                      ? signed?.accepted_name
+                        ? `Accepted by ${signed.accepted_name}${
+                            signed.accepted_at
+                              ? ` on ${new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", dateStyle: "long" }).format(new Date(signed.accepted_at))}`
+                              : ""
+                          }.`
+                        : "You accepted this quote."
+                      : "You declined this quote."}
                   </p>
+                  {depositUrl && (
+                    <div className="mt-3">
+                      <DepositNextStep url={depositUrl} />
+                    </div>
+                  )}
                   {onboarding && (
                     <div className="mt-3">
                       <OnboardingNextStep url={`${tenantOrigin(tenant)}/welcome/${onboarding.id}/${onboarding.token}`} />
