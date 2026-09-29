@@ -8,6 +8,8 @@ import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 import { logAudit } from "@/lib/auditLog";
 import { resetDemo } from "@/lib/demo";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { billingStart, DASHBOARD_MONTHLY_PENCE } from "@/lib/billing";
+import { createSubscriptionCheckout } from "@/lib/stripe";
 import { ensureRedirectUrl, redirectUrlFor } from "@/lib/supabaseRedirects";
 
 async function requireAdmin() {
@@ -292,4 +294,43 @@ export async function resetDemoTenant() {
   } catch (err) {
     return { ok: false as const, error: err instanceof Error ? err.message : "Reset failed" };
   }
+}
+
+// The £39/month dashboard fee (lib/billing.ts): a Stripe checkout link to send
+// the client. The card goes in now; the first charge waits for the end of
+// their free period.
+export async function createBillingLink(tenantId: string): Promise<{ url: string; startsOn: string } | { error: string }> {
+  await requireAdmin();
+  if (!process.env.STRIPE_SECRET_KEY) return { error: "Add STRIPE_SECRET_KEY in Vercel first (Scalar's own Stripe account)." };
+  const admin = createAdminClient();
+  const { data: t } = await admin
+    .from("tenants")
+    .select("id, business_name, domain, slug, contact_email, launched_on, free_hosting_months")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (!t) return { error: "Customer not found." };
+  const start = billingStart(t.launched_on, t.free_hosting_months ?? 12);
+  if ("error" in start) return start;
+  try {
+    const origin = tenantOrigin(t);
+    const session = await createSubscriptionCheckout({
+      amountPence: DASHBOARD_MONTHLY_PENCE,
+      productName: `Dashboard - ${t.business_name}`,
+      customerEmail: t.contact_email,
+      trialEnd: start.trialEnd,
+      successUrl: `${origin}/help?billing=done`,
+      cancelUrl: `${origin}/help`,
+      metadata: { billing_tenant_id: t.id },
+    });
+    return { url: session.url, startsOn: start.startsOn };
+  } catch (err) {
+    console.error("Billing link failed:", err);
+    return { error: "Stripe refused - check STRIPE_SECRET_KEY is Scalar's own live key." };
+  }
+}
+
+export async function markChangeRequestDone(requestId: string) {
+  await requireAdmin();
+  await createAdminClient().from("change_requests").update({ status: "done", done_at: new Date().toISOString() }).eq("id", requestId);
+  revalidatePath("/admin");
 }

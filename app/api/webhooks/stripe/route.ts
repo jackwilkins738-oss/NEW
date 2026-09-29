@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/stripe";
 import { logAudit } from "@/lib/auditLog";
 import { formatGBP } from "@/lib/format";
+import { billingStatusFor } from "@/lib/billing";
 
 // Registered once in the Stripe dashboard (platform account, with "listen
 // to events on Connected accounts" turned on) pointing at this URL. The raw
@@ -27,6 +28,29 @@ export async function POST(request: Request) {
   }
 
   try {
+    // The dashboard fee (lib/billing.ts) - events on Scalar's own Stripe account.
+    if (event.type === "checkout.session.completed" && (event.data.object as { mode?: string }).mode === "subscription") {
+      const session = event.data.object as { subscription?: string; metadata?: { billing_tenant_id?: string } };
+      const tenantId = session.metadata?.billing_tenant_id;
+      if (tenantId && session.subscription) {
+        await createAdminClient()
+          .from("tenants")
+          .update({ stripe_subscription_id: session.subscription, billing_status: "trialing" })
+          .eq("id", tenantId);
+        await logAudit({ tenantId, action: "billing.card_added", entityType: "tenant", entityId: tenantId, summary: "Card added for the monthly dashboard fee" });
+      }
+    }
+    if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as { id?: string; status?: string; metadata?: { billing_tenant_id?: string } };
+      if (sub.id && sub.metadata?.billing_tenant_id) {
+        await createAdminClient()
+          .from("tenants")
+          .update({ billing_status: event.type === "customer.subscription.deleted" ? "cancelled" : billingStatusFor(sub.status ?? "") })
+          .eq("id", sub.metadata.billing_tenant_id)
+          .eq("stripe_subscription_id", sub.id);
+      }
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as { metadata?: { invoice_id?: string } };
       const invoiceId = session.metadata?.invoice_id;

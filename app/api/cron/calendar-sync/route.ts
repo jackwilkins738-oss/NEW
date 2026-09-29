@@ -9,6 +9,7 @@ import { sendReviewRequests } from "@/lib/reviewRequests";
 import { sendVisitReminders } from "@/lib/visitReminders";
 import { sendMorningBriefs } from "@/lib/morningBrief";
 import { sendServiceReminders } from "@/lib/serviceReminders";
+import { sendMonthlyReports } from "@/lib/monthlyReport";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 
@@ -139,6 +140,13 @@ export async function GET(request: Request) {
     return { checked: 0, sent: 0 };
   });
 
+  // Scalar's own clients, on the 1st: last month in numbers.
+  const monthly = await sendMonthlyReports().catch((err) => {
+    console.error("Monthly reports failed:", err);
+    Sentry.captureException(err);
+    return { sent: 0 };
+  });
+
   // Last of the emails, so it reflects anything the steps above changed.
   const briefs = await sendMorningBriefs().catch((err) => {
     console.error("Morning briefs failed:", err);
@@ -153,5 +161,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, visits, services, briefs, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, visits, services, monthly, briefs, demo });
 }
