@@ -16,6 +16,7 @@ import { logAudit } from "@/lib/auditLog";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { reviewEmail, reviewRecipient } from "@/lib/reviewRequests";
 import { addMonths } from "@/lib/serviceReminders";
+import { MAX_IMPORT_ROWS } from "@/lib/customerImport";
 import { emailInvoice, findOrCreateCustomer, generateRef, jobFromQuote, nextInvoiceNumber, raiseJobInvoice, type JobInvoiceKind } from "@/lib/jobs";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
@@ -1634,4 +1635,48 @@ export async function deleteServiceReminder(reminderId: string, projectId: strin
   const supabase = await createClient();
   await supabase.from("service_reminders").delete().eq("id", reminderId);
   revalidatePath(`/projects/${projectId}`);
+}
+
+// Bulk customers from a spreadsheet (lib/customerImport.ts parses it in the
+// browser). Re-checked here: names capped, anyone whose email is already a
+// customer is left alone, and RLS scopes every insert to the member's tenant.
+export async function importCustomers(
+  tenantId: string,
+  rows: unknown
+): Promise<{ ok: true; added: number; existing: number } | { ok: false; error: string }> {
+  if (!Array.isArray(rows) || rows.length === 0) return { ok: false, error: "Nothing to import." };
+  if (rows.length > MAX_IMPORT_ROWS) return { ok: false, error: `${MAX_IMPORT_ROWS} customers at a time at most.` };
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenantId, userData.user.id))) return { ok: false, error: "Not allowed." };
+
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "") || null;
+  const clean = rows
+    .map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : {}))
+    .map((r) => ({
+      name: str(r.name, 200),
+      email: str(r.email, 200)?.toLowerCase() ?? null,
+      phone: str(r.phone, 40),
+      address: str(r.address, 300),
+      notes: str(r.notes, 1000),
+    }))
+    .filter((r): r is { name: string; email: string | null; phone: string | null; address: string | null; notes: string | null } => !!r.name);
+
+  const { data: existingRows } = await supabase.from("customers").select("email").eq("tenant_id", tenantId).not("email", "is", null);
+  const existing = new Set((existingRows ?? []).map((r) => (r.email as string).toLowerCase()));
+  const fresh = clean.filter((r) => !r.email || !existing.has(r.email));
+  for (let i = 0; i < fresh.length; i += 500) {
+    const { error } = await supabase.from("customers").insert(fresh.slice(i, i + 500).map((r) => ({ tenant_id: tenantId, ...r })));
+    if (error) return { ok: false, error: `Stopped after ${i} - ${error.message}` };
+  }
+  revalidatePath("/customers");
+  await logAudit({
+    tenantId,
+    userId: userData.user.id,
+    action: "customers.imported",
+    entityType: "customer",
+    entityId: tenantId,
+    summary: `Imported ${fresh.length} customers from a spreadsheet`,
+  });
+  return { ok: true, added: fresh.length, existing: clean.length - fresh.length };
 }
