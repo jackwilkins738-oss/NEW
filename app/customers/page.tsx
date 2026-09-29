@@ -7,6 +7,7 @@ import { IconUsers } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
 import { getCurrentUserRole } from "@/lib/membershipRole";
 import { CustomersListPanel } from "@/components/CustomersListPanel";
+import { CustomerImport } from "@/components/CustomerImport";
 import { addCustomer } from "@/app/dashboard/actions";
 
 const field =
@@ -60,6 +61,8 @@ export default async function CustomersPage() {
             record per customer across every job they&apos;ve had.
           </p>
         </header>
+
+        <CustomerImport tenantId={tenant.id} />
 
         <form
           action={addCustomer}
