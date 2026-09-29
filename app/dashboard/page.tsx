@@ -196,7 +196,7 @@ export default async function DashboardPage() {
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, client_name, reference, milestone, amount_pence, paid_pence, due_date, status, view_token, sent_at, project_id"
+        "id, invoice_number, client_name, reference, milestone, amount_pence, paid_pence, due_date, status, view_token, sent_at, project_id, customer_id, lead_id"
       )
       .eq("tenant_id", tenant.id)
       .order("due_date", { ascending: true }),
@@ -284,6 +284,21 @@ export default async function DashboardPage() {
   const pageviewCount = pageviewsRes.count ?? 0;
   const projects = projectsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
+
+  // Phone numbers for the "Nudge" buttons on unpaid invoices: the customer's,
+  // else the enquiry's.
+  const unpaid = invoices.filter((i) => i.status !== "paid");
+  const customerIds = [...new Set(unpaid.map((i) => i.customer_id).filter((id): id is string => !!id))];
+  const leadIds = [...new Set(unpaid.map((i) => i.lead_id).filter((id): id is string => !!id))];
+  const [customerPhoneRes, leadPhoneRes] = await Promise.all([
+    customerIds.length ? supabase.from("customers").select("id, phone").in("id", customerIds) : Promise.resolve({ data: [] }),
+    leadIds.length ? supabase.from("leads").select("id, phone").in("id", leadIds) : Promise.resolve({ data: [] }),
+  ]);
+  const customerPhone = new Map((customerPhoneRes.data ?? []).map((c: { id: string; phone: string | null }) => [c.id, c.phone]));
+  const leadPhone = new Map((leadPhoneRes.data ?? []).map((l: { id: string; phone: string | null }) => [l.id, l.phone]));
+  const invoicePhones = new Map(
+    unpaid.map((i) => [i.id, (i.customer_id && customerPhone.get(i.customer_id)) || (i.lead_id && leadPhone.get(i.lead_id)) || null])
+  );
   const trades = tradesRes.data ?? [];
   const projectPhotos = photosRes.data ?? [];
   const quotes = quotesRes.data ?? [];
@@ -842,6 +857,7 @@ export default async function DashboardPage() {
             defaultVatRate={tenant.default_vat_rate}
             defaultQuoteTerms={tenant.default_quote_terms}
             defaultPaymentTerms={tenant.default_payment_terms}
+            businessName={tenant.business_name}
             templates={quoteTemplates}
             templatesEnabled={templatesEnabled}
           />
@@ -850,7 +866,8 @@ export default async function DashboardPage() {
         <div className="mt-5">
           <InvoicesPanel
             tenantId={tenant.id}
-            invoices={invoices}
+            businessName={tenant.business_name}
+            invoices={invoices.map((i) => ({ ...i, phone: invoicePhones.get(i.id) ?? null }))}
             projects={projects.map((p) => ({ id: p.id, client_name: p.client_name }))}
             leads={leads.map((l) => ({ id: l.id, name: l.name, email: l.email, status: l.status }))}
           />

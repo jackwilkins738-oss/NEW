@@ -6,6 +6,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { signOut } from "@/app/login/actions";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MfaSettings } from "@/components/MfaSettings";
+import { PushToggle } from "@/components/PushToggle";
 import { IconShield } from "@/components/DashboardIcons";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,9 @@ export default async function AccountPage() {
 
         <div className="mt-6">
           <MfaSettings initialFactors={verifiedFactors} />
+        </div>
+        <div className="mt-5">
+          <PushToggle tenantId={tenant.id} />
         </div>
       </div>
     </main>

@@ -14,6 +14,7 @@ import {
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconUsers } from "@/components/DashboardIcons";
 import { PanelSearchInput } from "@/components/PanelSearchInput";
+import { PushToggle } from "@/components/PushToggle";
 import { PanelPagination } from "@/components/PanelPagination";
 import { BulkActionBar } from "@/components/BulkActionBar";
 
@@ -294,7 +295,8 @@ export function LeadsPanel({
           <IconUsers className="h-4 w-4 text-brand" />
           Recent leads
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <PushToggle tenantId={tenantId} compact />
           {followUpCount > 0 && (
             <span className="rounded-full bg-[rgba(208,59,59,0.15)] px-2 py-0.5 text-xs font-bold text-critical">
               {followUpCount} need{followUpCount === 1 ? "s" : ""} follow-up
