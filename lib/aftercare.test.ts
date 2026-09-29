@@ -39,3 +39,17 @@ describe("aftercareRemindersFor", () => {
     expect(aftercareRemindersFor([t("2026-10-01", 24)], "2028-09-01")[0].text).toContain("1 October 2028");
   });
 });
+
+describe("referral ask", () => {
+  it("goes to the client 45 days after launch, with their own link", async () => {
+    const { referralEmailFor, referralLink } = await import("./aftercare");
+    const t = { business_name: "Smith & Sons <Roofing>", launched_on: "2026-10-01" };
+    expect(referralEmailFor(t, "2026-11-14")).toBeNull();
+    const email = referralEmailFor(t, "2026-11-15")!;
+    expect(email.subject).toMatch(/another trade/);
+    expect(referralLink(t.business_name)).toBe("https://www.scalardigital.co.uk/contact?ref=Smith%20%26%20Sons%20Roofing");
+    expect(email.html).toContain("Smith &amp; Sons &lt;Roofing&gt;");
+    expect(email.html).toContain("15% off");
+    expect(referralEmailFor({ ...t, launched_on: null }, "2026-11-15")).toBeNull();
+  });
+});
