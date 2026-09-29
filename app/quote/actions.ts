@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { after } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,6 +9,7 @@ import { logAudit } from "@/lib/auditLog";
 import { formatGBP } from "@/lib/format";
 import { sendEmail } from "@/lib/email";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { cleanSignature } from "@/lib/signature";
 import { businessRecipients, emailInvoice, jobFromQuote, raiseJobInvoice } from "@/lib/jobs";
 
 const escapeHtml = (s: string) =>
@@ -19,24 +21,42 @@ const escapeHtml = (s: string) =>
 // tenants.site_key), which is why this goes through the service-role admin
 // client rather than the session-scoped one everything in the dashboard
 // uses - there's no signed-in user for RLS to check.
-export async function acceptQuote(quoteId: string, token: string) {
+export async function acceptQuote(quoteId: string, token: string, signature?: { name: string; agreed: boolean }) {
   const admin = createAdminClient();
   const { data: quote } = await admin
     .from("quotes")
-    .select("id, accept_token, status, tenant_id, client_name, total_pence, customer_email, quote_number")
+    .select("id, accept_token, status, tenant_id, client_name, total_pence, customer_email, quote_number, deposit_pence")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote || quote.accept_token !== token || quote.status === "declined") {
     return { ok: false };
   }
   const firstAccept = quote.status !== "accepted";
-  await admin.from("quotes").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", quoteId);
+  const signedName = cleanSignature(signature?.name);
+  if (firstAccept && (!signedName || !signature?.agreed)) {
+    return { ok: false, error: "Type your full name and tick the box to accept." };
+  }
+  const acceptedAt = new Date().toISOString();
+  if (firstAccept) {
+    const h = await headers();
+    const signed = {
+      status: "accepted",
+      accepted_at: acceptedAt,
+      accepted_name: signedName,
+      accepted_ip: (h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "").slice(0, 64) || null,
+      accepted_user_agent: (h.get("user-agent") || "").slice(0, 300) || null,
+    };
+    const { error } = await admin.from("quotes").update(signed).eq("id", quoteId);
+    // Before migration 050 the signature columns don't exist: still accept, just without them.
+    if (error) await admin.from("quotes").update({ status: "accepted", accepted_at: acceptedAt }).eq("id", quoteId);
+  }
   const onboardingUrl = await afterAccept(quote, firstAccept);
+  const depositUrl = await depositPayment(quote);
   // The business's side runs after the customer's page has answered, and a
   // failure in it never turns their "accepted" into an error.
   if (firstAccept) {
     after(() =>
-      startJob(quote).catch((err) => {
+      startJob(quote, signedName, acceptedAt).catch((err) => {
         console.error(`After-accept steps failed for quote ${quote.id}:`, err);
         Sentry.captureException(err);
       })
@@ -50,9 +70,40 @@ export async function acceptQuote(quoteId: string, token: string) {
     action: "quote.accepted",
     entityType: "quote",
     entityId: quoteId,
-    summary: `${quote.client_name} accepted their quote (${formatGBP(quote.total_pence)})`,
+    summary: `${quote.client_name} accepted their quote (${formatGBP(quote.total_pence)})${signedName ? `, signed "${signedName}"` : ""}`,
   });
-  return { ok: true, onboardingUrl };
+  return { ok: true, onboardingUrl, depositUrl };
+}
+
+/**
+ * The deposit, payable the moment they say yes: when the quote asks for one
+ * and the business takes card payments (Stripe connected), the job and its
+ * deposit invoice are made now - the same ones the steps after acceptance
+ * would make, never a second - and the customer gets the invoice's pay page.
+ */
+async function depositPayment(quote: { id: string; tenant_id: string; deposit_pence: number | null }): Promise<string | null> {
+  if (!quote.deposit_pence || quote.deposit_pence <= 0) return null;
+  const admin = createAdminClient();
+  const { data: tenant } = await admin.from("tenants").select("stripe_account_id, domain, slug").eq("id", quote.tenant_id).maybeSingle();
+  if (!tenant?.stripe_account_id) return null;
+  try {
+    const projectId = await jobFromQuote(admin, quote.id, quote.tenant_id);
+    if (!projectId) return null;
+    await raiseJobInvoice(admin, projectId, quote.tenant_id, "deposit");
+    const { data: invoice } = await admin
+      .from("invoices")
+      .select("id, view_token, status")
+      .eq("project_id", projectId)
+      .ilike("milestone", "deposit")
+      .limit(1)
+      .maybeSingle();
+    if (!invoice || invoice.status === "paid") return null;
+    return `${tenantOrigin(tenant)}/invoice/${invoice.id}/${invoice.view_token}`;
+  } catch (err) {
+    console.error(`Deposit payment setup failed for quote ${quote.id}:`, err);
+    Sentry.captureException(err);
+    return null;
+  }
 }
 
 // Only quotes made from Scalar's own outreach (POST /api/prospects/quote)
@@ -104,7 +155,11 @@ async function afterAccept(
 // invoice is emailed to them if the business switched that on in Settings
 // (otherwise the alert says what to invoice, one tap away) - and everyone at the
 // business is told at once instead of finding out next time they log in.
-async function startJob(quote: { id: string; tenant_id: string; client_name: string; total_pence: number; quote_number: string | null }) {
+async function startJob(
+  quote: { id: string; tenant_id: string; client_name: string; total_pence: number; quote_number: string | null; customer_email: string | null; accept_token?: string },
+  signedName: string | null,
+  acceptedAt: string
+) {
   const admin = createAdminClient();
   const { data: tenant } = await admin
     .from("tenants")
@@ -119,19 +174,46 @@ async function startJob(quote: { id: string; tenant_id: string; client_name: str
 
   const projectId = await jobFromQuote(admin, quote.id, quote.tenant_id);
   let depositLine = "";
-  if (projectId && autoSend) {
-    const deposit = await raiseJobInvoice(admin, projectId, quote.tenant_id, "deposit");
-    if (deposit) {
+  if (projectId) {
+    // The deposit invoice may already exist - made when they accepted, so they could pay by card straight away.
+    const { data: existing } = await admin
+      .from("invoices")
+      .select("id, amount_pence, sent_at")
+      .eq("project_id", projectId)
+      .ilike("milestone", "deposit")
+      .limit(1)
+      .maybeSingle();
+    let deposit = existing ? { id: existing.id as string, amountPence: existing.amount_pence as number } : null;
+    if (!deposit && autoSend) deposit = await raiseJobInvoice(admin, projectId, quote.tenant_id, "deposit");
+    if (deposit && autoSend && !existing?.sent_at) {
       const sent = await emailInvoice(admin, deposit.id, quote.tenant_id);
       depositLine = sent.ok
         ? `The deposit invoice (${formatGBP(deposit.amountPence)}) has been emailed to them.`
         : `The deposit invoice (${formatGBP(deposit.amountPence)}) is raised, but there's no email address for them - send it another way.`;
+    } else if (deposit) {
+      depositLine = `They were offered their ${formatGBP(deposit.amountPence)} deposit to pay by card as they accepted - you'll see it marked paid if they did.`;
+    } else {
+      const { data: q } = await admin.from("quotes").select("deposit_pence").eq("id", quote.id).maybeSingle();
+      if (q?.deposit_pence && q.deposit_pence > 0) {
+        depositLine = `Their deposit is ${formatGBP(q.deposit_pence)} - one tap on "Invoice the deposit" on the job sends it.`;
+      }
     }
-  } else if (projectId) {
-    const { data: q } = await admin.from("quotes").select("deposit_pence").eq("id", quote.id).maybeSingle();
-    if (q?.deposit_pence && q.deposit_pence > 0) {
-      depositLine = `Their deposit is ${formatGBP(q.deposit_pence)} - one tap on "Invoice the deposit" on the job sends it.`;
-    }
+  }
+
+  // The customer's copy of what they agreed to.
+  if (quote.customer_email && signedName) {
+    const quoteUrl = quote.accept_token ? `${tenantOrigin(tenant)}/quote/${quote.id}/${quote.accept_token}` : null;
+    const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", dateStyle: "long", timeStyle: "short" }).format(new Date(acceptedAt));
+    await sendEmail({
+      to: [quote.customer_email],
+      subject: `You accepted your quote from ${tenant.business_name}${quote.quote_number ? ` (${quote.quote_number})` : ""}`,
+      html: `<p>Hi ${escapeHtml(quote.client_name)},</p>
+        <p>Thanks - this confirms you accepted the quote${quote.quote_number ? ` ${escapeHtml(quote.quote_number)}` : ""} from ${escapeHtml(tenant.business_name)} for <strong>${formatGBP(quote.total_pence)}</strong>, including its terms, on ${escapeHtml(when)}, signed as "${escapeHtml(signedName)}".</p>
+        ${quoteUrl ? `<p><a href="${quoteUrl}">View the quote you accepted</a></p>` : ""}
+        <p>Keep this email for your records. We'll be in touch to arrange the next steps.</p>
+        <p>${escapeHtml(tenant.business_name)}</p>`,
+      replyTo: tenant.contact_email ?? undefined,
+    });
   }
 
   const to = await businessRecipients(admin, quote.tenant_id, tenant.contact_email);
