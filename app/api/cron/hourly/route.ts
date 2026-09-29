@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { sendEnquiryNudges } from "@/lib/enquiryNudge";
+import { checkClientSites } from "@/lib/siteMonitor";
 
 // Hourly jobs. Called by .github/workflows/hourly.yml rather than a Vercel
 // cron: Vercel's free plan only allows daily crons, and an hourly entry in
 // vercel.json would fail every deploy on it. Same CRON_SECRET bearer as the
 // Vercel crons.
+// Site checks run in parallel but each can wait up to 30 seconds.
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,5 +19,10 @@ export async function GET(request: Request) {
     Sentry.captureException(err);
     return { checked: 0, sent: 0 };
   });
-  return NextResponse.json({ ok: true, nudges });
+  const sites = await checkClientSites().catch((err) => {
+    console.error("Site checks failed:", err);
+    Sentry.captureException(err);
+    return { checked: 0, alerts: 0 };
+  });
+  return NextResponse.json({ ok: true, nudges, sites });
 }

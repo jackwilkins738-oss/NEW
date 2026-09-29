@@ -334,3 +334,19 @@ export async function markChangeRequestDone(requestId: string) {
   await createAdminClient().from("change_requests").update({ status: "done", done_at: new Date().toISOString() }).eq("id", requestId);
   revalidatePath("/admin");
 }
+
+// The client's live website, for the hourly uptime check (lib/siteMonitor.ts).
+export async function setWebsiteUrl(tenantId: string, url: string): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  let clean = url.trim().toLowerCase().replace(/\/+$/, "");
+  if (clean && !/^https?:\/\//.test(clean)) clean = `https://${clean}`;
+  clean = clean.replace(/^http:\/\//, "https://");
+  if (clean && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/.test(clean)) return { error: "That doesn't look like a website address." };
+  const { error } = await createAdminClient()
+    .from("tenants")
+    .update({ website_url: clean || null, site_status: null, site_fail_count: 0, site_down_since: null })
+    .eq("id", tenantId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { ok: true };
+}
