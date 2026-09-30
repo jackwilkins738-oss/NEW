@@ -159,13 +159,13 @@ export default async function PublicQuotePage(
                   </p>
                 )}
                 {quote.exclusions && (
-                  <p>
+                  <p className="whitespace-pre-line">
                     <span className="font-semibold text-ink-2">Exclusions: </span>
                     {quote.exclusions}
                   </p>
                 )}
                 {quote.terms && (
-                  <p>
+                  <p className="whitespace-pre-line">
                     <span className="font-semibold text-ink-2">Terms: </span>
                     {quote.terms}
                   </p>
