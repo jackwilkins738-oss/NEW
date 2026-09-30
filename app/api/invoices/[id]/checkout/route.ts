@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
+import { tokensMatch } from "@/lib/tokens";
 
 // Public - the customer clicks "Pay now" on the public invoice page, which
 // posts here with the same view_token that page itself was reached with.
@@ -19,7 +20,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     .select("id, tenant_id, invoice_number, amount_pence, paid_pence, status, view_token")
     .eq("id", params.id)
     .maybeSingle();
-  if (!invoice || invoice.view_token !== token) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!invoice || !tokensMatch(invoice.view_token, token)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (invoice.status === "paid") return NextResponse.json({ error: "This invoice is already paid" }, { status: 400 });
 
   const { data: tenant } = await admin

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QuotePdfDocument, type QuotePdfData } from "@/lib/quotePdf";
 import { deriveBrandTheme } from "@/lib/theme";
+import { tokensMatch } from "@/lib/tokens";
 
 const SELECT =
   "id, tenant_id, quote_number, client_name, line_items, markup_percent, vat_rate, vat_amount_pence, total_pence, expires_at, deposit_pence, payment_terms, exclusions, terms, accept_token";
@@ -29,7 +30,7 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
   if (!quote && token) {
     const admin = createAdminClient();
     const { data } = await admin.from("quotes").select(SELECT).eq("id", params.id).maybeSingle();
-    if (data && data.accept_token === token) quote = data;
+    if (data && tokensMatch(data.accept_token, token)) quote = data;
   }
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

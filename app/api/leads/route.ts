@@ -25,6 +25,24 @@ export async function OPTIONS() {
   return new NextResponse(null, { headers: CORS_HEADERS });
 }
 
+// Public endpoint - its tenant_id/site_key sit in every client site's page
+// source - so every field is trimmed to a sane length before it is stored
+// or emailed. Whatever was typed as the email is kept on the enquiry (a typo
+// is still worth seeing), but it has to look like an address before anything
+// is sent to it or it's used as a reply-to.
+const LIMITS = { name: 120, email: 200, phone: 40, message: 5000, source: 100 } as const;
+const EMAIL = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
+
+function field(body: Record<string, unknown>, key: keyof typeof LIMITS): string | null {
+  const v = body[key];
+  if (v === undefined || v === null) return null;
+  const t = String(v).trim().slice(0, LIMITS[key]);
+  return t || null;
+}
+
+const esc = (v: string) =>
+  v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
@@ -32,6 +50,14 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: CORS_HEADERS });
   }
+
+  const fields = {
+    name: field(body, "name"),
+    email: field(body, "email"),
+    phone: field(body, "phone"),
+    message: field(body, "message"),
+    source: field(body, "source"),
+  };
 
   const tenantId = String(body.tenant_id ?? "");
   const siteKey = String(body.site_key ?? "");
@@ -78,11 +104,7 @@ export async function POST(request: Request) {
     .insert({
       tenant_id: tenantId,
       site_key: siteKey,
-      name: body.name ? String(body.name) : null,
-      email: body.email ? String(body.email) : null,
-      phone: body.phone ? String(body.phone) : null,
-      message: body.message ? String(body.message) : null,
-      source: body.source ? String(body.source) : null,
+      ...fields,
       ip,
     })
     .select("id")
@@ -113,13 +135,7 @@ export async function POST(request: Request) {
   // rather than left floating: on Vercel a promise still running when the
   // response goes out can be frozen with the function, and the owner's alert
   // (or the enquirer's auto-reply) silently never sends.
-  const leadDetails = {
-    name: body.name ? String(body.name) : null,
-    email: body.email ? String(body.email) : null,
-    phone: body.phone ? String(body.phone) : null,
-    message: body.message ? String(body.message) : null,
-    source: body.source ? String(body.source) : null,
-  };
+  const leadDetails = fields;
   after(async () => {
     await notifyNewLead(admin, tenant, leadDetails, photoLinks).catch((err) => {
       console.error("Lead notification failed:", err);
@@ -130,8 +146,8 @@ export async function POST(request: Request) {
       body: `${leadDetails.message ?? ""}${photoLinks.length ? ` (${photoLinks.length} photo${photoLinks.length === 1 ? "" : "s"})` : ""}` || "Tap to see it",
       url: "/dashboard",
     }).catch((err) => Sentry.captureException(err));
-    if (body.email) {
-      await sendLeadAutoReply(tenant, String(body.name ?? ""), String(body.email)).catch((err) => {
+    if (fields.email && EMAIL.test(fields.email)) {
+      await sendLeadAutoReply(tenant, fields.name ?? "", fields.email).catch((err) => {
         console.error("Lead auto-reply failed:", err);
         Sentry.captureException(err);
       });
@@ -153,14 +169,18 @@ async function sendLeadAutoReply(
   name: string,
   email: string
 ) {
-  const firstName = name.trim().split(/\s+/)[0] || null;
+  // Both go into HTML: the name is whatever the visitor typed, so it is
+  // escaped (and kept to one word) - otherwise the form could be used to
+  // send a stranger a link-laden email in this business's name.
+  const firstName = esc(name.trim().split(/\s+/)[0]?.slice(0, 40) ?? "") || null;
+  const business = esc(tenant.business_name);
 
   await sendEmail({
     to: [email],
     subject: `Thanks for getting in touch with ${tenant.business_name}`,
     html: `
       <p>Hi${firstName ? ` ${firstName}` : ""},</p>
-      <p>Thanks for reaching out to ${tenant.business_name} - we've received your enquiry and someone will be in touch shortly.</p>
+      <p>Thanks for reaching out to ${business} - we've received your enquiry and someone will be in touch shortly.</p>
       <p>If it's urgent, feel free to reply directly to this email.</p>
     `,
     replyTo: tenant.contact_email ?? undefined,
@@ -187,7 +207,6 @@ async function notifyNewLead(
   if (tenant.contact_email) emails.add(tenant.contact_email.toLowerCase());
   if (emails.size === 0) return;
 
-  const esc = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
   const dashboardUrl = `https://${tenant.domain || `${tenant.slug}.scalardigital.co.uk`}/dashboard`;
   const who = lead.name || lead.email || lead.phone || "Someone";
   const brandColor = deriveBrandTheme(tenant.brand_theme).light.brand;
@@ -198,7 +217,7 @@ async function notifyNewLead(
   await sendEmail({
     to: [...emails],
     subject: `New enquiry: ${who}`,
-    replyTo: lead.email ?? undefined,
+    replyTo: lead.email && EMAIL.test(lead.email) ? lead.email : undefined,
     html: `
       <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
         <p style="font-size:16px;"><strong>${esc(who)}</strong> just enquired via ${esc(tenant.business_name)}'s website${

@@ -12,6 +12,7 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { cleanSignature } from "@/lib/signature";
 import { sendPush } from "@/lib/push";
 import { businessRecipients, emailInvoice, jobFromQuote, raiseJobInvoice } from "@/lib/jobs";
+import { tokensMatch } from "@/lib/tokens";
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -29,7 +30,7 @@ export async function acceptQuote(quoteId: string, token: string, signature?: { 
     .select("id, accept_token, status, tenant_id, client_name, total_pence, customer_email, quote_number, deposit_pence")
     .eq("id", quoteId)
     .maybeSingle();
-  if (!quote || quote.accept_token !== token || quote.status === "declined") {
+  if (!quote || !tokensMatch(quote.accept_token, token) || quote.status === "declined") {
     return { ok: false };
   }
   const firstAccept = quote.status !== "accepted";
@@ -249,7 +250,7 @@ export async function declineQuote(quoteId: string, token: string) {
     .select("id, accept_token, status, tenant_id, client_name")
     .eq("id", quoteId)
     .maybeSingle();
-  if (!quote || quote.accept_token !== token || quote.status === "accepted") {
+  if (!quote || !tokensMatch(quote.accept_token, token) || quote.status === "accepted") {
     return { ok: false };
   }
   await admin.from("quotes").update({ status: "declined", declined_at: new Date().toISOString() }).eq("id", quoteId);

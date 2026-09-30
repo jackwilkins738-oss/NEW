@@ -4,6 +4,7 @@ import { formatGBP } from "@/lib/format";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
 import { PortalVariationActions } from "@/app/portal/PortalVariationActions";
+import { tokensMatch } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function ProjectPortalPage(props: { params: Promise<{ id: s
     .eq("id", params.id)
     .maybeSingle();
 
-  if (!project || project.portal_token !== params.token) notFound();
+  if (!project || !tokensMatch(project.portal_token, params.token)) notFound();
 
   const [tenantRes, quoteRes, invoicesRes, variationsRes, photosRes] = await Promise.all([
     admin.from("tenants").select("business_name, brand_theme, logo_url, contact_email").eq("id", project.tenant_id).maybeSingle(),

@@ -10,6 +10,8 @@ import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { deriveBrandTheme } from "@/lib/theme";
 import { computePipelineSummary, renderPipelineHtml } from "@/lib/pipeline";
+import { hasCronSecret } from "@/lib/serviceAuth";
+import { escapeHtml } from "@/lib/jobs";
 
 const SEVERITY_COLOR: Record<Alert["severity"], string> = {
   critical: "#d03b3b",
@@ -22,8 +24,7 @@ const SEVERITY_COLOR: Record<Alert["severity"], string> = {
 // scheduled invocation automatically - nothing else to configure. See
 // vercel.json for the schedule (Monday 08:00 UTC).
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -210,7 +211,7 @@ async function sendDigestForTenant(
         : `This week: ${pipeline.newLeads} new lead${pipeline.newLeads === 1 ? "" : "s"}, ${pipeline.viewedThisWeek.length} preview${pipeline.viewedThisWeek.length === 1 ? "" : "s"} opened`,
     html: `
       <div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;">
-        <p style="font-size:16px;">Your Monday check-in for <strong>${tenant.business_name}</strong>:</p>
+        <p style="font-size:16px;">Your Monday check-in for <strong>${escapeHtml(tenant.business_name)}</strong>:</p>
         ${snapshot}
         ${renderPipelineHtml(pipeline)}
         ${rows ? `<ul style="padding-left:18px;">${rows}</ul>` : ""}

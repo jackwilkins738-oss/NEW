@@ -5,6 +5,7 @@ import { brandThemeStyleTag } from "@/lib/theme";
 import { initialsFor } from "@/lib/initials";
 import { isPastUK } from "@/lib/ukDate";
 import { PayInvoiceButton } from "@/app/invoice/PayInvoiceButton";
+import { tokensMatch } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function PublicInvoicePage(
     .eq("id", params.id)
     .maybeSingle();
 
-  if (!invoice || invoice.view_token !== params.token) notFound();
+  if (!invoice || !tokensMatch(invoice.view_token, params.token)) notFound();
 
   const { data: tenant } = await admin
     .from("tenants")

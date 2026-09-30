@@ -14,3 +14,16 @@ export function hasServiceSecret(request: Request, envName = "PROSPECTS_API_SECR
   const expected = Buffer.from(`Bearer ${secret}`);
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
+
+// The cron routes' CRON_SECRET bearer. Unlike a plain `auth !== \`Bearer ${secret}\``
+// check, an unset secret refuses every request - otherwise a deployment
+// missing the variable (a preview, say) would accept the literal header
+// "Bearer undefined" - and the comparison is constant-time. No minimum
+// length here, so an existing short secret keeps working.
+export function hasCronSecret(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const given = Buffer.from(request.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
