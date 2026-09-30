@@ -28,3 +28,24 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
+
+  # Tenant isolation, proven against the real schema: every migration loaded
+  # into a throwaway Postgres, then two businesses checked against each other
+  # on every table (supabase/tests/rls.sql). Needs no secrets or Supabase
+  # project - it never touches real data.
+  rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/test-rls.sh
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
