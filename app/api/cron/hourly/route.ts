@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { sendEnquiryNudges } from "@/lib/enquiryNudge";
 import { checkClientSites } from "@/lib/siteMonitor";
+import { hasCronSecret } from "@/lib/serviceAuth";
 
 // Hourly jobs. Called by .github/workflows/hourly.yml rather than a Vercel
 // cron: Vercel's free plan only allows daily crons, and an hourly entry in
@@ -11,7 +12,7 @@ import { checkClientSites } from "@/lib/siteMonitor";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const nudges = await sendEnquiryNudges().catch((err) => {

@@ -17,7 +17,7 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { reviewEmail, reviewRecipient } from "@/lib/reviewRequests";
 import { addMonths } from "@/lib/serviceReminders";
 import { MAX_IMPORT_ROWS } from "@/lib/customerImport";
-import { emailInvoice, findOrCreateCustomer, generateRef, jobFromQuote, nextInvoiceNumber, raiseJobInvoice, type JobInvoiceKind } from "@/lib/jobs";
+import { emailInvoice, escapeHtml, findOrCreateCustomer, generateRef, jobFromQuote, nextInvoiceNumber, raiseJobInvoice, type JobInvoiceKind } from "@/lib/jobs";
 
 // Best-effort, mirroring the notifyNewLead pattern in app/api/leads/route.ts:
 // a Google API hiccup should never stop a project save/delete from working,
@@ -650,8 +650,8 @@ export async function sendQuote(quoteId: string, tenantId: string) {
       to: [recipient],
       subject: `Your quote from ${businessName}${quote.quote_number ? ` (${quote.quote_number})` : ""}`,
       html: `
-        <p>Hi ${quote.client_name},</p>
-        <p>${businessName} has sent you a quote${quote.total_pence ? ` for ${formatGBP(quote.total_pence)}` : ""}.</p>
+        <p>Hi ${escapeHtml(quote.client_name ?? "")},</p>
+        <p>${escapeHtml(businessName)} has sent you a quote${quote.total_pence ? ` for ${formatGBP(quote.total_pence)}` : ""}.</p>
         <p><a href="${acceptUrl}">View and respond to your quote</a></p>
       `,
       // Sends from Scalar's own domain either way - this just makes a reply

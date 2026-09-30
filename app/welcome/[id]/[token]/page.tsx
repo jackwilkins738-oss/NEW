@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { brandThemeStyleTag } from "@/lib/theme";
 import { normaliseAnswers } from "@/lib/onboarding";
 import { WelcomeForm } from "@/app/welcome/WelcomeForm";
+import { tokensMatch } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your new website", robots: { index: false, follow: false } };
@@ -20,7 +21,7 @@ export default async function WelcomePage(props: { params: Promise<{ id: string;
     .select("id, tenant_id, token, client_name, answers, submitted_at")
     .eq("id", id)
     .maybeSingle();
-  if (!row || row.token !== token) notFound();
+  if (!row || !tokensMatch(row.token, token)) notFound();
 
   const [{ data: tenant }, { data: files }] = await Promise.all([
     admin.from("tenants").select("business_name, brand_theme, contact_email").eq("id", row.tenant_id).maybeSingle(),

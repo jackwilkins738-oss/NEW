@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { formatGBP } from "@/lib/format";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { escapeHtml } from "@/lib/jobs";
 
 // Called once a day from the calendar-sync cron rather than getting its own
 // vercel.json entry - Vercel's free Hobby plan caps a project at 2 cron
@@ -72,8 +73,8 @@ export async function sendPaymentReminders(): Promise<{ checked: number; sent: n
         to: [recipient],
         subject: `Payment reminder: invoice ${invoice.invoice_number ?? ""} from ${tenant.business_name}`.trim(),
         html: `
-          <p>Hi ${invoice.client_name},</p>
-          <p>This is a reminder that ${tenant.business_name}'s invoice${invoice.invoice_number ? ` ${invoice.invoice_number}` : ""}
+          <p>Hi ${escapeHtml(invoice.client_name ?? "")},</p>
+          <p>This is a reminder that ${escapeHtml(tenant.business_name)}'s invoice${invoice.invoice_number ? ` ${invoice.invoice_number}` : ""}
              for ${formatGBP(outstanding)} was due ${daysOverdue === 0 ? "today" : `${daysOverdue} day${daysOverdue === 1 ? "" : "s"} ago`}.</p>
           <p><a href="${viewUrl}">View and pay your invoice</a></p>
         `,

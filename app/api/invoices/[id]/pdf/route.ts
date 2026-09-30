@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoicePdfDocument, type InvoicePdfData } from "@/lib/invoicePdf";
 import { deriveBrandTheme } from "@/lib/theme";
+import { tokensMatch } from "@/lib/tokens";
 
 const SELECT = "id, tenant_id, invoice_number, reference, milestone, client_name, amount_pence, paid_pence, due_date, status, view_token";
 
@@ -27,7 +28,7 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
   if (!invoice && token) {
     const admin = createAdminClient();
     const { data } = await admin.from("invoices").select(SELECT).eq("id", params.id).maybeSingle();
-    if (data && data.view_token === token) invoice = data;
+    if (data && tokensMatch(data.view_token, token)) invoice = data;
   }
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

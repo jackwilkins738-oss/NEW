@@ -6,6 +6,7 @@ import { initialsFor } from "@/lib/initials";
 import { isPastUK } from "@/lib/ukDate";
 import { DepositNextStep, OnboardingNextStep, QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
 import { tenantOrigin } from "@/lib/tenantOrigin";
+import { tokensMatch } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function PublicQuotePage(
     .eq("id", params.id)
     .maybeSingle();
 
-  if (!quote || quote.accept_token !== params.token) notFound();
+  if (!quote || !tokensMatch(quote.accept_token, params.token)) notFound();
 
   const { data: tenant } = await admin
     .from("tenants")

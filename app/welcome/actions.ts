@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/auditLog";
 import { sendEmail } from "@/lib/email";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { answeredCount, normaliseAnswers, safeFilename, uploadProblem } from "@/lib/onboarding";
+import { tokensMatch } from "@/lib/tokens";
 
 // Public, unauthenticated actions for a website client's onboarding page
 // (app/welcome/[id]/[token]). As with the quote page, the token IS the
@@ -22,7 +23,7 @@ async function load(id: string, token: string) {
     .select("id, tenant_id, token, client_name, answers, submitted_at")
     .eq("id", id)
     .maybeSingle();
-  return data && data.token === token ? { admin, row: data } : null;
+  return data && tokensMatch(data.token, token) ? { admin, row: data } : null;
 }
 
 export async function saveOnboarding(id: string, token: string, rawAnswers: unknown, submit: boolean) {

@@ -12,6 +12,7 @@ import { sendServiceReminders } from "@/lib/serviceReminders";
 import { sendMonthlyReports } from "@/lib/monthlyReport";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
+import { hasCronSecret } from "@/lib/serviceAuth";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
 // Google already happens instantly (syncNextVisitToCalendar in
@@ -32,8 +33,7 @@ import { sendAftercareReminders } from "@/lib/aftercare";
 // and uses whichever one actually has a connection. In practice a tenant
 // has one active user, so this is rarely ambiguous.
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

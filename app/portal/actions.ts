@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { formatGBP } from "@/lib/format";
+import { tokensMatch } from "@/lib/tokens";
 
 // Public, unauthenticated actions - reached from the no-login portal page
 // (app/portal/[id]/[token]). portal_token match IS the security boundary
@@ -15,7 +16,7 @@ import { formatGBP } from "@/lib/format";
 // from the staff-side version.
 async function verifyPortalProject(admin: ReturnType<typeof createAdminClient>, projectId: string, token: string) {
   const { data: project } = await admin.from("projects").select("id, tenant_id, portal_token").eq("id", projectId).maybeSingle();
-  if (!project || project.portal_token !== token) return null;
+  if (!project || !tokensMatch(project.portal_token, token)) return null;
   return project;
 }
 
