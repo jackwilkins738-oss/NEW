@@ -22,7 +22,7 @@ function fakeAdmin() {
         in: (c: string, v: unknown) => (w.filters.push([c, v]), writes.push(w), Promise.resolve({ error: null })),
         insert: (values: Record<string, unknown>) => ((w.op = "insert"), (w.values = values), writes.push(w), chain),
         update: (values: Record<string, unknown>) => ((w.op = "update"), (w.values = values), chain),
-        maybeSingle: async () => ({ data: table === "tenants" ? { id: TENANT, site_key: "site-key-1", quote_number_prefix: "SD" } : null }),
+        maybeSingle: async () => ({ data: table === "tenants" ? { id: TENANT, site_key: "site-key-1", quote_number_prefix: "SD", default_quote_terms: "Saved terms", default_payment_terms: null } : null }),
         single: async () => ({ data: table === "leads" ? { id: "lead-1" } : { id: "quote-1", accept_token: "tok-1" }, error: null }),
       };
       return chain;
@@ -86,6 +86,20 @@ describe("POST /api/prospects/quote", () => {
     fakeAdmin();
     const body = await (await POST(req({ ...good, vat_rate: 20 }))).json();
     expect(body.total_pence).toBe(300000);
+  });
+
+  it("the terms the customer signs travel with the quote", async () => {
+    const writes = fakeAdmin();
+    await POST(req({ ...good, terms: "1. Scope\n2. Payment", exclusions: "Domain fees", payment_terms: "50% deposit" }));
+    expect(writes.find((w) => w.table === "quotes")!.values).toMatchObject({
+      terms: "1. Scope\n2. Payment", exclusions: "Domain fees", payment_terms: "50% deposit",
+    });
+  });
+
+  it("falls back to the business's saved terms, never none", async () => {
+    const writes = fakeAdmin();
+    await POST(req(good));
+    expect(writes.find((w) => w.table === "quotes")!.values).toMatchObject({ terms: "Saved terms", exclusions: null });
   });
 
   it("rejects bad input", async () => {

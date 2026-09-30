@@ -12,6 +12,10 @@ import { randomBytes } from "node:crypto";
 // moves the prospect to "replied". Nothing is emailed from here: the panel
 // hands the owner the quote link to send personally.
 //
+// The terms travel with the quote - the customer signs "including its terms",
+// so a quote with none would bind them to nothing. The panel sends Scalar's
+// terms of business; if it doesn't, the tenant's saved defaults are used.
+//
 // The link is built on this app's own origin - the quote pages live here -
 // rather than the tenant's domain.
 
@@ -63,7 +67,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: tenant } = await admin
     .from("tenants")
-    .select("id, site_key, quote_number_prefix")
+    .select("id, site_key, quote_number_prefix, default_quote_terms, default_payment_terms")
     .eq("id", tenantId)
     .maybeSingle();
   if (!tenant) return NextResponse.json({ error: "Unknown tenant" }, { status: 404 });
@@ -101,7 +105,9 @@ export async function POST(request: Request) {
       customer_email: email,
       customer_phone: phone,
       expires_at: expires,
-      payment_terms: text(body.payment_terms, 500),
+      payment_terms: text(body.payment_terms, 500) ?? tenant.default_payment_terms ?? null,
+      exclusions: text(body.exclusions, 2000),
+      terms: text(body.terms, 10_000) ?? tenant.default_quote_terms ?? null,
       markup_percent: 0,
       vat_rate: vatRate,
       line_items: lineItems,
