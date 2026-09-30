@@ -5,6 +5,7 @@ import { getValidAccessToken, type CalendarConnection } from "@/lib/calendarConn
 import { getEvent } from "@/lib/googleCalendar";
 import { sendPaymentReminders } from "@/lib/paymentReminders";
 import { sendQuoteChasers } from "@/lib/quoteChasers";
+import { sendOnboardingChasers } from "@/lib/onboardingChasers";
 import { sendReviewRequests } from "@/lib/reviewRequests";
 import { sendVisitReminders } from "@/lib/visitReminders";
 import { sendMorningBriefs } from "@/lib/morningBrief";
@@ -122,6 +123,12 @@ export async function GET(request: Request) {
     return { checked: 0, sent: 0 };
   });
 
+  const onboarding = await sendOnboardingChasers().catch((err) => {
+    console.error("Onboarding chasers failed:", err);
+    Sentry.captureException(err);
+    return { checked: 0, sent: 0 };
+  });
+
   const reviews = await sendReviewRequests().catch((err) => {
     console.error("Review requests failed:", err);
     Sentry.captureException(err);
@@ -161,5 +168,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, reviews, visits, services, monthly, briefs, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, onboarding, reviews, visits, services, monthly, briefs, demo });
 }

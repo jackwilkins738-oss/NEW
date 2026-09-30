@@ -19,7 +19,7 @@ export const ONBOARDING_SECTIONS: { title: string; questions: OnboardingQuestion
   {
     title: "What you do",
     questions: [
-      { id: "services", label: "The services to show on your site", hint: "One per line, e.g. Flat roofs", kind: "long", max: 1500 },
+      { id: "services", label: "The services to show on your site", hint: "One per line, with a few words on each if you like, e.g. Flat roofs - GRP and EPDM, 20-year guarantee", kind: "long", max: 1500 },
       { id: "main_service", label: "The job you'd most like more of", kind: "text", max: 200 },
       { id: "areas", label: "Towns and areas you cover", hint: "One per line - only places you genuinely work", kind: "long", max: 1500 },
       { id: "years_trading", label: "How long you've been trading", hint: "e.g. Since 2009", kind: "text", max: 100 },
@@ -34,6 +34,16 @@ export const ONBOARDING_SECTIONS: { title: string; questions: OnboardingQuestion
       { id: "insurance_amount", label: "Cover amount (if insured)", hint: "e.g. £5 million", kind: "text", max: 100 },
       { id: "memberships", label: "Memberships you currently hold", hint: "e.g. Checkatrade, TrustMark, NFRC - only current ones", kind: "text", max: 500 },
       { id: "reviews_link", label: "Link to your reviews", hint: "Google, Checkatrade, Trustpilot...", kind: "text", max: 500 },
+      { id: "review_quotes", label: "3-5 reviews you'd like on your site", hint: "Copy them in, with the customer's first name and town, e.g. \"Brilliant job, tidy and on time\" - Sue, Guildford", kind: "long", max: 3000 },
+    ],
+  },
+  {
+    title: "Questions your customers ask",
+    questions: [
+      { id: "free_quotes", label: "Do you give free quotes?", kind: "choice", options: ["Yes", "No"], max: 20 },
+      { id: "lead_time", label: "How soon can you usually visit, and start?", hint: "e.g. Visit within a week, usually start within 3-4 weeks", kind: "text", max: 300 },
+      { id: "call_outs", label: "Do you do emergency call-outs? When?", hint: "e.g. Yes, 7 days a week for leaks - or No", kind: "text", max: 300 },
+      { id: "planning", label: "Do you handle planning permission and building control?", hint: "Skip if it doesn't apply to your work", kind: "text", max: 300 },
     ],
   },
   {
@@ -49,6 +59,7 @@ export const ONBOARDING_SECTIONS: { title: string; questions: OnboardingQuestion
   {
     title: "Your current website and email",
     questions: [
+      { id: "domain", label: "Your website address, if you have one", hint: "e.g. kerrroofing.co.uk - or the one you'd like", kind: "text", max: 200 },
       { id: "domain_registrar", label: "Where your domain name is registered", hint: "e.g. GoDaddy, 123-reg, IONOS - or 'my old web designer'", kind: "text", max: 200 },
       { id: "domain_login", label: "Do you have the login for it?", kind: "choice", options: ["Yes", "No", "Not sure"], max: 20 },
       { id: "email_host", label: "Where your email is hosted", hint: "e.g. Gmail / Google Workspace, Microsoft 365, with your domain company - so nothing breaks at switch-over", kind: "text", max: 200 },
