@@ -143,7 +143,7 @@ async function afterAccept(
       html: `
         <p>Hi,</p>
         <p>Thanks for accepting the quote - really looking forward to building ${escapeHtml(quote.client_name)}'s new site.</p>
-        <p>The next step takes about ten minutes: tell us what you do, where you work and how customers reach you, and upload your logo and a few photos of your work. It's all on one page, and you can come back to it any time:</p>
+        <p>The next step takes about ten minutes: tell us what you do, where you work and how customers reach you, and upload your logo and a few photos of your work. It's a few short steps, it saves as you go, and you can come back to it any time:</p>
         <p><a href="${url}">${url}</a></p>
         <p>Any questions, just reply to this email.</p>
         <p>${business}</p>`,

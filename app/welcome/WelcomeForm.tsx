@@ -27,6 +27,16 @@ export function WelcomeForm(props: {
   const [status, setStatus] = useState<string>("");
   const [submitted, setSubmitted] = useState(Boolean(props.submittedAt));
   const [isPending, startTransition] = useTransition();
+  // One section at a time - 25 questions on one phone screen is where people give up.
+  // Steps: each question section, then photos, then check-and-send (where a returning client lands).
+  const photoStep = ONBOARDING_SECTIONS.length;
+  const lastStep = photoStep + 1;
+  const [step, setStep] = useState(props.submittedAt ? lastStep : 0);
+  const top = useRef<HTMLDivElement>(null);
+  const go = (to: number) => {
+    setStep(Math.max(0, Math.min(lastStep, to)));
+    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const dirty = useRef(false);
   const uploadSeq = useRef(0);
 
@@ -78,9 +88,37 @@ export function WelcomeForm(props: {
 
   const answered = Object.values(answers).filter((v) => v && v.trim()).length;
 
+  const stepTitles = [...ONBOARDING_SECTIONS.map((s) => s.title), "Your logo and photos", "Check and send"];
+  const filled = (ids: string[]) => ids.filter((k) => answers[k]?.trim()).length;
+  const missing = [
+    !answers.services?.trim() && { label: "Your services", to: 0 },
+    !answers.areas?.trim() && { label: "The towns you cover", to: 0 },
+    !answers.phone?.trim() && { label: "The phone number to show", to: ONBOARDING_SECTIONS.findIndex((s) => s.questions.some((q) => q.id === "phone")) },
+    !files.some((f) => f.kind === "photo") && { label: "Photos of your work", to: photoStep },
+  ].filter(Boolean) as { label: string; to: number }[];
+
   return (
-    <div>
-      {ONBOARDING_SECTIONS.map((section) => (
+    <div ref={top} className="scroll-mt-4">
+      <div className="mt-6">
+        <div className="flex items-baseline justify-between text-xs font-semibold text-muted">
+          <span>
+            Step {step + 1} of {lastStep + 1}: {stepTitles[step]}
+          </span>
+          {status && <span>{status}</span>}
+        </div>
+        <div className="mt-2 flex gap-1" aria-hidden="true">
+          {stepTitles.map((t, i) => (
+            <button
+              key={t}
+              type="button"
+              tabIndex={-1}
+              onClick={() => go(i)}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? "bg-brand" : "bg-black/10"}`}
+            />
+          ))}
+        </div>
+      </div>
+      {ONBOARDING_SECTIONS.map((section, i) => i !== step ? null : (
         <section key={section.title} className={card}>
           <h2 className="font-display text-lg font-bold text-ink">{section.title}</h2>
           <div className="mt-3 flex flex-col gap-4">
@@ -114,6 +152,7 @@ export function WelcomeForm(props: {
         </section>
       ))}
 
+      {step === photoStep && (
       <section className={card}>
         <h2 className="font-display text-lg font-bold text-ink">Your logo and photos</h2>
         <p className="mt-1 text-sm text-ink-2">
@@ -178,7 +217,60 @@ export function WelcomeForm(props: {
           </ul>
         )}
       </section>
+      )}
 
+      {step === lastStep && (
+        <section className={card}>
+          <h2 className="font-display text-lg font-bold text-ink">Check and send</h2>
+          <ul className="mt-3 divide-y divide-black/8 text-sm">
+            {ONBOARDING_SECTIONS.map((section, i) => (
+              <li key={section.title} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="text-ink-2">{section.title}</span>
+                <button type="button" onClick={() => go(i)} className="font-semibold text-brand hover:underline">
+                  {filled(section.questions.map((q) => q.id))} of {section.questions.length} answered
+                </button>
+              </li>
+            ))}
+            <li className="flex items-center justify-between gap-3 py-2.5">
+              <span className="text-ink-2">Logo and photos</span>
+              <button type="button" onClick={() => go(photoStep)} className="font-semibold text-brand hover:underline">
+                {files.length} file{files.length === 1 ? "" : "s"}
+              </button>
+            </li>
+          </ul>
+          {missing.length > 0 && (
+            <div className="mt-4 rounded-lg bg-surface-2 p-3.5 text-sm text-ink-2">
+              <p className="font-semibold text-ink">The build goes quicker with these - but you can send without them:</p>
+              <ul className="mt-1.5 flex flex-wrap gap-2">
+                {missing.map((m) => (
+                  <li key={m.label}>
+                    <button type="button" onClick={() => go(m.to)} className="rounded-md border border-black/15 bg-surface px-2.5 py-1 text-xs font-semibold text-ink hover:border-brand">
+                      {m.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      <div className="mt-5 flex items-center justify-between gap-3">
+        {step > 0 ? (
+          <button type="button" onClick={() => go(step - 1)} className="rounded-lg border border-black/15 bg-surface px-4 py-3 text-sm font-semibold text-ink-2 hover:border-brand">
+            Back
+          </button>
+        ) : (
+          <span />
+        )}
+        {step < lastStep && (
+          <button type="button" onClick={() => go(step + 1)} className="btn-primary rounded-lg bg-brand px-5 py-3 text-sm font-bold text-white hover:bg-brand-strong">
+            {step === photoStep ? "Check and send" : "Next"}
+          </button>
+        )}
+      </div>
+
+      {step === lastStep && (
       <div className={`${card} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
         <p className="text-sm text-ink-2">
           {answered} of {ONBOARDING_QUESTION_COUNT} answered · {files.length} file{files.length === 1 ? "" : "s"}
@@ -199,7 +291,8 @@ export function WelcomeForm(props: {
           {submitted ? "Send the updates" : "Send to us"}
         </button>
       </div>
-      {submitted && (
+      )}
+      {submitted && step === lastStep && (
         <p className="mt-3 rounded-lg bg-[rgba(12,163,12,0.1)] p-4 text-sm font-semibold text-good">
           Thanks - we&apos;ve got everything so far. You can still add or change anything here.
         </p>

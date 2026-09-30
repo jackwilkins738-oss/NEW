@@ -98,6 +98,7 @@ export function createFakeSupabase(seed: Record<string, Row[]> = {}) {
       ilike(col: string, p: string) { const re = like(p); filters.push((r) => re.test(String(r[col] ?? ""))); return b; },
       gte(col: string, v: unknown) { filters.push((r) => String(r[col]) >= String(v)); return b; },
       lte(col: string, v: unknown) { filters.push((r) => String(r[col]) <= String(v)); return b; },
+      lt(col: string, v: unknown) { filters.push((r) => (typeof v === "number" ? Number(r[col]) < v : String(r[col]) < String(v))); return b; },
       order(col: string, o?: { ascending?: boolean }) { order = { col, asc: o?.ascending !== false }; return b; },
       limit(n: number) { limitN = n; return b; },
       single() { single = "one"; return Promise.resolve(run()); },
