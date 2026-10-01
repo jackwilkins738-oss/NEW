@@ -7,6 +7,7 @@ import { isPastUK } from "@/lib/ukDate";
 import { DepositNextStep, OnboardingNextStep, QuoteResponseButtons } from "@/app/quote/QuoteResponseButtons";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { tokensMatch } from "@/lib/tokens";
+import { recordQuoteView } from "@/lib/recordQuoteView";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,13 @@ export default async function PublicQuotePage(
   const { data: quote } = await admin
     .from("quotes")
     .select(
-      "id, tenant_id, quote_number, client_name, line_items, cost_subtotal_pence, markup_percent, vat_rate, vat_amount_pence, total_pence, status, expires_at, deposit_pence, payment_terms, exclusions, terms, accept_token"
+      "id, tenant_id, quote_number, client_name, sent_at, line_items, cost_subtotal_pence, markup_percent, vat_rate, vat_amount_pence, total_pence, status, expires_at, deposit_pence, payment_terms, exclusions, terms, accept_token"
     )
     .eq("id", params.id)
     .maybeSingle();
 
   if (!quote || !tokensMatch(quote.accept_token, params.token)) notFound();
+  await recordQuoteView(admin, quote);
 
   const { data: tenant } = await admin
     .from("tenants")
