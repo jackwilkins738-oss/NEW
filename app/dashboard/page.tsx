@@ -312,7 +312,18 @@ export default async function DashboardPage() {
   );
   const trades = tradesRes.data ?? [];
   const projectPhotos = photosRes.data ?? [];
-  const quotes = quotesRes.data ?? [];
+  // Quote opens (migration 057), read on their own so a database without the
+  // migration still shows every quote - just without "Opened 2x".
+  const { data: quoteViews } = await supabase
+    .from("quotes")
+    .select("id, view_count, last_viewed_at")
+    .eq("tenant_id", tenant.id)
+    .eq("status", "sent");
+  const viewsById = new Map((quoteViews ?? []).map((v) => [v.id, v]));
+  const quotes = (quotesRes.data ?? []).map((q) => {
+    const v = viewsById.get(q.id);
+    return v ? { ...q, view_count: v.view_count as number, last_viewed_at: v.last_viewed_at as string | null } : q;
+  });
   const costItems = costItemsRes.data ?? [];
   const allVariations = variationsRes.data ?? [];
   const pendingVariations = allVariations.filter((v) => v.status === "pending");
@@ -864,6 +875,7 @@ export default async function DashboardPage() {
         <div className="mt-5">
           <QuotesPanel
             tenantId={tenant.id}
+            renderedAt={renderedAt}
             quotes={quotes}
             convertedQuoteIds={projects.map((p) => p.quote_id).filter((id): id is string => !!id)}
             defaultVatRate={tenant.default_vat_rate}

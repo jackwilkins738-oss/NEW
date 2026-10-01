@@ -15,6 +15,7 @@ import { lineSuggestions, matchSuggestion, startFrom, type QuoteStart } from "@/
 import { useToast } from "@/components/Toast";
 import { MessageButtons } from "@/components/MessageButtons";
 import { chaseText } from "@/lib/contact";
+import { viewSummary } from "@/lib/quoteViews";
 import { formatGBP } from "@/lib/format";
 import { DeleteButton } from "@/components/DeleteButton";
 import { IconDocument } from "@/components/DashboardIcons";
@@ -51,6 +52,9 @@ type Quote = {
   accepted_at: string | null;
   declined_at: string | null;
   created_at: string;
+  /** Migration 057 - absent on a database without it. */
+  view_count?: number;
+  last_viewed_at?: string | null;
 };
 
 const STATUS_OPTIONS = [
@@ -518,6 +522,7 @@ function QuoteRow({
   converted,
   selected,
   onToggleSelect,
+  renderedAt,
 }: {
   quote: Quote;
   tenantId: string;
@@ -525,6 +530,7 @@ function QuoteRow({
   converted: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  renderedAt: number;
 }) {
   const [status, setStatus] = useState(quote.status);
   const [isPending, startTransition] = useTransition();
@@ -546,6 +552,15 @@ function QuoteRow({
           <p className="text-xs text-muted">
             {quote.quote_number ?? "no number"} &middot; {quote.line_items.length} line item
             {quote.line_items.length === 1 ? "" : "s"}
+            {status === "sent" && quote.view_count !== undefined && (
+              <>
+                {" "}
+                &middot;{" "}
+                <span className={quote.view_count ? "font-semibold text-ink-2" : undefined}>
+                  {viewSummary(quote.view_count, quote.last_viewed_at, renderedAt)}
+                </span>
+              </>
+            )}
             {quote.expires_at && (
               <>
                 {" "}
@@ -666,8 +681,11 @@ export function QuotesPanel({
   templates,
   templatesEnabled,
   businessName = "",
+  renderedAt,
 }: {
   businessName?: string;
+  /** When the dashboard was rendered (server) - for "opened 2h ago". */
+  renderedAt: number;
   tenantId: string;
   quotes: Quote[];
   convertedQuoteIds: string[];
@@ -696,7 +714,7 @@ export function QuotesPanel({
   const pageItems = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+    <div id="quotes" className="scroll-mt-24 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           <IconDocument className="h-4 w-4 text-brand" />
@@ -755,6 +773,7 @@ export function QuotesPanel({
               quote={q}
               tenantId={tenantId}
               businessName={businessName}
+              renderedAt={renderedAt}
               converted={converted.has(q.id)}
               selected={selected.has(q.id)}
               onToggleSelect={() =>
