@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 // Served at /track.js. Embed on a customer's website as:
 //   <script src="https://dashboard.example.com/track.js"
 //           data-tenant="<tenant id>" data-site-key="<tenant site_key>" defer></script>
-// It logs a pageview on every load, and a lead on submit of any <form data-lead-form>
+// It logs a pageview on every load, a tap on any call / WhatsApp / email link, and a
+// lead on submit of any <form data-lead-form>
 // with name="name"/"email"/"phone"/"message"/"source" fields - plus up to five
 // photos from an <input type="file" name="photos" multiple accept="image/*">.
 //
@@ -45,6 +46,38 @@ export async function GET() {
     body: JSON.stringify({ tenant_id: tenantId, site_key: siteKey, path: location.pathname, referrer: document.referrer || null }),
     keepalive: true
   }).catch(function () {});
+
+  // Taps on call, WhatsApp and email links - for a trade, most enquiries are
+  // phone calls, which no form ever sees. Recorded as a pageview with a kind
+  // (migration 056); keepalive so it still lands as the phone opens the dialler.
+  function tapKind(href) {
+    var h = href.trim().toLowerCase();
+    if (h.indexOf('tel:') === 0) return 'call';
+    if (h.indexOf('whatsapp:') === 0 || ['https://wa.me/', 'https://api.whatsapp.com/', 'https://web.whatsapp.com/', 'http://wa.me/']
+      .some(function (p) { return h.indexOf(p) === 0; })) return 'whatsapp';
+    if (h.indexOf('mailto:') === 0) return 'email';
+    return null;
+  }
+  document.addEventListener(
+    'click',
+    function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      var kind = a ? tapKind(a.getAttribute('href') || '') : null;
+      if (!kind) return;
+      fetch(SUPABASE_URL + '/rest/v1/pageviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON_KEY,
+          Authorization: 'Bearer ' + ANON_KEY,
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ tenant_id: tenantId, site_key: siteKey, path: location.pathname, referrer: document.referrer || null, kind: kind }),
+        keepalive: true
+      }).catch(function () {});
+    },
+    true
+  );
 
   // Leads go through this app's own API instead of straight to Supabase,
   // so a notification email can fire the moment one comes in.
