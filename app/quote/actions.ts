@@ -13,6 +13,7 @@ import { cleanSignature } from "@/lib/signature";
 import { sendPush } from "@/lib/push";
 import { businessRecipients, emailInvoice, jobFromQuote, raiseJobInvoice } from "@/lib/jobs";
 import { tokensMatch } from "@/lib/tokens";
+import { chosenExtras, parseExtras, withExtras } from "@/lib/quoteExtras";
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -23,7 +24,12 @@ const escapeHtml = (s: string) =>
 // tenants.site_key), which is why this goes through the service-role admin
 // client rather than the session-scoped one everything in the dashboard
 // uses - there's no signed-in user for RLS to check.
-export async function acceptQuote(quoteId: string, token: string, signature?: { name: string; agreed: boolean }) {
+export async function acceptQuote(
+  quoteId: string,
+  token: string,
+  signature?: { name: string; agreed: boolean },
+  extras?: number[]
+) {
   const admin = createAdminClient();
   const { data: quote } = await admin
     .from("quotes")
@@ -33,24 +39,45 @@ export async function acceptQuote(quoteId: string, token: string, signature?: { 
   if (!quote || !tokensMatch(quote.accept_token, token) || quote.status === "declined") {
     return { ok: false };
   }
-  const firstAccept = quote.status !== "accepted";
+  let firstAccept = quote.status !== "accepted";
   const signedName = cleanSignature(signature?.name);
   if (firstAccept && (!signedName || !signature?.agreed)) {
     return { ok: false, error: "Type your full name and tick the box to accept." };
   }
   const acceptedAt = new Date().toISOString();
   if (firstAccept) {
+    // The extras they ticked become lines of the quote they're signing - in
+    // the same update as the signature, worked out from the quote as sent, so
+    // a double tap writes the same thing twice rather than adding them twice.
+    const priced = await pricedWithExtras(admin, quoteId, extras);
+    if (priced) {
+      quote.total_pence = priced.total_pence;
+      quote.deposit_pence = priced.deposit_pence;
+    }
     const h = await headers();
     const signed = {
+      ...priced,
       status: "accepted",
       accepted_at: acceptedAt,
       accepted_name: signedName,
       accepted_ip: (h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "").slice(0, 64) || null,
       accepted_user_agent: (h.get("user-agent") || "").slice(0, 300) || null,
     };
-    const { error } = await admin.from("quotes").update(signed).eq("id", quoteId);
+    // Only while it isn't accepted yet: a second tap landing at the same time
+    // changes nothing (and doesn't add the extras again).
+    const first = await admin.from("quotes").update(signed).eq("id", quoteId).neq("status", "accepted").select("id");
+    let result: { data: { id: string }[] | null; error: unknown } = first;
     // Before migration 050 the signature columns don't exist: still accept, just without them.
-    if (error) await admin.from("quotes").update({ status: "accepted", accepted_at: acceptedAt }).eq("id", quoteId);
+    if (first.error) {
+      result = await admin
+        .from("quotes")
+        .update({ ...priced, status: "accepted", accepted_at: acceptedAt })
+        .eq("id", quoteId)
+        .neq("status", "accepted")
+        .select("id");
+    }
+    // Saved fine but nothing changed: another tap accepted it a moment ago.
+    if (!result.error && !result.data?.length) firstAccept = false;
   }
   const onboardingUrl = await afterAccept(quote, firstAccept);
   const depositUrl = await depositPayment(quote);
@@ -75,6 +102,18 @@ export async function acceptQuote(quoteId: string, token: string, signature?: { 
     summary: `${quote.client_name} accepted their quote (${formatGBP(quote.total_pence)})${signedName ? `, signed "${signedName}"` : ""}`,
   });
   return { ok: true, onboardingUrl, depositUrl };
+}
+
+/** The quote's new lines and totals with the ticked extras, or null when none were ticked (or before migration 058). */
+async function pricedWithExtras(admin: ReturnType<typeof createAdminClient>, quoteId: string, picked: unknown) {
+  if (!Array.isArray(picked) || picked.length === 0) return null;
+  const { data: q, error } = await admin
+    .from("quotes")
+    .select("optional_items, line_items, markup_percent, vat_rate, total_pence, deposit_pence")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (error || !q) return null;
+  return withExtras(q, chosenExtras(parseExtras(q.optional_items), picked));
 }
 
 /**

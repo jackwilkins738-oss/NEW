@@ -2,8 +2,24 @@
 
 import { useState, useTransition } from "react";
 import { acceptQuote, declineQuote } from "@/app/quote/actions";
+import { formatGBP } from "@/lib/format";
 
-export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; token: string }) {
+export function QuoteResponseButtons({
+  quoteId,
+  token,
+  extras = [],
+  totalPence = 0,
+  vatIncluded = false,
+}: {
+  quoteId: string;
+  token: string;
+  /** Optional extras they can tick before signing, priced as they'll pay them. */
+  extras?: { description: string; pence: number }[];
+  totalPence?: number;
+  vatIncluded?: boolean;
+}) {
+  const [picked, setPicked] = useState<number[]>([]);
+  const newTotal = totalPence + picked.reduce((sum, i) => sum + (extras[i]?.pence ?? 0), 0);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<"accepted" | "declined" | null>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
@@ -30,6 +46,31 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
   const ready = name.trim().length >= 2 && agreed;
   return (
     <div className="flex flex-col gap-3">
+      {extras.length > 0 && (
+        <fieldset className="rounded-lg border border-black/8 bg-surface-2 p-4">
+          <legend className="px-1 text-xs font-bold uppercase tracking-wide text-ink-2">Optional extras</legend>
+          <div className="flex flex-col gap-2">
+            {extras.map((e, i) => (
+              <label key={i} className="flex items-start justify-between gap-3 text-sm text-ink">
+                <span className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(i)}
+                    onChange={(ev) => setPicked((p) => (ev.target.checked ? [...p, i] : p.filter((x) => x !== i)))}
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                  />
+                  <span>{e.description}</span>
+                </span>
+                <span className="whitespace-nowrap font-mono text-ink-2">+{formatGBP(e.pence)}</span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-3 flex justify-between border-t border-black/8 pt-3 text-sm font-bold text-ink">
+            <span>Total{picked.length ? " with extras" : ""}{vatIncluded ? " (inc. VAT)" : ""}</span>
+            <span className="font-mono">{formatGBP(newTotal)}</span>
+          </p>
+        </fieldset>
+      )}
       <label className="text-xs font-semibold text-ink-2">
         Your full name
         <input
@@ -42,7 +83,7 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
       </label>
       <label className="flex items-start gap-2 text-sm text-ink-2">
         <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand" />
-        <span>I accept this quote and its terms.</span>
+        <span>I accept this quote{picked.length ? ` with the extras ticked above (${formatGBP(newTotal)} in total)` : ""} and its terms.</span>
       </label>
       {error && <p className="text-sm font-semibold text-critical">{error}</p>}
     <div className="flex flex-col gap-2 sm:flex-row">
@@ -52,7 +93,7 @@ export function QuoteResponseButtons({ quoteId, token }: { quoteId: string; toke
         onClick={() =>
           startTransition(async () => {
             setError(null);
-            const res = await acceptQuote(quoteId, token, { name, agreed });
+            const res = await acceptQuote(quoteId, token, { name, agreed }, picked);
             if (res.ok) {
               setOnboardingUrl(res.onboardingUrl ?? null);
               setDepositUrl(res.depositUrl ?? null);

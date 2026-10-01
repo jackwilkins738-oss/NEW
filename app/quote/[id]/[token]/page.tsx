@@ -8,6 +8,7 @@ import { DepositNextStep, OnboardingNextStep, QuoteResponseButtons } from "@/app
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { tokensMatch } from "@/lib/tokens";
 import { recordQuoteView } from "@/lib/recordQuoteView";
+import { extraWithVat, parseExtras } from "@/lib/quoteExtras";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,12 @@ export default async function PublicQuotePage(
   const expired = quote.expires_at ? isPastUK(quote.expires_at) : false;
   const decided = quote.status === "accepted" || quote.status === "declined";
   const saleSubtotal = quote.total_pence - quote.vat_amount_pence;
+  // Optional extras (migration 058), read on their own so an older database just shows none.
+  const { data: extrasRow } = decided ? { data: null } : await admin.from("quotes").select("optional_items").eq("id", quote.id).maybeSingle();
+  const extras = parseExtras((extrasRow as { optional_items?: unknown } | null)?.optional_items).map((e) => ({
+    description: e.description,
+    pence: extraWithVat(e, Number(quote.vat_rate) || 0),
+  }));
   const businessName = tenant?.business_name ?? "Your contractor";
 
   return (
@@ -209,7 +216,7 @@ export default async function PublicQuotePage(
                   This quote has expired. Get in touch for an updated quote.
                 </p>
               ) : (
-                <QuoteResponseButtons quoteId={quote.id} token={quote.accept_token} />
+                <QuoteResponseButtons quoteId={quote.id} token={quote.accept_token} extras={extras} totalPence={quote.total_pence} vatIncluded={Number(quote.vat_rate) > 0} />
               )}
             </div>
           </div>
