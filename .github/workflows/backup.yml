@@ -58,6 +58,34 @@ jobs:
           fi
           echo "Backup $stamp: $size bytes, encrypted"
 
+      # A backup nobody has restored is a hope, not a backup. Every night the file just made is
+      # decrypted and loaded into a throwaway Postgres on this runner (gone when the job ends),
+      # and the tables that matter must come back with rows in them - or the job fails and
+      # GitHub emails you. Nothing decrypted leaves the runner or reaches the log.
+      - name: Prove it restores
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          docker run -d --name restore -e POSTGRES_PASSWORD=restore-check postgres:17 >/dev/null
+          for i in $(seq 1 30); do docker exec restore pg_isready -U postgres >/dev/null 2>&1 && break; sleep 2; done
+          # The dump refers to Supabase's own roles and auth schema; stand-ins let it load.
+          docker exec restore psql -U postgres -q -c "create role anon; create role authenticated; create role service_role; create schema auth; create function auth.uid() returns uuid language sql as 'select null::uuid'; create table auth.users (id uuid primary key);" >/dev/null
+          gpg --batch --quiet --decrypt --pinentry-mode loopback --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" backup-*.sql.gz.gpg \
+            | gunzip \
+            | docker exec -i restore psql -U postgres -q -o /dev/null 2>restore-errors.txt || true
+          for t in tenants memberships leads quotes invoices projects; do
+            n=$(docker exec restore psql -U postgres -tA -c "select count(*) from public.$t" 2>/dev/null || echo missing)
+            if [ "$n" = "missing" ]; then
+              echo "::error::Restore check failed: table $t didn't come back."; exit 1
+            fi
+            echo "Restored $t: $n rows"
+          done
+          if [ "$(docker exec restore psql -U postgres -tA -c 'select count(*) from public.tenants')" -lt 1 ]; then
+            echo "::error::Restore check failed: no tenants came back."; exit 1
+          fi
+          echo "Restore check passed."
+          docker rm -f restore >/dev/null
+
       - name: Keep for 30 days
         if: steps.ready.outputs.ok == 'true'
         uses: actions/upload-artifact@v4
