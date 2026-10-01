@@ -65,6 +65,41 @@ beforeEach(() => {
   pending.length = 0;
 });
 
+describe("optional extras ticked when accepting", () => {
+  function withExtrasOnQuote() {
+    setup({ deposit: 924_000 });
+    Object.assign(db.table("quotes")[0], {
+      line_items: [{ category: "other", description: "Loft conversion", unit_price_pence: 4_620_000 }],
+      markup_percent: 0,
+      vat_rate: 0,
+      optional_items: [
+        { description: "Velux blinds", price_pence: 60_000 },
+        { description: "Extra socket run", price_pence: 30_000 },
+      ],
+    });
+  }
+
+  it("adds the ticked extras to the signed quote, total and deposit", async () => {
+    withExtrasOnQuote();
+    const res = await acceptQuote(QUOTE, TOKEN, sign, [1]);
+    await Promise.all(pending);
+    expect(res.ok).toBe(true);
+    const q = db.table("quotes")[0];
+    expect(q.total_pence).toBe(4_650_000);
+    expect(q.deposit_pence).toBe(Math.round((924_000 * 4_650_000) / 4_620_000));
+    expect((q.line_items as { description: string }[]).map((l) => l.description)).toEqual(["Loft conversion", "Extra socket run"]);
+  });
+
+  it("ignores extras that aren't on the quote, and never adds them twice", async () => {
+    withExtrasOnQuote();
+    await acceptQuote(QUOTE, TOKEN, sign, [9, -1]);
+    expect(db.table("quotes")[0].total_pence).toBe(4_620_000);
+    await acceptQuote(QUOTE, TOKEN, sign, [0]); // already accepted: nothing changes
+    await Promise.all(pending);
+    expect(db.table("quotes")[0].total_pence).toBe(4_620_000);
+  });
+});
+
 describe("accepting a quote - who can, and what they have to do", () => {
   it("refuses a wrong token, and changes nothing", async () => {
     setup();

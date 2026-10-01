@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasServiceSecret } from "@/lib/serviceAuth";
 import { isValidProspectSlug } from "@/lib/prospects";
 import { computeQuoteTotals, parseLineItems } from "@/lib/quoteMath";
+import { parseExtras } from "@/lib/quoteExtras";
 import { randomBytes } from "node:crypto";
 
 // "They're interested - send them a quote." Called by the owner's local
@@ -121,6 +122,11 @@ export async function POST(request: Request) {
     .select("id, accept_token")
     .single();
   if (quoteError || !quote) return NextResponse.json({ error: "Could not save the quote" }, { status: 500 });
+
+  // Optional extras the client can tick before signing (migration 058). Saved
+  // on their own so a database without the migration still gets the quote.
+  const extras = parseExtras(body.optional_items);
+  if (extras.length) await admin.from("quotes").update({ optional_items: extras }).eq("id", quote.id);
 
   // Their private onboarding page, offered once they accept (app/quote/actions.ts).
   const onboardingToken = randomBytes(24).toString("base64url");
