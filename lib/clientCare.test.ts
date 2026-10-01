@@ -45,5 +45,14 @@ describe("monthly report", () => {
     expect(email.html).toContain("Kerr &amp; Sons");
     expect(email.html).toContain("2 (£8,400)");
     expect(email.html).not.toContain("New reviews");
+    expect(email.html).not.toContain("Taps on");
+  });
+
+  it("counts taps on their phone number and WhatsApp, and a month of only taps still gets a report", () => {
+    const none = { visits: 0, enquiries: 0, quotesSent: 0, quotesWon: 0, wonPence: 0, reviews: 0 };
+    const email = monthlyReportEmail("Kerr", "September 2026", { ...none, callTaps: 14, whatsappTaps: 3 }, "https://x/dashboard")!;
+    expect(email.html).toContain("Taps on your phone number");
+    expect(email.html).toContain(">14<");
+    expect(email.html).toContain("Taps on WhatsApp");
   });
 });

@@ -37,6 +37,7 @@ import { IconTrendUp, IconBanknote, IconTrophy, IconClock, IconDocument, IconUse
 import { formatGBP } from "@/lib/format";
 import { todayInUK, daysBetweenUK } from "@/lib/ukDate";
 import { brandThemeStyleTag } from "@/lib/theme";
+import { tapCounts, tapSummary } from "@/lib/contactTaps";
 
 // Leads/projects/invoices change from outside this app (a customer's own
 // website, another teammate) - never let Next.js serve a cached snapshot of
@@ -163,6 +164,7 @@ export default async function DashboardPage() {
   const [
     leadsRes,
     pageviewsRes,
+    tapsRes,
     projectsRes,
     invoicesRes,
     tradesRes,
@@ -185,7 +187,15 @@ export default async function DashboardPage() {
       .from("pageviews")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id)
+      .is("kind", null)
       .gte("created_at", thirtyDaysAgo),
+    supabase
+      .from("pageviews")
+      .select("kind")
+      .eq("tenant_id", tenant.id)
+      .not("kind", "is", null)
+      .gte("created_at", thirtyDaysAgo)
+      .limit(5000),
     supabase
       .from("projects")
       .select(
@@ -282,6 +292,7 @@ export default async function DashboardPage() {
   }
   const prospects = prospectsRes.data ?? [];
   const pageviewCount = pageviewsRes.count ?? 0;
+  const taps = tapCounts(tapsRes.data ?? []);
   const projects = projectsRes.data ?? [];
   const invoices = invoicesRes.data ?? [];
 
@@ -611,6 +622,7 @@ export default async function DashboardPage() {
               <IconEye className="h-4 w-4 text-muted" />
               <p className="mt-1.5 text-xs font-semibold text-ink-2">Page views &middot; 30d</p>
               <p className="mt-0.5 font-mono text-lg font-bold text-ink">{pageviewCount}</p>
+              {taps.total > 0 && <p className="mt-0.5 text-xs text-muted">{tapSummary(taps)}</p>}
             </div>
           </div>
         </Reveal>
