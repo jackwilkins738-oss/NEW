@@ -7,6 +7,7 @@ import { businessRecipients, escapeHtml } from "@/lib/jobs";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { DEMO_SLUG } from "@/lib/demo";
 import { tapCounts } from "@/lib/contactTaps";
+import { searchStats, type SearchStats } from "@/lib/searchConsole";
 
 // On the 1st of each month, each of Scalar Digital's launched clients gets
 // last month in numbers: visits to their website, taps on their phone number
@@ -25,6 +26,8 @@ export type MonthStats = {
   quotesWon: number;
   wonPence: number;
   reviews: number;
+  /** From Google Search Console, when the client's property is shared with us - else left out. */
+  search?: SearchStats | null;
 };
 
 /** "2026-10-01" -> the month before it, as [first day, first day of the next month, "September 2026"]. */
@@ -39,7 +42,8 @@ export function previousMonth(todayUK: string): { from: string; to: string; labe
 
 /** The report, or null for a month with nothing at all to show. */
 export function monthlyReportEmail(businessName: string, monthLabel: string, s: MonthStats, dashboardUrl: string) {
-  if (s.visits + (s.callTaps ?? 0) + (s.whatsappTaps ?? 0) + s.enquiries + s.quotesSent + s.quotesWon + s.reviews === 0) return null;
+  if (s.visits + (s.callTaps ?? 0) + (s.whatsappTaps ?? 0) + s.enquiries + s.quotesSent + s.quotesWon + s.reviews +
+      (s.search?.impressions ?? 0) === 0) return null;
   const row = (label: string, value: string) =>
     `<tr><td style="padding:6px 16px 6px 0;color:#56534a;">${label}</td><td style="padding:6px 0;font-weight:bold;font-size:18px;">${value}</td></tr>`;
   const rows = [
@@ -51,13 +55,28 @@ export function monthlyReportEmail(businessName: string, monthLabel: string, s: 
     row("Quotes accepted", s.quotesWon > 0 ? `${s.quotesWon} (${formatGBP(s.wonPence)})` : "0"),
     s.reviews > 0 ? row("New reviews", String(s.reviews)) : "",
   ].join("");
+  const g = s.search;
+  const google = g && g.impressions > 0
+    ? `<p style="margin:18px 0 6px;font-weight:bold;">On Google</p>
+      <table style="border-collapse:collapse;margin:0 0 6px;">${[
+        row("Times your site showed in Google searches", g.impressions.toLocaleString("en-GB")),
+        row("Clicks through to your site", g.clicks.toLocaleString("en-GB")),
+        g.position > 0 ? row("Average position in the results", String(g.position)) : "",
+      ].join("")}</table>${
+        g.topQueries.length
+          ? `<p style="color:#56534a;margin:4px 0;">Searches that brought people in: ${g.topQueries
+              .map((q) => `&ldquo;${escapeHtml(q.query)}&rdquo; (${q.clicks})`)
+              .join(", ")}</p>`
+          : ""
+      }<p style="color:#6b6255;font-size:12px;margin:4px 0;">Google's own figures, from Search Console.</p>`
+    : "";
   return {
     subject: `${monthLabel} for ${businessName}: ${s.enquiries} enquir${s.enquiries === 1 ? "y" : "ies"}${
       s.quotesWon > 0 ? `, ${formatGBP(s.wonPence)} won` : ""
     }`,
     html: `<div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;max-width:520px;">
       <p>Here's how ${escapeHtml(businessName)}'s website and dashboard did in ${escapeHtml(monthLabel)}:</p>
-      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>
+      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>${google}
       <p><a href="${dashboardUrl}">Open your dashboard</a> for the detail.</p>
       <p style="color:#6b6255;font-size:13px;">Anything you'd like changed on the site? Use Website help in your dashboard, or just reply.</p>
       <p>Scalar Digital</p>
@@ -109,6 +128,7 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
           quotesWon: (won.data ?? []).length,
           wonPence: (won.data ?? []).reduce((sum, q) => sum + (q.total_pence ?? 0), 0),
           reviews: reviews.count ?? 0,
+          search: t.domain ? await searchStats(t.domain, from, to).catch(() => null) : null,
         },
         `${tenantOrigin(t)}/dashboard`
       );
