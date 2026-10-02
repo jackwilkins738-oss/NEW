@@ -62,12 +62,27 @@ export type Teardown = {
   services?: string[];
   /** Their brand colour (#rrggbb), already darkened to take white text. */
   brandColour?: string;
+  /** Their logo and up to 4 photos from their own homepage (https images only, no SVG) - for
+   *  "your homepage, rebuilt" on the preview, fetched through the website's own image route. */
+  logo?: string;
+  photos?: string[];
 };
 
 // A service name reaches a public page, so only short, plain wording gets
 // through: letters, digits, spaces and a little punctuation - no markup.
 const SERVICE_RE = /^[A-Za-z0-9 &'/,+-]{2,24}$/;
 const COLOUR_RE = /^#[0-9a-f]{6}$/;
+// Raster images on https only: an SVG can carry script, and plain http would be blocked on the page.
+const IMAGE_URL_RE = /^https:\/\/[^\s"'<>]+\.(?:jpe?g|png|webp)(?:\?[^\s"'<>]*)?$/i;
+
+function imageUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 400 || !IMAGE_URL_RE.test(value)) return undefined;
+  try {
+    return new URL(value).protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function intIn(value: unknown, min: number, max: number): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
@@ -106,6 +121,11 @@ export function normaliseTeardown(input: unknown): Teardown | null {
   }
   if (typeof t.brandColour === "string" && COLOUR_RE.test(t.brandColour.toLowerCase())) {
     out.brandColour = t.brandColour.toLowerCase();
+  }
+  put("logo", imageUrl(t.logo));
+  if (Array.isArray(t.photos)) {
+    const photos = [...new Set(t.photos.map(imageUrl).filter((u): u is string => !!u))].slice(0, 4);
+    if (photos.length) out.photos = photos;
   }
   const hasAnything = Object.keys(checks).length > 0 || Object.keys(out).length > 2;
   return hasAnything ? out : null;
