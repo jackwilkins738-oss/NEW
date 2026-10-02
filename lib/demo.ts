@@ -59,8 +59,18 @@ export async function ensureDemoTenant(admin: Admin): Promise<{ id: string; site
   return data;
 }
 
+// "Show as" on a sales call: the prospect's own firm name at the top of the
+// demo, so it's their dashboard they're looking at. Plain words only, and
+// anything else falls back to the made-up firm. The morning reset puts it back.
+const SHOW_AS_RE = /^[A-Za-z0-9][A-Za-z0-9 &'.,()+-]{1,59}$/;
+
+export function demoName(showAs?: string | null): string {
+  const name = (showAs ?? "").replace(/\s+/g, " ").trim();
+  return SHOW_AS_RE.test(name) ? name : DEMO_NAME;
+}
+
 /** Wipes the demo tenant's data and writes a fresh set. Returns the tenant id. */
-export async function resetDemo(admin: Admin): Promise<string> {
+export async function resetDemo(admin: Admin, showAs?: string | null): Promise<string> {
   const { id: tenant_id, site_key } = await ensureDemoTenant(admin);
 
   // Children first where there's no cascade from a parent being deleted here.
@@ -73,7 +83,7 @@ export async function resetDemo(admin: Admin): Promise<string> {
   }
   await admin
     .from("tenants")
-    .update({ business_name: DEMO_NAME, company_address: "Unit 4, Hurst Farm, Guildford GU4 7AA", default_vat_rate: 20 })
+    .update({ business_name: demoName(showAs), company_address: "Unit 4, Hurst Farm, Guildford GU4 7AA", default_vat_rate: 20 })
     .eq("id", tenant_id);
 
   const t = { tenant_id };

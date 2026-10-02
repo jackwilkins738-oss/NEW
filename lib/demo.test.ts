@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { resetDemo, resetDemoIfPresent, DEMO_SLUG } from "./demo";
+import { resetDemo, resetDemoIfPresent, demoName, DEMO_NAME, DEMO_SLUG } from "./demo";
 
 // A fake admin client that records every call, so the test can prove the
 // reset only ever touches the demo tenant and writes sensible data.
@@ -22,7 +22,7 @@ function fakeAdmin(demoExists = true) {
         }),
         single: async () => ({ data: { id: "demo-tenant", site_key: "demo-key" }, error: null }),
         delete: () => ((call.op = "delete"), chain),
-        update: () => ((call.op = "update"), chain),
+        update: (values: Record<string, unknown>) => ((call.op = "update"), (call.rows = [values]), chain),
         insert: (rows: Record<string, unknown> | Record<string, unknown>[], options?: { defaultToNull?: boolean }) => {
           call.op = "insert";
           (call as { defaultToNull?: boolean }).defaultToNull = options?.defaultToNull;
@@ -135,5 +135,23 @@ describe("demo data matches the real database", () => {
         for (const key of Object.keys(row)) expect(known!.has(key), `${c.table}.${key}`).toBe(true);
       }
     }
+  });
+});
+
+describe("demoName", () => {
+  it("uses a plain firm name and falls back for anything else", () => {
+    expect(demoName("Kerr Roofing & Sons")).toBe("Kerr Roofing & Sons");
+    expect(demoName("  J.  Smith (Builders) Ltd ")).toBe("J. Smith (Builders) Ltd");
+    for (const bad of ["", undefined, null, "x", "<script>", "a".repeat(61), "Kerr\nRoofing<b>"]) {
+      expect(demoName(bad as string)).toBe(DEMO_NAME);
+    }
+  });
+
+  it("puts the 'show as' name on the demo tenant only", async () => {
+    const { admin, calls } = fakeAdmin();
+    await resetDemo(admin, "Kerr Roofing");
+    const update = calls.find((c) => c.op === "update" && c.table === "tenants")!;
+    expect(update.filters).toContainEqual(["id", "demo-tenant"]);
+    expect(JSON.stringify(update)).toContain("Kerr Roofing");
   });
 });

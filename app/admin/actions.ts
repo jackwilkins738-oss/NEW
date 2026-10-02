@@ -281,11 +281,11 @@ export async function deleteTenant(tenantId: string) {
 // Sets up (first time) and refreshes the sales demo (lib/demo.ts): a made-up
 // firm's dashboard to screen-share on calls. Also makes sure the admin who
 // pressed it can sign in to it.
-export async function resetDemoTenant() {
+export async function resetDemoTenant(showAs?: string) {
   const { userId } = await requireAdmin();
   const admin = createAdminClient();
   try {
-    const tenantId = await resetDemo(admin);
+    const tenantId = await resetDemo(admin, typeof showAs === "string" ? showAs.slice(0, 80) : null);
     await admin
       .from("memberships")
       .upsert({ tenant_id: tenantId, user_id: userId, role: "owner" }, { onConflict: "tenant_id,user_id" });
