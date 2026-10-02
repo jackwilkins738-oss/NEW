@@ -27,6 +27,7 @@ const AAL_EXEMPT_PREFIXES = [
   "/api/stripe/",
   "/api/calendar/google/",
   "/api/leads",
+  "/api/site-feedback",
   "/api/prospects/",
   "/invoice/",
   "/quote/",
