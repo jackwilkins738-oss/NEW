@@ -165,3 +165,35 @@ describe("normaliseTeardown - logo and photos", () => {
     expect(normaliseTeardown({ checks: { https: true }, logo: 'https://kerr.co.uk/"><x.png' })!.logo).toBeUndefined();
   });
 });
+
+describe("normaliseTeardown - filmstrip and screenshot", () => {
+  const jpeg = (n = 40) => `data:image/jpeg;base64,${"A".repeat(n)}==`;
+  const frames = [
+    { t: 1125, img: jpeg() },
+    { t: 1875, img: jpeg() },
+    { t: 3000, img: jpeg() },
+  ];
+
+  it("keeps three ordered small JPEG frames and a screenshot", () => {
+    const out = normaliseTeardown({ checks: { https: true }, frames, screenshot: jpeg(1000) })!;
+    expect(out.frames).toEqual(frames);
+    expect(out.screenshot).toBe(jpeg(1000));
+  });
+
+  it("drops frames that aren't exactly three, out of order, oversized or not JPEG", () => {
+    const base = { checks: { https: true } };
+    expect(normaliseTeardown({ ...base, frames: frames.slice(0, 2) })!.frames).toBeUndefined();
+    expect(normaliseTeardown({ ...base, frames: [frames[2], frames[0], frames[1]] })!.frames).toBeUndefined();
+    expect(normaliseTeardown({ ...base, frames: [...frames.slice(0, 2), { t: 3000, img: jpeg(13_000) }] })!.frames).toBeUndefined();
+    expect(
+      normaliseTeardown({ ...base, frames: [...frames.slice(0, 2), { t: 3000, img: "data:image/svg+xml;base64,AAAA" }] })!.frames,
+    ).toBeUndefined();
+    expect(normaliseTeardown({ ...base, frames: [...frames.slice(0, 2), { t: 90_000, img: jpeg() }] })!.frames).toBeUndefined();
+  });
+
+  it("drops a screenshot that is too big or carries anything but base64", () => {
+    const base = { checks: { https: true } };
+    expect(normaliseTeardown({ ...base, screenshot: jpeg(41_000) })!.screenshot).toBeUndefined();
+    expect(normaliseTeardown({ ...base, screenshot: 'data:image/jpeg;base64,AA"><script>' })!.screenshot).toBeUndefined();
+  });
+});

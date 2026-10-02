@@ -12,6 +12,7 @@ import { deriveBrandTheme } from "@/lib/theme";
 import { computePipelineSummary, renderPipelineHtml } from "@/lib/pipeline";
 import { hasCronSecret } from "@/lib/serviceAuth";
 import { escapeHtml } from "@/lib/jobs";
+import { pruneProspectShots } from "@/lib/prospectShots";
 
 const SEVERITY_COLOR: Record<Alert["severity"], string> = {
   critical: "#d03b3b",
@@ -33,7 +34,15 @@ export async function GET(request: Request) {
     .from("tenants")
     .select("id, business_name, slug, domain, brand_theme");
 
-  if (!tenants) return NextResponse.json({ ok: true, sent: 0 });
+  // Housekeeping, independent of the digests: old prospect screenshots go.
+  let shotsPruned = 0;
+  try {
+    shotsPruned = await pruneProspectShots(admin);
+  } catch (err) {
+    Sentry.captureException(err);
+  }
+
+  if (!tenants) return NextResponse.json({ ok: true, sent: 0, shotsPruned });
 
   let sent = 0;
   for (const tenant of tenants) {
@@ -46,7 +55,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, tenants: tenants.length });
+  return NextResponse.json({ ok: true, sent, tenants: tenants.length, shotsPruned });
 }
 
 async function sendDigestForTenant(

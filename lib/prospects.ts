@@ -66,7 +66,21 @@ export type Teardown = {
    *  "your homepage, rebuilt" on the preview, fetched through the website's own image route. */
   logo?: string;
   photos?: string[];
+  /** Slow sites only: 3 small frames of their homepage loading on Google's test phone (ms since
+   *  the start, JPEG data URI), and how it looks once loaded. Removed after SHOTS_KEEP_DAYS. */
+  frames?: { t: number; img: string }[];
+  screenshot?: string;
 };
+
+// Small inline JPEGs only - nothing that could carry markup, nothing that bloats the row.
+const JPEG_URI_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
+const FRAME_MAX = 12_000;
+const SCREENSHOT_MAX = 40_000;
+export const SHOTS_KEEP_DAYS = 45;
+
+function jpegUri(value: unknown, max: number): string | undefined {
+  return typeof value === "string" && value.length <= max && JPEG_URI_RE.test(value) ? value : undefined;
+}
 
 // A service name reaches a public page, so only short, plain wording gets
 // through: letters, digits, spaces and a little punctuation - no markup.
@@ -127,6 +141,16 @@ export function normaliseTeardown(input: unknown): Teardown | null {
     const photos = [...new Set(t.photos.map(imageUrl).filter((u): u is string => !!u))].slice(0, 4);
     if (photos.length) out.photos = photos;
   }
+  if (Array.isArray(t.frames) && t.frames.length === 3) {
+    const frames = t.frames.flatMap((f) => {
+      const r = f && typeof f === "object" ? (f as Record<string, unknown>) : {};
+      const ms = intIn(r.t, 0, 60_000);
+      const img = jpegUri(r.img, FRAME_MAX);
+      return ms !== undefined && img ? [{ t: ms, img }] : [];
+    });
+    if (frames.length === 3 && frames.every((f, i) => i === 0 || f.t >= frames[i - 1].t)) out.frames = frames;
+  }
+  put("screenshot", jpegUri(t.screenshot, SCREENSHOT_MAX));
   const hasAnything = Object.keys(checks).length > 0 || Object.keys(out).length > 2;
   return hasAnything ? out : null;
 }
