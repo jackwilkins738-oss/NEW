@@ -133,3 +133,35 @@ describe("normaliseProspect with a teardown", () => {
     expect("row" in noDate && "teardown" in noDate.row).toBe(false);
   });
 });
+
+describe("normaliseTeardown - logo and photos", () => {
+  it("keeps https raster images only, at most four photos, no duplicates", () => {
+    const t = normaliseTeardown({
+      checks: { https: true },
+      logo: "https://kerr.co.uk/img/logo.png",
+      photos: [
+        "https://kerr.co.uk/img/roof-1.jpg",
+        "https://kerr.co.uk/img/roof-1.jpg",
+        "http://kerr.co.uk/img/roof-2.jpg",
+        "https://kerr.co.uk/img/badge.svg",
+        "javascript:alert(1).jpg",
+        "https://kerr.co.uk/img/roof-3.webp?w=800",
+        "https://kerr.co.uk/a.png",
+        "https://kerr.co.uk/b.jpeg",
+        "https://kerr.co.uk/c.jpg",
+      ],
+    })!;
+    expect(t.logo).toBe("https://kerr.co.uk/img/logo.png");
+    expect(t.photos).toEqual([
+      "https://kerr.co.uk/img/roof-1.jpg",
+      "https://kerr.co.uk/img/roof-3.webp?w=800",
+      "https://kerr.co.uk/a.png",
+      "https://kerr.co.uk/b.jpeg",
+    ]);
+  });
+
+  it("drops an SVG logo or one with quotes in it", () => {
+    expect(normaliseTeardown({ checks: { https: true }, logo: "https://kerr.co.uk/logo.svg" })!.logo).toBeUndefined();
+    expect(normaliseTeardown({ checks: { https: true }, logo: 'https://kerr.co.uk/"><x.png' })!.logo).toBeUndefined();
+  });
+});
