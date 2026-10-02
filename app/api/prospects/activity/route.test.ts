@@ -12,7 +12,7 @@ const TENANT = "abdc6408-1fd5-4fb6-9c4c-53600b571a6d";
 const url = (q = `?tenant_id=${TENANT}`) => `https://admin.scalardigital.co.uk/api/prospects/activity${q}`;
 const req = (q?: string, auth = `Bearer ${SECRET}`) => new Request(url(q), { headers: { authorization: auth } });
 
-function fakeAdmin(total: number) {
+function fakeAdmin(total: number, noEngagementColumns = false) {
   const calls: { select: string; tenant: string; from: number; to: number }[] = [];
   const admin = {
     from: vi.fn(() => {
@@ -23,6 +23,9 @@ function fakeAdmin(total: number) {
         order: () => chain,
         range: async (from: number, to: number) => {
           calls.push({ ...q, from, to });
+          if (noEngagementColumns && q.select.includes("engaged_seconds")) {
+            return { data: null, error: { message: "column prospects.engaged_seconds does not exist" } };
+          }
           const n = Math.max(0, Math.min(to + 1, total) - from);
           return { data: Array.from({ length: n }, (_, i) => ({ slug: `firm-${from + i}`, view_count: 1 })), error: null };
         },
@@ -58,7 +61,17 @@ describe("GET /api/prospects/activity", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).prospects).toHaveLength(3);
     expect(calls[0].tenant).toBe(TENANT);
-    expect(calls[0].select).toBe("slug, status, channel, view_count, first_viewed_at, last_viewed_at");
+    expect(calls[0].select).toBe(
+      "slug, status, channel, view_count, first_viewed_at, last_viewed_at, engaged_seconds, max_scroll, reached, choice, choice_at"
+    );
+  });
+
+  it("falls back to the basic columns until migration 059 has been run", async () => {
+    const calls = fakeAdmin(3, true);
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    expect((await res.json()).prospects).toHaveLength(3);
+    expect(calls.map((c) => c.select)).toEqual([expect.stringContaining("engaged_seconds"), "slug, status, channel, view_count, first_viewed_at, last_viewed_at"]);
   });
 
   it("pages past the 1000-row cap", async () => {
