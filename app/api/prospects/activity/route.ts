@@ -7,6 +7,8 @@ import { hasServiceSecret } from "@/lib/serviceAuth";
 // make a call list. Server-to-server only, behind the same service secret as
 // the import, and engagement facts only: slug, status, channel, view dates.
 const PAGE = 1000; // PostgREST's default row cap per request
+const BASIC = "slug, status, channel, view_count, first_viewed_at, last_viewed_at";
+const ENGAGEMENT = "engaged_seconds, max_scroll, reached, choice, choice_at";
 
 export async function GET(request: Request) {
   if (!hasServiceSecret(request)) {
@@ -19,13 +21,14 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
   const rows: unknown[] = [];
+  // Engagement (migration 059) when it's there; the basic columns until it's been run.
+  let columns = `${BASIC}, ${ENGAGEMENT}`;
   for (let from = 0; from < 50 * PAGE; from += PAGE) {
-    const { data, error } = await admin
-      .from("prospects")
-      .select("slug, status, channel, view_count, first_viewed_at, last_viewed_at")
-      .eq("tenant_id", tenantId)
-      .order("slug")
-      .range(from, from + PAGE - 1);
+    let { data, error } = await admin.from("prospects").select(columns).eq("tenant_id", tenantId).order("slug").range(from, from + PAGE - 1);
+    if (error && columns !== BASIC) {
+      columns = BASIC;
+      ({ data, error } = await admin.from("prospects").select(columns).eq("tenant_id", tenantId).order("slug").range(from, from + PAGE - 1));
+    }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     rows.push(...(data ?? []));
     if (!data || data.length < PAGE) break;
