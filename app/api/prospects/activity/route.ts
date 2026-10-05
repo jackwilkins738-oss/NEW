@@ -5,9 +5,11 @@ import { hasServiceSecret } from "@/lib/serviceAuth";
 // Who has opened their preview page - for the owner's local control panel,
 // which joins it with phone numbers that never leave the owner's machine to
 // make a call list. Server-to-server only, behind the same service secret as
-// the import, and engagement facts only: slug, status, channel, view dates.
+// the import, and engagement facts only: slug, status, channel, view dates,
+// and when the page got its speed check.
 const PAGE = 1000; // PostgREST's default row cap per request
-const BASIC = "slug, status, channel, view_count, first_viewed_at, last_viewed_at";
+// teardown_at: whether the page has its speed check - the panel re-checks a site whose page has none.
+const BASIC = "slug, status, channel, view_count, first_viewed_at, last_viewed_at, teardown_at";
 const ENGAGEMENT = "engaged_seconds, max_scroll, reached, choice, choice_at";
 
 export async function GET(request: Request) {

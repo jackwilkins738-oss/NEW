@@ -62,7 +62,7 @@ describe("GET /api/prospects/activity", () => {
     expect((await res.json()).prospects).toHaveLength(3);
     expect(calls[0].tenant).toBe(TENANT);
     expect(calls[0].select).toBe(
-      "slug, status, channel, view_count, first_viewed_at, last_viewed_at, engaged_seconds, max_scroll, reached, choice, choice_at"
+      "slug, status, channel, view_count, first_viewed_at, last_viewed_at, teardown_at, engaged_seconds, max_scroll, reached, choice, choice_at"
     );
   });
 
@@ -71,7 +71,7 @@ describe("GET /api/prospects/activity", () => {
     const res = await GET(req());
     expect(res.status).toBe(200);
     expect((await res.json()).prospects).toHaveLength(3);
-    expect(calls.map((c) => c.select)).toEqual([expect.stringContaining("engaged_seconds"), "slug, status, channel, view_count, first_viewed_at, last_viewed_at"]);
+    expect(calls.map((c) => c.select)).toEqual([expect.stringContaining("engaged_seconds"), "slug, status, channel, view_count, first_viewed_at, last_viewed_at, teardown_at"]);
   });
 
   it("pages past the 1000-row cap", async () => {
