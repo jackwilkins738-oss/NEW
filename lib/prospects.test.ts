@@ -197,3 +197,49 @@ describe("normaliseTeardown - filmstrip and screenshot", () => {
     expect(normaliseTeardown({ ...base, screenshot: 'data:image/jpeg;base64,AA"><script>' })!.screenshot).toBeUndefined();
   });
 });
+
+describe("normaliseTeardown - Google rating and rivals", () => {
+  it("keeps a real rating, rounded, and drops a made-up one", () => {
+    expect(normaliseTeardown({ checks: { showsReviews: false }, google: { rating: 4.83, reviews: 63 } })).toMatchObject({
+      checks: { showsReviews: false },
+      google: { rating: 4.8, reviews: 63 },
+    });
+    expect(normaliseTeardown({ checks: { https: true }, google: { rating: 7, reviews: 63 } })!.google).toBeUndefined();
+    expect(normaliseTeardown({ checks: { https: true }, google: { rating: 4.5, reviews: 0 } })!.google).toBeUndefined();
+  });
+
+  it("keeps two or three plain rivals with scores, and nothing that could carry markup", () => {
+    const out = normaliseTeardown({
+      checks: { https: true },
+      rivals: {
+        query: "roofer in Guildford",
+        position: 7,
+        checkedAt: "2026-10-05",
+        items: [
+          { name: "Top Roofing", score: 88 },
+          { name: "<script>x</script>", score: 70 },
+          { name: "Second Roofing", score: 140 },
+          { name: "Smith & Sons (Roofing) Ltd.", score: 64 },
+          { name: "Fourth", score: 50 },
+        ],
+      },
+    })!;
+    expect(out.rivals).toEqual({
+      query: "roofer in Guildford",
+      position: 7,
+      checkedAt: "2026-10-05",
+      items: [
+        { name: "Top Roofing", score: 88 },
+        { name: "Smith & Sons (Roofing) Ltd.", score: 64 },
+        { name: "Fourth", score: 50 },
+      ],
+    });
+  });
+
+  it("drops a comparison with fewer than two rivals or a bad search", () => {
+    const one = { query: "roofer in Guildford", items: [{ name: "Top", score: 80 }] };
+    expect(normaliseTeardown({ checks: { https: true }, rivals: one })!.rivals).toBeUndefined();
+    const bad = { query: "<b>x</b>", items: [{ name: "A1", score: 80 }, { name: "B1", score: 70 }] };
+    expect(normaliseTeardown({ checks: { https: true }, rivals: bad })!.rivals).toBeUndefined();
+  });
+});
