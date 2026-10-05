@@ -45,6 +45,7 @@ export const TEARDOWN_CHECKS = [
   "metaDescription",
   "https",
   "secureAssets",
+  "showsReviews",
 ] as const;
 export const TEARDOWN_PLATFORMS = ["wordpress", "wix", "squarespace", "godaddy", "webflow", "weebly", "duda", "shopify"] as const;
 
@@ -70,6 +71,11 @@ export type Teardown = {
    *  the start, JPEG data URI), and how it looks once loaded. Removed after SHOTS_KEEP_DAYS. */
   frames?: { t: number; img: string }[];
   screenshot?: string;
+  /** Their Google rating, from a Places result whose website is theirs (or their Google Maps list). */
+  google?: { rating: number; reviews: number };
+  /** The top firms on Google Maps for their trade and town, with Google's mobile score for each -
+   *  shown next to theirs. position: where they came in that search, when they were in it. */
+  rivals?: { query: string; position?: number; checkedAt?: string; items: { name: string; score: number }[] };
 };
 
 // Small inline JPEGs only - nothing that could carry markup, nothing that bloats the row.
@@ -80,6 +86,35 @@ export const SHOTS_KEEP_DAYS = 45;
 
 function jpegUri(value: unknown, max: number): string | undefined {
   return typeof value === "string" && value.length <= max && JPEG_URI_RE.test(value) ? value : undefined;
+}
+
+// A rival's name and the search reach a public page too: plain wording only, no markup.
+const RIVAL_NAME_RE = /^[A-Za-z0-9 &'()./,+-]{2,60}$/;
+const QUERY_RE = /^[A-Za-z0-9 &'/,.-]{3,80}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function google(value: unknown): Teardown["google"] | undefined {
+  const g = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  if (!g || typeof g.rating !== "number" || !Number.isFinite(g.rating) || g.rating < 1 || g.rating > 5) return undefined;
+  const reviews = intIn(g.reviews, 1, 1_000_000);
+  return reviews ? { rating: Math.round(g.rating * 10) / 10, reviews } : undefined;
+}
+
+function rivals(value: unknown): Teardown["rivals"] | undefined {
+  const r = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  if (!r || typeof r.query !== "string" || !QUERY_RE.test(r.query) || !Array.isArray(r.items)) return undefined;
+  const items = r.items.flatMap((i) => {
+    const x = i && typeof i === "object" ? (i as Record<string, unknown>) : {};
+    const name = typeof x.name === "string" ? x.name.replace(/\s+/g, " ").trim() : "";
+    const score = intIn(x.score, 0, 100);
+    return RIVAL_NAME_RE.test(name) && score !== undefined ? [{ name, score }] : [];
+  }).slice(0, 3);
+  if (items.length < 2) return undefined;
+  const out: NonNullable<Teardown["rivals"]> = { query: r.query, items };
+  const position = intIn(r.position, 1, 60);
+  if (position !== undefined) out.position = position;
+  if (typeof r.checkedAt === "string" && DATE_RE.test(r.checkedAt)) out.checkedAt = r.checkedAt;
+  return out;
 }
 
 // A service name reaches a public page, so only short, plain wording gets
@@ -151,6 +186,8 @@ export function normaliseTeardown(input: unknown): Teardown | null {
     if (frames.length === 3 && frames.every((f, i) => i === 0 || f.t >= frames[i - 1].t)) out.frames = frames;
   }
   put("screenshot", jpegUri(t.screenshot, SCREENSHOT_MAX));
+  put("google", google(t.google));
+  put("rivals", rivals(t.rivals));
   const hasAnything = Object.keys(checks).length > 0 || Object.keys(out).length > 2;
   return hasAnything ? out : null;
 }
