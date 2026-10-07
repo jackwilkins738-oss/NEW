@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TEARDOWN_MAX_CHARS, isValidProspectSlug, normaliseProspect, normaliseTeardown, slimTeardown } from "./prospects";
+import { TEARDOWN_MAX_CHARS, isValidProspectSlug, normaliseProspect, normaliseTeardown, slimTeardown, videoEmbedUrl } from "./prospects";
 
 describe("isValidProspectSlug", () => {
   it("accepts lowercase hyphenated slugs", () => {
@@ -256,5 +256,23 @@ describe("normaliseTeardown - size", () => {
     expect(JSON.stringify(out).length).toBeLessThanOrEqual(TEARDOWN_MAX_CHARS);
     expect(out.frames).toHaveLength(3); // ~73 KB in all - under 100 KB, so nothing needed dropping
     expect(slimTeardown(out)).toEqual({ v: 1, checks: { tapToCall: false } });
+  });
+});
+
+describe("videoEmbedUrl", () => {
+  it("turns Loom, YouTube and Vimeo links into their players", () => {
+    const loom = "0123456789abcdef0123456789abcdef";
+    expect(videoEmbedUrl(`https://www.loom.com/share/${loom}`)).toBe(`https://www.loom.com/embed/${loom}`);
+    expect(videoEmbedUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3")).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(videoEmbedUrl("https://youtu.be/dQw4w9WgXcQ")).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(videoEmbedUrl("https://m.youtube.com/shorts/dQw4w9WgXcQ")).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(videoEmbedUrl("https://vimeo.com/123456789")).toBe("https://player.vimeo.com/video/123456789");
+  });
+
+  it("refuses anything else", () => {
+    for (const bad of ["http://youtu.be/dQw4w9WgXcQ", "https://loom.com.evil.io/share/0123456789abcdef0123456789abcdef",
+      "https://www.loom.com/share/nope", "javascript:alert(1)", "", 42, null]) {
+      expect(videoEmbedUrl(bad)).toBeNull();
+    }
   });
 });

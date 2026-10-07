@@ -273,3 +273,32 @@ export function normaliseProspect(input: unknown): { row: ProspectRow } | { erro
   }
   return { row };
 }
+
+/**
+ * A Loom, YouTube or Vimeo link as the player's embed address, or null for anything else.
+ * Matches the database check in migration 062, so only these three players are ever framed.
+ */
+export function videoEmbedUrl(input: unknown): string | null {
+  if (typeof input !== "string" || input.length > 300) return null;
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.replace(/^www\./, "").replace(/^m\./, "");
+  const path = url.pathname.split("/").filter(Boolean);
+  if (host === "loom.com" && (path[0] === "share" || path[0] === "embed") && /^[a-f0-9]{32}$/.test(path[1] ?? "")) {
+    return `https://www.loom.com/embed/${path[1]}`;
+  }
+  const yt =
+    host === "youtu.be" ? path[0]
+    : host === "youtube.com" || host === "youtube-nocookie.com"
+      ? path[0] === "watch" ? url.searchParams.get("v") ?? "" : ["shorts", "embed", "live"].includes(path[0] ?? "") ? path[1] : ""
+      : "";
+  if (yt && /^[A-Za-z0-9_-]{11}$/.test(yt)) return `https://www.youtube-nocookie.com/embed/${yt}`;
+  const vimeo = host === "vimeo.com" ? path[0] : host === "player.vimeo.com" && path[0] === "video" ? path[1] : "";
+  if (vimeo && /^[0-9]{6,12}$/.test(vimeo)) return `https://player.vimeo.com/video/${vimeo}`;
+  return null;
+}
