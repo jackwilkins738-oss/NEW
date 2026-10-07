@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidProspectSlug, normaliseProspect, normaliseTeardown } from "./prospects";
+import { TEARDOWN_MAX_CHARS, isValidProspectSlug, normaliseProspect, normaliseTeardown, slimTeardown } from "./prospects";
 
 describe("isValidProspectSlug", () => {
   it("accepts lowercase hyphenated slugs", () => {
@@ -241,5 +241,20 @@ describe("normaliseTeardown - Google rating and rivals", () => {
     expect(normaliseTeardown({ checks: { https: true }, rivals: one })!.rivals).toBeUndefined();
     const bad = { query: "<b>x</b>", items: [{ name: "A1", score: 80 }, { name: "B1", score: 70 }] };
     expect(normaliseTeardown({ checks: { https: true }, rivals: bad })!.rivals).toBeUndefined();
+  });
+});
+
+describe("normaliseTeardown - size", () => {
+  const jpeg = (n: number) => `data:image/jpeg;base64,${"A".repeat(n)}==`;
+  it("drops the biggest pictures first to stay under the limit", () => {
+    const out = normaliseTeardown({
+      checks: { tapToCall: false },
+      frames: [0, 1, 2].map((i) => ({ t: i * 1000, img: jpeg(11_000) })),
+      screenshot: jpeg(39_000),
+      photos: ["https://kerr.co.uk/a.jpg"],
+    })!;
+    expect(JSON.stringify(out).length).toBeLessThanOrEqual(TEARDOWN_MAX_CHARS);
+    expect(out.frames).toHaveLength(3); // ~73 KB in all - under 100 KB, so nothing needed dropping
+    expect(slimTeardown(out)).toEqual({ v: 1, checks: { tapToCall: false } });
   });
 });
