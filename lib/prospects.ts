@@ -83,6 +83,18 @@ const JPEG_URI_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
 const FRAME_MAX = 12_000;
 const SCREENSHOT_MAX = 40_000;
 export const SHOTS_KEEP_DAYS = 45;
+/** Under the column's limit (migration 061, 128 KB) with room to spare - pictures go first if it's bigger. */
+export const TEARDOWN_MAX_CHARS = 100_000;
+
+/** The teardown without its pictures (filmstrip, screenshot, logo, photos) - the checks and facts stay. */
+export function slimTeardown(t: Teardown): Teardown {
+  const out = { ...t };
+  delete out.frames;
+  delete out.screenshot;
+  delete out.photos;
+  delete out.logo;
+  return out;
+}
 
 function jpegUri(value: unknown, max: number): string | undefined {
   return typeof value === "string" && value.length <= max && JPEG_URI_RE.test(value) ? value : undefined;
@@ -188,6 +200,11 @@ export function normaliseTeardown(input: unknown): Teardown | null {
   put("screenshot", jpegUri(t.screenshot, SCREENSHOT_MAX));
   put("google", google(t.google));
   put("rivals", rivals(t.rivals));
+  // Never over the column's size limit: the biggest pictures go first, then the rest of them.
+  for (const k of ["screenshot", "frames", "photos", "logo"] as const) {
+    if (JSON.stringify(out).length <= TEARDOWN_MAX_CHARS) break;
+    delete out[k];
+  }
   const hasAnything = Object.keys(checks).length > 0 || Object.keys(out).length > 2;
   return hasAnything ? out : null;
 }

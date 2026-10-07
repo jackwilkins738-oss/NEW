@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasServiceSecret } from "@/lib/serviceAuth";
-import { MAX_IMPORT_ROWS, normaliseProspect, type ProspectRow } from "@/lib/prospects";
+import { MAX_IMPORT_ROWS, normaliseProspect, slimTeardown, type ProspectRow } from "@/lib/prospects";
 
 // Bulk upsert of outreach prospects for one tenant (Scalar's own, in
 // practice). Called by the owner's import script, never by a browser.
@@ -78,16 +78,31 @@ export async function POST(request: Request) {
       delete rest.teardown_at;
       return rest;
     });
+  const write = async (batch: typeof toWrite) =>
+    (
+      await admin
+        .from("prospects")
+        .upsert(
+          batch.map((r) => ({ ...r, tenant_id: tenantId, updated_at: now })),
+          { onConflict: "slug" }
+        )
+    ).error;
+  // One row the database refuses would fail the whole bulk write - and every firm in it. So on an
+  // error the batch is written a row at a time: the rest land, and only the refused ones come back.
+  const failed: { slug: string; error: string }[] = [];
+  const slimmed: string[] = [];
   for (const batch of [withTeardown, withoutTeardown]) {
-    if (batch.length === 0) continue;
-    const { error } = await admin
-      .from("prospects")
-      .upsert(
-        batch.map((r) => ({ ...r, tenant_id: tenantId, updated_at: now })),
-        { onConflict: "slug" }
-      );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (batch.length === 0 || !(await write(batch))) continue;
+    for (const row of batch) {
+      let error = await write([row]);
+      if (error && row.teardown && /teardown/i.test(error.message)) {
+        // Too big for the column (before migration 061): keep the checks and facts, drop the pictures.
+        error = await write([{ ...row, teardown: slimTeardown(row.teardown) }]);
+        if (!error) slimmed.push(row.slug);
+      }
+      if (error) failed.push({ slug: row.slug, error: error.message });
+    }
   }
 
-  return NextResponse.json({ ok: true, upserted: toWrite.length, rejected });
+  return NextResponse.json({ ok: true, upserted: toWrite.length - failed.length, rejected, failed, slimmed });
 }
