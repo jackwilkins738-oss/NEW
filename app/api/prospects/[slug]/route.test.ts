@@ -3,7 +3,7 @@ import { createFakeSupabase, type FakeDb } from "@/lib/testing/fakeSupabase";
 
 let db: FakeDb;
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => db.client }));
-import { DELETE } from "./route";
+import { DELETE, PATCH } from "./route";
 
 const SECRET = "s".repeat(40);
 const SLUG = "kerr-roofing-4a7bc2";
@@ -41,5 +41,40 @@ describe("DELETE /api/prospects/[slug]", () => {
     db = createFakeSupabase({ prospects: [{ id: "p1", slug: SLUG, status: "new" }] });
     expect((await call(SLUG, "Bearer nope")).status).toBe(401);
     expect(db.table("prospects")).toHaveLength(1);
+  });
+});
+
+const patch = (body: unknown, slug = SLUG, auth = `Bearer ${SECRET}`) =>
+  PATCH(
+    new Request(`https://admin.scalardigital.co.uk/api/prospects/${slug}`, {
+      method: "PATCH",
+      headers: { authorization: auth, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ slug }) },
+  );
+
+describe("PATCH /api/prospects/[slug] (video)", () => {
+  beforeEach(() => {
+    db = createFakeSupabase({ prospects: [{ id: "p1", slug: SLUG, status: "viewed", video_url: null }] });
+  });
+
+  it("stores a Loom share link as its embed address", async () => {
+    const res = await patch({ video_url: "https://www.loom.com/share/0123456789abcdef0123456789abcdef?sid=x" });
+    expect(await res.json()).toEqual({ ok: true, video_url: "https://www.loom.com/embed/0123456789abcdef0123456789abcdef" });
+    expect(db.table("prospects")[0].video_url).toBe("https://www.loom.com/embed/0123456789abcdef0123456789abcdef");
+  });
+
+  it("takes it off with an empty value", async () => {
+    db.table("prospects")[0].video_url = "https://player.vimeo.com/video/123456789";
+    expect((await patch({ video_url: "" })).status).toBe(200);
+    expect(db.table("prospects")[0].video_url).toBeNull();
+  });
+
+  it("refuses other sites, unknown pages and strangers", async () => {
+    expect((await patch({ video_url: "https://evil.example/embed/x" })).status).toBe(400);
+    expect((await patch({ video_url: "https://youtu.be/dQw4w9WgXcQ" }, "nobody-111111")).status).toBe(404);
+    expect((await patch({ video_url: "" }, SLUG, "Bearer nope")).status).toBe(401);
+    expect(db.table("prospects")[0].video_url).toBeNull();
   });
 });
