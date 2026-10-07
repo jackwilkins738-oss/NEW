@@ -65,6 +65,14 @@ export async function DELETE(request: Request, props: { params: Promise<{ slug: 
   }
   const { error } = await admin.from("prospects").delete().eq("id", before.id);
   if (error) return NextResponse.json({ error: "Could not delete" }, { status: 500 });
+  // Their walkthrough video too (migration 063) - it shows their site and name.
+  try {
+    const { data: files } = await admin.storage.from("preview-videos").list("", { search: slug });
+    const mine = (files ?? []).map((f: { name: string }) => f.name).filter((n: string) => n.startsWith(`${slug}-`));
+    if (mine.length) await admin.storage.from("preview-videos").remove(mine);
+  } catch {
+    // storage unreachable: the record is gone, which is what the page reads
+  }
   const { data: quotes } = await admin.from("onboarding").select("id").eq("prospect_slug", slug);
   return NextResponse.json({ ok: true, deleted: true, quotes: (quotes ?? []).length });
 }

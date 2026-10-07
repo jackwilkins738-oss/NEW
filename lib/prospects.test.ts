@@ -269,6 +269,20 @@ describe("videoEmbedUrl", () => {
     expect(videoEmbedUrl("https://vimeo.com/123456789")).toBe("https://player.vimeo.com/video/123456789");
   });
 
+  it("takes the panel's own uploaded walkthroughs, from this project only", () => {
+    const own = "https://abcdefghijklmnopqrst.supabase.co";
+    const prev = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = own;
+    try {
+      const file = `${own}/storage/v1/object/public/preview-videos/kerr-roofing-4a7bc2-0a1b2c3d.mp4`;
+      expect(videoEmbedUrl(file)).toBe(file);
+      expect(videoEmbedUrl(file.replace("abcdefghijklmnopqrst", "zzzzzzzzzzzzzzzzzzzz"))).toBeNull();
+      expect(videoEmbedUrl(`${own}/storage/v1/object/public/lead-photos/x.mp4`)).toBeNull();
+    } finally {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = prev;
+    }
+  });
+
   it("refuses anything else", () => {
     for (const bad of ["http://youtu.be/dQw4w9WgXcQ", "https://loom.com.evil.io/share/0123456789abcdef0123456789abcdef",
       "https://www.loom.com/share/nope", "javascript:alert(1)", "", 42, null]) {

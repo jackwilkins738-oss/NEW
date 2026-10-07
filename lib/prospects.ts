@@ -275,11 +275,16 @@ export function normaliseProspect(input: unknown): { row: ProspectRow } | { erro
 }
 
 /**
- * A Loom, YouTube or Vimeo link as the player's embed address, or null for anything else.
- * Matches the database check in migration 062, so only these three players are ever framed.
+ * A Loom, YouTube or Vimeo link as the player's embed address, or one of the panel's own uploaded
+ * walkthroughs (migration 063), or null for anything else. Matches the database check.
  */
+const OWN_VIDEO = /^https:\/\/[a-z0-9]{20}\.supabase\.co\/storage\/v1\/object\/public\/preview-videos\/[a-z0-9-]{1,100}\.mp4$/;
+
 export function videoEmbedUrl(input: unknown): string | null {
   if (typeof input !== "string" || input.length > 300) return null;
+  // A walkthrough the panel recorded and uploaded (migration 063) - only from this project's storage.
+  const own = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
+  if (OWN_VIDEO.test(input) && own && input.startsWith(`${own}/storage/`)) return input;
   let url: URL;
   try {
     url = new URL(input.trim());
