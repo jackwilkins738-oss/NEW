@@ -1,3 +1,8 @@
+import * as Sentry from "@sentry/nextjs";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
+import { tenantOrigin } from "@/lib/tenantOrigin";
+
 // Job posts (migration 065): a finished job with photos -> a page on the
 // client's website and a Google Business Profile post. The owner's panel
 // drafts them through /api/job-posts; the client approves on /posts.
@@ -78,5 +83,66 @@ export function draftReadyEmail(businessName: string, title: string, postsUrl: s
       <p>Have a quick read, change anything that's not right, and approve it - it goes on your website the next morning.</p>
       <p><a href="${esc(postsUrl)}">Read and approve it</a></p>
       <p>Scalar Digital</p>`,
+  };
+}
+
+export const REMIND_AFTER_DAYS = 3;
+
+/** A draft that's waited 3 days and hasn't been reminded about (migration 066). */
+export function dueForReminder(post: { status: string; created_at: string; reminded_at: string | null }, now: number): boolean {
+  return post.status === "draft" && !post.reminded_at && now - Date.parse(post.created_at) >= REMIND_AFTER_DAYS * DAY;
+}
+
+/** The one reminder about drafts still waiting - several drafts make one email. */
+export function draftReminderEmail(businessName: string, titles: string[], postsUrl: string) {
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  const n = titles.length;
+  return {
+    subject: n === 1 ? `Still waiting: "${titles[0]}"` : `${n} website posts waiting for you`,
+    html: `<p>Hi ${esc(businessName)},</p>
+      <p>${n === 1 ? "This write-up of a finished job is" : "These write-ups of finished jobs are"} still waiting for your OK:</p>
+      <ul>${titles.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+      <p>Each one approved is another page about your real local work - it takes a minute.</p>
+      <p><a href="${esc(postsUrl)}">Read and approve</a></p>
+      <p>Scalar Digital</p>`,
+  };
+}
+
+export async function sendJobPostReminders(): Promise<{ sent: number }> {
+  const admin = createAdminClient();
+  const { data: drafts, error } = await admin
+    .from("job_posts")
+    .select("id, tenant_id, title, status, created_at, reminded_at")
+    .eq("status", "draft")
+    .is("reminded_at", null);
+  if (error || !drafts?.length) return { sent: 0 };
+  const now = Date.now();
+  const byTenant = new Map<string, typeof drafts>();
+  for (const d of drafts.filter((d) => dueForReminder(d, now))) byTenant.set(d.tenant_id, [...(byTenant.get(d.tenant_id) ?? []), d]);
+  let sent = 0;
+  for (const [tenantId, posts] of byTenant) {
+    try {
+      const { data: t } = await admin.from("tenants").select("business_name, contact_email, domain, slug").eq("id", tenantId).maybeSingle();
+      // Marked first, so a failed send never turns into a reminder every day.
+      await admin.from("job_posts").update({ reminded_at: new Date().toISOString() }).in("id", posts.map((p) => p.id));
+      if (!t?.contact_email) continue;
+      await sendEmail({ to: [t.contact_email], ...draftReminderEmail(t.business_name, posts.map((p) => p.title), `${tenantOrigin(t)}/posts`) });
+      sent++;
+    } catch (err) {
+      console.error(`Job post reminder failed for tenant ${tenantId}:`, err);
+      Sentry.captureException(err);
+    }
+  }
+  return { sent };
+}
+
+export type GrowthStats = { pagesPublished: number; pagesLive: number; pageVisits: number; pageTaps: number; waiting: number };
+
+/** Pageviews (track.js) on job pages: visits, and call / WhatsApp taps made from them. */
+export function jobPageCounts(rows: { path: string | null; kind: string | null }[]): { visits: number; taps: number } {
+  const onJobs = rows.filter((r) => (r.path ?? "").startsWith("/work/"));
+  return {
+    visits: onJobs.filter((r) => !r.kind).length,
+    taps: onJobs.filter((r) => r.kind === "call" || r.kind === "whatsapp").length,
   };
 }

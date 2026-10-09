@@ -8,6 +8,8 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { DEMO_SLUG } from "@/lib/demo";
 import { tapCounts } from "@/lib/contactTaps";
 import { searchStats, type SearchStats } from "@/lib/searchConsole";
+import { jobPageCounts, type GrowthStats } from "@/lib/jobPosts";
+import { planIncludes } from "@/lib/plans";
 
 // On the 1st of each month, each of Scalar Digital's launched clients gets
 // last month in numbers: visits to their website, taps on their phone number
@@ -28,6 +30,8 @@ export type MonthStats = {
   reviews: number;
   /** From Google Search Console, when the client's property is shared with us - else left out. */
   search?: SearchStats | null;
+  /** Growth and Pro clients: what Local Growth did this month (job posts, migration 065). */
+  growth?: GrowthStats | null;
 };
 
 /** "2026-10-01" -> the month before it, as [first day, first day of the next month, "September 2026"]. */
@@ -43,7 +47,7 @@ export function previousMonth(todayUK: string): { from: string; to: string; labe
 /** The report, or null for a month with nothing at all to show. */
 export function monthlyReportEmail(businessName: string, monthLabel: string, s: MonthStats, dashboardUrl: string) {
   if (s.visits + (s.callTaps ?? 0) + (s.whatsappTaps ?? 0) + s.enquiries + s.quotesSent + s.quotesWon + s.reviews +
-      (s.search?.impressions ?? 0) === 0) return null;
+      (s.search?.impressions ?? 0) + (s.growth?.pagesPublished ?? 0) === 0) return null;
   const row = (label: string, value: string) =>
     `<tr><td style="padding:6px 16px 6px 0;color:#56534a;">${label}</td><td style="padding:6px 0;font-weight:bold;font-size:18px;">${value}</td></tr>`;
   const rows = [
@@ -70,13 +74,29 @@ export function monthlyReportEmail(businessName: string, monthLabel: string, s: 
           : ""
       }<p style="color:#6b6255;font-size:12px;margin:4px 0;">Google's own figures, from Search Console.</p>`
     : "";
+  const gr = s.growth;
+  const growth = gr
+    ? `<p style="margin:18px 0 6px;font-weight:bold;">Growing your local search</p>
+      <table style="border-collapse:collapse;margin:0 0 6px;">${[
+        row("New pages about your finished jobs", String(gr.pagesPublished)),
+        row("Job pages on your site now", String(gr.pagesLive)),
+        row("Visits to your job pages", String(gr.pageVisits)),
+        gr.pageTaps ? row("Calls and WhatsApps from job pages", String(gr.pageTaps)) : "",
+      ].join("")}</table>${
+        gr.waiting
+          ? `<p style="color:#56534a;margin:4px 0;">${gr.waiting} more ${gr.waiting === 1 ? "is" : "are"} written and waiting for your OK - <a href="${dashboardUrl.replace(/\/dashboard$/, "/posts")}">approve ${gr.waiting === 1 ? "it" : "them"}</a>.</p>`
+          : gr.pagesPublished === 0
+            ? `<p style="color:#56534a;margin:4px 0;">No new pages this month - add photos to your jobs before marking them complete and they're written up for you.</p>`
+            : ""
+      }`
+    : "";
   return {
     subject: `${monthLabel} for ${businessName}: ${s.enquiries} enquir${s.enquiries === 1 ? "y" : "ies"}${
       s.quotesWon > 0 ? `, ${formatGBP(s.wonPence)} won` : ""
     }`,
     html: `<div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;max-width:520px;">
       <p>Here's how ${escapeHtml(businessName)}'s website and dashboard did in ${escapeHtml(monthLabel)}:</p>
-      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>${google}
+      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>${google}${growth}
       <p><a href="${dashboardUrl}">Open your dashboard</a> for the detail.</p>
       <p style="color:#6b6255;font-size:13px;">Anything you'd like changed on the site? Use Website help in your dashboard, or just reply.</p>
       <p>Scalar Digital</p>
@@ -91,7 +111,7 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
   const admin = createAdminClient();
   const { data: tenants } = await admin
     .from("tenants")
-    .select("id, business_name, domain, slug, contact_email, launched_on")
+    .select("id, business_name, domain, slug, contact_email, launched_on, plan")
     .not("launched_on", "is", null)
     .neq("slug", DEMO_SLUG);
 
@@ -116,6 +136,7 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
         between(admin.from("quotes").select("total_pence").eq("tenant_id", t.id), "accepted_at"),
         between(admin.from("reviews").select("id", count).eq("tenant_id", t.id), "received_at"),
       ]);
+      const growth = planIncludes(t.plan, "seo_pages") ? await growthStats(admin, t.id, from, to).catch(() => null) : null;
       const email = monthlyReportEmail(
         t.business_name,
         label,
@@ -129,6 +150,7 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
           wonPence: (won.data ?? []).reduce((sum, q) => sum + (q.total_pence ?? 0), 0),
           reviews: reviews.count ?? 0,
           search: t.domain ? await searchStats(t.domain, from, to).catch(() => null) : null,
+          growth,
         },
         `${tenantOrigin(t)}/dashboard`
       );
@@ -143,4 +165,26 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
     }
   }
   return { sent };
+}
+
+async function growthStats(admin: ReturnType<typeof createAdminClient>, tenantId: string, from: string, to: string): Promise<GrowthStats | null> {
+  const { data: posts, error } = await admin.from("job_posts").select("status, published_at").eq("tenant_id", tenantId);
+  if (error) return null;
+  const { data: views } = await admin
+    .from("pageviews")
+    .select("path, kind")
+    .eq("tenant_id", tenantId)
+    .like("path", "/work/%")
+    .gte("created_at", `${from}T00:00:00Z`)
+    .lt("created_at", `${to}T00:00:00Z`)
+    .limit(20000);
+  const counts = jobPageCounts(views ?? []);
+  const live = (posts ?? []).filter((p) => p.status === "published");
+  return {
+    pagesPublished: live.filter((p) => p.published_at && p.published_at >= `${from}T00:00:00Z` && p.published_at < `${to}T00:00:00Z`).length,
+    pagesLive: live.length,
+    pageVisits: counts.visits,
+    pageTaps: counts.taps,
+    waiting: (posts ?? []).filter((p) => p.status === "draft").length,
+  };
 }

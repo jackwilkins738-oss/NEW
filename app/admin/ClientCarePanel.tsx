@@ -11,6 +11,7 @@ export type CareTenant = {
   launched_on: string | null;
   billing_status: string | null;
   plan?: string;
+  posts?: { waiting: number; live: number } | null;
   website_url?: string | null;
   site_status?: string | null;
 };
@@ -66,6 +67,11 @@ function BillingRow({ t, monitorReady, plansReady }: { t: CareTenant; monitorRea
             {label}
             {hasCard && ` · ${planLabel(current)}`}
           </p>
+          {t.posts && (t.posts.waiting > 0 || t.posts.live > 0) && (
+            <p className={`text-xs ${t.posts.waiting > 0 ? "font-semibold text-critical" : "text-muted"}`}>
+              Job posts: {t.posts.live} live{t.posts.waiting > 0 && ` · ${t.posts.waiting} waiting for their approval`}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {plansReady && (
