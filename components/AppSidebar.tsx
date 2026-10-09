@@ -19,6 +19,7 @@ const LINKS = [
   { href: "/team", label: "Team", Icon: IconHardHat },
   { href: "/suppliers", label: "Suppliers", Icon: IconTruck },
   { href: "/reviews", label: "Reviews", Icon: IconStar },
+  { href: "/posts", label: "Website posts", Icon: IconDocument },
   { href: "/audit", label: "Audit log", Icon: IconClock },
   { href: "/settings", label: "Settings", Icon: IconSettings },
   { href: "/help", label: "Website help", Icon: IconDocument },
