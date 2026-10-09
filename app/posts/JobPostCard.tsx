@@ -12,6 +12,7 @@ export type JobPostView = {
   google_post: string;
   photos: { url: string; alt: string }[];
   page_url: string | null;
+  google_post_name?: string | null;
 };
 
 const field = "w-full rounded-lg border border-black/15 bg-surface px-3 py-2 text-sm text-ink";
@@ -83,7 +84,10 @@ export function JobPostCard({ post }: { post: JobPostView }) {
               See it on your website
             </a>
           )}
-          {post.status === "published" && post.google_post && (
+          {post.status === "published" && post.google_post_name && (
+            <p className="mt-2 text-xs font-semibold text-good">Posted on your Google profile too.</p>
+          )}
+          {post.status === "published" && post.google_post && !post.google_post_name && (
             <div className="mt-3 rounded-xl bg-surface-2 p-3">
               <p className="text-xs font-semibold text-ink">Post it on Google too (30 seconds):</p>
               <p className="mt-1 whitespace-pre-line text-sm text-ink-2">{post.google_post}</p>
