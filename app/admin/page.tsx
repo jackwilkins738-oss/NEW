@@ -61,6 +61,15 @@ export default async function AdminPage() {
   const siteById = new Map((siteRows ?? []).map((r) => [r.id, r]));
   const { data: planRows, error: planError } = await admin.from("tenants").select("id, plan");
   const planById = new Map((planRows ?? []).map((r) => [r.id, r.plan as string]));
+  // Local Growth (migration 065): posts waiting for each client's approval, and live on their site.
+  const { data: postRows } = await admin.from("job_posts").select("tenant_id, status");
+  const postsByTenant = new Map<string, { waiting: number; live: number }>();
+  for (const r of postRows ?? []) {
+    const c = postsByTenant.get(r.tenant_id) ?? { waiting: 0, live: 0 };
+    if (r.status === "draft") c.waiting++;
+    if (r.status === "published") c.live++;
+    postsByTenant.set(r.tenant_id, c);
+  }
   const careTenants = tenantsWithAftercare
     .filter((t) => t.launched_on && t.slug !== "demo")
     .map((t) => ({
@@ -69,6 +78,7 @@ export default async function AdminPage() {
       launched_on: t.launched_on,
       billing_status: billingById.get(t.id) ?? null,
       plan: planById.get(t.id) ?? "care",
+      posts: postsByTenant.get(t.id) ?? null,
       website_url: siteById.get(t.id)?.website_url ?? null,
       site_status: siteById.get(t.id)?.site_status ?? null,
     }));

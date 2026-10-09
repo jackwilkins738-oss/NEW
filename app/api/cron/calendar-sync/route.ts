@@ -13,6 +13,7 @@ import { sendServiceReminders } from "@/lib/serviceReminders";
 import { sendMonthlyReports } from "@/lib/monthlyReport";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
+import { sendJobPostReminders } from "@/lib/jobPosts";
 import { hasCronSecret } from "@/lib/serviceAuth";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
@@ -154,6 +155,13 @@ export async function GET(request: Request) {
     return { sent: 0 };
   });
 
+  // Growth clients: job posts that have waited 3 days for their approval (one reminder).
+  const jobPosts = await sendJobPostReminders().catch((err) => {
+    console.error("Job post reminders failed:", err);
+    Sentry.captureException(err);
+    return { sent: 0 };
+  });
+
   // Last of the emails, so it reflects anything the steps above changed.
   const briefs = await sendMorningBriefs().catch((err) => {
     console.error("Morning briefs failed:", err);
@@ -168,5 +176,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, onboarding, reviews, visits, services, monthly, briefs, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, onboarding, reviews, visits, services, monthly, jobPosts, briefs, demo });
 }
