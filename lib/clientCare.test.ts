@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 
-import { billingStart, billingStatusFor } from "./billing";
+import { billingStart, billingStatusFor, planIncludes, planLabel, planOf } from "./billing";
 import { monthlyReportEmail, previousMonth } from "./monthlyReport";
 
 describe("billing start", () => {
@@ -54,5 +54,35 @@ describe("monthly report", () => {
     expect(email.html).toContain("Taps on your phone number");
     expect(email.html).toContain(">14<");
     expect(email.html).toContain("Taps on WhatsApp");
+  });
+});
+
+describe("care plans", () => {
+  it("treats unknown or missing plans as Care", () => {
+    expect(planOf("growth")).toBe("growth");
+    expect(planOf("pro")).toBe("pro");
+    expect(planOf(undefined)).toBe("care");
+    expect(planOf("platinum")).toBe("care");
+  });
+
+  it("switches features on by plan", () => {
+    expect(planIncludes("care", "review_requests")).toBe(true);
+    expect(planIncludes("care", "google_posts")).toBe(false);
+    expect(planIncludes("growth", "seo_pages")).toBe(true);
+    expect(planIncludes("growth", "missed_calls")).toBe(false);
+    expect(planIncludes("pro", "missed_calls")).toBe(true);
+  });
+
+  it("labels prices", () => {
+    expect(planLabel("care")).toBe("Care - £39/month");
+    expect(planLabel("growth")).toBe("Growth - £149/month");
+  });
+
+  it("bills paid plans from today, even in the free period", () => {
+    const now = new Date("2026-10-01T12:00:00Z");
+    expect(billingStart("2026-10-01", 12, now, "growth")).toEqual({ trialEnd: null, startsOn: "2026-10-01" });
+    expect("trialEnd" in billingStart("2026-10-01", 12, now, "care") && billingStart("2026-10-01", 12, now, "care")).toMatchObject({
+      startsOn: "2027-10-01",
+    });
   });
 });

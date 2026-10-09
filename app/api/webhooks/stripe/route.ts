@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/stripe";
 import { logAudit } from "@/lib/auditLog";
 import { formatGBP } from "@/lib/format";
-import { billingStatusFor } from "@/lib/billing";
+import { billingStatusFor, PLANS, planOf } from "@/lib/billing";
 
 // Registered once in the Stripe dashboard (platform account, with "listen
 // to events on Connected accounts" turned on) pointing at this URL. The raw
@@ -30,17 +30,36 @@ export async function POST(request: Request) {
   try {
     // The dashboard fee (lib/billing.ts) - events on Scalar's own Stripe account.
     if (event.type === "checkout.session.completed" && (event.data.object as { mode?: string }).mode === "subscription") {
-      const session = event.data.object as { subscription?: string; metadata?: { billing_tenant_id?: string } };
+      const session = event.data.object as { subscription?: string; metadata?: { billing_tenant_id?: string; billing_plan?: string } };
       const tenantId = session.metadata?.billing_tenant_id;
       if (tenantId && session.subscription) {
-        await createAdminClient()
+        const admin = createAdminClient();
+        await admin
           .from("tenants")
-          .update({ stripe_subscription_id: session.subscription, billing_status: "trialing" })
+          .update({
+            stripe_subscription_id: session.subscription,
+            // Care waits out the free period; Growth and Pro bill from the start.
+            billing_status: planOf(session.metadata?.billing_plan) === "care" ? "trialing" : "active",
+          })
           .eq("id", tenantId);
-        await logAudit({ tenantId, action: "billing.card_added", entityType: "tenant", entityId: tenantId, summary: "Card added for the monthly dashboard fee" });
+        // Separate update so a card still lands before migration 064 adds the plan column.
+        if (session.metadata?.billing_plan) {
+          await admin.from("tenants").update({ plan: planOf(session.metadata.billing_plan) }).eq("id", tenantId);
+        }
+        await logAudit({
+          tenantId,
+          action: "billing.card_added",
+          entityType: "tenant",
+          entityId: tenantId,
+          summary: `Card added for the ${PLANS[planOf(session.metadata?.billing_plan)].name} plan`,
+        });
       }
     }
-    if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
+    if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated" ||
+      event.type === "customer.subscription.deleted"
+    ) {
       const sub = event.data.object as { id?: string; status?: string; metadata?: { billing_tenant_id?: string } };
       if (sub.id && sub.metadata?.billing_tenant_id) {
         await createAdminClient()

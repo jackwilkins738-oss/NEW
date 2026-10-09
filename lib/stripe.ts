@@ -155,6 +155,45 @@ export async function createSubscriptionCheckout(params: {
   return res.json();
 }
 
+// Moves an existing care-plan subscription to a new monthly price. A paid
+// plan (endTrial) starts billing now - the free period only ever covered the
+// Care fee - and the difference for the rest of this month is prorated onto
+// the next invoice.
+export async function changeSubscriptionPrice(params: {
+  subscriptionId: string;
+  amountPence: number;
+  productName: string;
+  endTrial: boolean;
+  metadata: Record<string, string>;
+}): Promise<{ status: string }> {
+  const headers = {
+    Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY ?? ""}`,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+  const id = encodeURIComponent(params.subscriptionId);
+  const got = await fetch(`${STRIPE_API}/subscriptions/${id}`, { headers });
+  if (!got.ok) throw new Error(`Stripe subscription lookup failed: ${got.status} ${await got.text()}`);
+  const sub = (await got.json()) as { items: { data: { id: string; price: { product: string } }[] } };
+  const item = sub.items.data[0];
+  if (!item) throw new Error("Stripe subscription has no items");
+  await fetch(`${STRIPE_API}/products/${encodeURIComponent(item.price.product)}`, {
+    method: "POST",
+    headers,
+    body: new URLSearchParams({ name: params.productName }),
+  });
+  const body = new URLSearchParams();
+  body.set("items[0][id]", item.id);
+  body.set("items[0][price_data][currency]", "gbp");
+  body.set("items[0][price_data][product]", item.price.product);
+  body.set("items[0][price_data][unit_amount]", String(params.amountPence));
+  body.set("items[0][price_data][recurring][interval]", "month");
+  if (params.endTrial) body.set("trial_end", "now");
+  for (const [key, value] of Object.entries(params.metadata)) body.set(`metadata[${key}]`, value);
+  const res = await fetch(`${STRIPE_API}/subscriptions/${id}`, { method: "POST", headers, body });
+  if (!res.ok) throw new Error(`Stripe plan change failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
 // Manual signature check (Stripe's own documented algorithm) rather than
 // the SDK's Webhook.constructEvent - `t=<timestamp>,v1=<hex hmac>` in the
 // Stripe-Signature header, HMAC-SHA256 of "<timestamp>.<raw body>" against

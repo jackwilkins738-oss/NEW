@@ -8,8 +8,8 @@ import { PALETTE, DEFAULT_BRAND_THEME } from "@/lib/theme";
 import { logAudit } from "@/lib/auditLog";
 import { resetDemo } from "@/lib/demo";
 import { tenantOrigin } from "@/lib/tenantOrigin";
-import { billingStart, DASHBOARD_MONTHLY_PENCE } from "@/lib/billing";
-import { createSubscriptionCheckout } from "@/lib/stripe";
+import { billingStart, billingStatusFor, PLANS, planOf, type Plan } from "@/lib/billing";
+import { changeSubscriptionPrice, createSubscriptionCheckout } from "@/lib/stripe";
 import { ensureRedirectUrl, redirectUrlFor } from "@/lib/supabaseRedirects";
 
 async function requireAdmin() {
@@ -296,12 +296,16 @@ export async function resetDemoTenant(showAs?: string) {
   }
 }
 
-// The £39/month dashboard fee (lib/billing.ts): a Stripe checkout link to send
-// the client. The card goes in now; the first charge waits for the end of
-// their free period.
-export async function createBillingLink(tenantId: string): Promise<{ url: string; startsOn: string } | { error: string }> {
+// The monthly care plan (lib/billing.ts): a Stripe checkout link to send the
+// client. The card goes in now; on Care the first charge waits for the end of
+// their free period, on Growth and Pro it's taken now.
+export async function createBillingLink(
+  tenantId: string,
+  planValue: string = "care"
+): Promise<{ url: string; startsOn: string } | { error: string }> {
   await requireAdmin();
   if (!process.env.STRIPE_SECRET_KEY) return { error: "Add STRIPE_SECRET_KEY in Vercel first (Scalar's own Stripe account)." };
+  const plan = planOf(planValue);
   const admin = createAdminClient();
   const { data: t } = await admin
     .from("tenants")
@@ -309,24 +313,67 @@ export async function createBillingLink(tenantId: string): Promise<{ url: string
     .eq("id", tenantId)
     .maybeSingle();
   if (!t) return { error: "Customer not found." };
-  const start = billingStart(t.launched_on, t.free_hosting_months ?? 12);
+  const start = billingStart(t.launched_on, t.free_hosting_months ?? 12, new Date(), plan);
   if ("error" in start) return start;
   try {
     const origin = tenantOrigin(t);
     const session = await createSubscriptionCheckout({
-      amountPence: DASHBOARD_MONTHLY_PENCE,
-      productName: `Dashboard - ${t.business_name}`,
+      amountPence: PLANS[plan].pence,
+      productName: `${PLANS[plan].name} plan - ${t.business_name}`,
       customerEmail: t.contact_email,
       trialEnd: start.trialEnd,
       successUrl: `${origin}/help?billing=done`,
       cancelUrl: `${origin}/help`,
-      metadata: { billing_tenant_id: t.id },
+      metadata: { billing_tenant_id: t.id, billing_plan: plan },
     });
     return { url: session.url, startsOn: start.startsOn };
   } catch (err) {
     console.error("Billing link failed:", err);
     return { error: "Stripe refused - check STRIPE_SECRET_KEY is Scalar's own live key." };
   }
+}
+
+// Moves a client with a card on file to another plan: their Stripe
+// subscription changes price at once (Growth and Pro start billing now) and
+// what's switched on for them follows.
+export async function changePlan(tenantId: string, planValue: string): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  if (!process.env.STRIPE_SECRET_KEY) return { error: "Add STRIPE_SECRET_KEY in Vercel first (Scalar's own Stripe account)." };
+  const plan: Plan = planOf(planValue);
+  const admin = createAdminClient();
+  const { data: t, error } = await admin
+    .from("tenants")
+    .select("id, business_name, plan, stripe_subscription_id, billing_status")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (error) return { error: "Run migration 064 (care plans) in Supabase first." };
+  if (!t) return { error: "Customer not found." };
+  if (planOf(t.plan) === plan) return { ok: true };
+  if (!t.stripe_subscription_id || (t.billing_status !== "active" && t.billing_status !== "trialing")) {
+    return { error: "They have no card on file - send them a card link for this plan instead." };
+  }
+  try {
+    const sub = await changeSubscriptionPrice({
+      subscriptionId: t.stripe_subscription_id,
+      amountPence: PLANS[plan].pence,
+      productName: `${PLANS[plan].name} plan - ${t.business_name}`,
+      endTrial: plan !== "care",
+      metadata: { billing_plan: plan },
+    });
+    await admin.from("tenants").update({ plan, billing_status: billingStatusFor(sub.status) }).eq("id", tenantId);
+  } catch (err) {
+    console.error("Plan change failed:", err);
+    return { error: "Stripe refused the change - check the subscription in Stripe." };
+  }
+  await logAudit({
+    tenantId,
+    action: "billing.plan_changed",
+    entityType: "tenant",
+    entityId: tenantId,
+    summary: `Plan changed from ${PLANS[planOf(t.plan)].name} to ${PLANS[plan].name}`,
+  });
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 export async function markChangeRequestDone(requestId: string) {
