@@ -11,6 +11,7 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { billingStart, billingStatusFor, PLANS, planOf, type Plan } from "@/lib/billing";
 import { changeSubscriptionPrice, createSubscriptionCheckout } from "@/lib/stripe";
 import { accessToken, listLocations, LOCATION, type Location } from "@/lib/googleBusiness";
+import { syncGoogleReviews } from "@/lib/googleSync";
 import { ensureRedirectUrl, redirectUrlFor } from "@/lib/supabaseRedirects";
 
 async function requireAdmin() {
@@ -420,4 +421,20 @@ export async function setGbpLocation(tenantId: string, location: string): Promis
   if (error) return { error: "Run migration 068 (Google Business) in Supabase first." };
   revalidatePath("/admin");
   return { ok: true };
+}
+
+// The daily Google reviews sync, run now (to check a newly linked client without waiting for the morning).
+export async function syncGoogleReviewsNow(): Promise<{ message: string }> {
+  await requireAdmin();
+  try {
+    const r = await syncGoogleReviews();
+    return {
+      message: r.clients
+        ? `Synced ${r.clients} client(s): ${r.reviews} review(s) from Google${r.alerts ? `, ${r.alerts} new-review email(s) sent` : ""}.`
+        : "No clients synced - each needs a linked profile and the Growth or Pro plan.",
+    };
+  } catch (err) {
+    console.error("Google reviews sync failed:", err);
+    return { message: `Sync failed: ${err instanceof Error ? err.message.slice(0, 200) : "unknown error"}` };
+  }
 }
