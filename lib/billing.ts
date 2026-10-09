@@ -1,12 +1,18 @@
-// The £39/month dashboard fee, as a Stripe subscription on Scalar Digital's
-// own Stripe account (not a tenant's connected one). The client adds a card
-// whenever suits - at launch is best - and the first charge waits until
-// their free period ends, so month 13 bills itself.
+// The monthly care plan, as a Stripe subscription on Scalar Digital's own
+// Stripe account (not a tenant's connected one). Care (£39) is the dashboard
+// fee: the client adds a card whenever suits - at launch is best - and the
+// first charge waits until their free period ends, so month 13 bills itself.
+// Growth and Pro are paid add-on work, so they bill from the day they start
+// (migration 064).
 
 import { addMonths } from "@/lib/aftercare";
 import { todayInUK } from "@/lib/ukDate";
+import { PLANS, type Plan } from "@/lib/plans";
 
-export const DASHBOARD_MONTHLY_PENCE = 3900;
+export { PLANS, planIncludes, planLabel, planOf, type Plan, type PlanFeature } from "@/lib/plans";
+
+export const DASHBOARD_MONTHLY_PENCE = PLANS.care.pence;
+
 // Stripe allows a trial of up to 730 days; stay clear of the edge.
 const MAX_TRIAL_DAYS = 725;
 const DAY_MS = 86_400_000;
@@ -19,10 +25,11 @@ const DAY_MS = 86_400_000;
 export function billingStart(
   launchedOn: string | null,
   freeMonths: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  plan: Plan = "care"
 ): { trialEnd: number | null; startsOn: string } | { error: string } {
   const today = todayInUK(now);
-  if (!launchedOn || freeMonths <= 0) return { trialEnd: null, startsOn: today };
+  if (plan !== "care" || !launchedOn || freeMonths <= 0) return { trialEnd: null, startsOn: today };
   const ends = addMonths(launchedOn, freeMonths);
   if (ends <= today) return { trialEnd: null, startsOn: today };
   const endMs = Date.parse(`${ends}T09:00:00Z`);

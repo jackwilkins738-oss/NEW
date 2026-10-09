@@ -59,6 +59,8 @@ export default async function AdminPage() {
   const billingById = new Map((billingRows ?? []).map((r) => [r.id, r.billing_status as string | null]));
   const { data: siteRows, error: siteError } = await admin.from("tenants").select("id, website_url, site_status");
   const siteById = new Map((siteRows ?? []).map((r) => [r.id, r]));
+  const { data: planRows, error: planError } = await admin.from("tenants").select("id, plan");
+  const planById = new Map((planRows ?? []).map((r) => [r.id, r.plan as string]));
   const careTenants = tenantsWithAftercare
     .filter((t) => t.launched_on && t.slug !== "demo")
     .map((t) => ({
@@ -66,6 +68,7 @@ export default async function AdminPage() {
       business_name: t.business_name,
       launched_on: t.launched_on,
       billing_status: billingById.get(t.id) ?? null,
+      plan: planById.get(t.id) ?? "care",
       website_url: siteById.get(t.id)?.website_url ?? null,
       site_status: siteById.get(t.id)?.site_status ?? null,
     }));
@@ -94,7 +97,7 @@ export default async function AdminPage() {
             </form>
           </div>
         </header>
-        <ClientCarePanel tenants={careTenants} requests={changeRequests} billingReady={!billingError} requestsReady={!requestsError} monitorReady={!siteError} />
+        <ClientCarePanel tenants={careTenants} requests={changeRequests} billingReady={!billingError} requestsReady={!requestsError} monitorReady={!siteError} plansReady={!planError} />
         <div className="mt-5">
           <AdminPanel tenants={tenantsWithAftercare} membersByTenant={membersByTenant} />
         </div>
