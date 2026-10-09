@@ -13,6 +13,9 @@ import { signOut } from "@/app/login/actions";
 import { IconStar } from "@/components/DashboardIcons";
 import { AppSidebar } from "@/components/AppSidebar";
 import { getCurrentUserRole } from "@/lib/membershipRole";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { planIncludes } from "@/lib/plans";
+import { ReviewReplyDrafter } from "@/components/ReviewReplyDrafter";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +38,10 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
       .eq("tenant_id", tenant.id),
     supabase.from("projects").select("id, client_name, ref").eq("tenant_id", tenant.id),
   ]);
+
+  // Review replies are Growth and up; the plan is read on its own (not among the default tenant columns).
+  const { data: planRow } = await createAdminClient().from("tenants").select("plan").eq("id", tenant.id).maybeSingle();
+  const canReply = planIncludes(planRow?.plan, "review_replies");
 
   const projectById = new Map((projectsRes.data ?? []).map((p) => [p.id, p]));
   const sort: SortKey = (searchParams.sort as SortKey) ?? "newest";
@@ -70,6 +77,24 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
           </div>
           <ReviewsSortSelect current={sort} />
         </header>
+
+        <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-ink">Reply to a Google review</h2>
+          {canReply ? (
+            <>
+              <p className="mb-3 mt-1 text-sm text-muted">
+                Paste a review from Google and get a reply to check and post. Replying to every review - the bad ones most of all - is
+                part of how people judge you.
+              </p>
+              <ReviewReplyDrafter />
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-muted">
+              Part of the Growth plan: a ready-to-post reply to any Google review, good or bad, in seconds. Use Website help or reply to
+              any Scalar Digital email to switch.
+            </p>
+          )}
+        </div>
 
         <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           {reviews.length === 0 ? (
