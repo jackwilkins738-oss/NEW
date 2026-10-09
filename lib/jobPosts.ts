@@ -146,3 +146,44 @@ export function jobPageCounts(rows: { path: string | null; kind: string | null }
     taps: onJobs.filter((r) => r.kind === "call" || r.kind === "whatsapp").length,
   };
 }
+
+/** How many jobs finished in [from, to) had photos - the raw material Growth turns into pages. */
+export async function finishedJobsWithPhotos(
+  admin: ReturnType<typeof createAdminClient>,
+  tenantId: string,
+  fromIso: string,
+  toIso: string
+): Promise<number> {
+  const { data: projects } = await admin
+    .from("projects")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .gte("completed_at", fromIso)
+    .lt("completed_at", toIso);
+  const ids = (projects ?? []).map((p) => p.id);
+  if (!ids.length) return 0;
+  const { data: photos } = await admin.from("project_photos").select("project_id").in("project_id", ids);
+  return new Set((photos ?? []).map((p) => p.project_id)).size;
+}
+
+/** Care clients' monthly report: their own finished jobs, as the case for Growth. Empty when there's nothing to point at. */
+export function growthPitch(jobsWithPhotos: number): string {
+  if (jobsWithPhotos < 1) return "";
+  const n = jobsWithPhotos === 1 ? "1 job" : `${jobsWithPhotos} jobs`;
+  return `<p style="margin:18px 0 6px;padding:12px 14px;background:#f4f1ea;border-radius:8px;color:#17140f;">
+      You finished ${n} with photos last month. On the <strong>Growth plan</strong>, each one becomes its own page on your website
+      and a post for your Google profile - written for you, live once you OK it. More pages about real local jobs is what moves you
+      up the search results. Reply to this email if you'd like it switched on.</p>`;
+}
+
+/** Per client, finished jobs with photos in the last 60 days - /admin's Growth candidates. */
+export async function recentJobsWithPhotosByTenant(admin: ReturnType<typeof createAdminClient>, now = Date.now()): Promise<Map<string, number>> {
+  const since = new Date(now - RECENT_DAYS * DAY).toISOString();
+  const { data: done } = await admin.from("projects").select("id, tenant_id").gte("completed_at", since);
+  const out = new Map<string, number>();
+  if (!done?.length) return out;
+  const { data: photos } = await admin.from("project_photos").select("project_id").in("project_id", done.map((r) => r.id));
+  const withPhotos = new Set((photos ?? []).map((p) => p.project_id));
+  for (const r of done) if (withPhotos.has(r.id)) out.set(r.tenant_id, (out.get(r.tenant_id) ?? 0) + 1);
+  return out;
+}

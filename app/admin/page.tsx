@@ -5,6 +5,7 @@ import { isPlatformAdmin } from "@/lib/platformAdmin";
 import { AdminPanel } from "@/components/AdminPanel";
 import { signOut } from "@/app/login/actions";
 import { DemoResetButton } from "@/app/admin/DemoResetButton";
+import { recentJobsWithPhotosByTenant } from "@/lib/jobPosts";
 import { ClientCarePanel } from "@/app/admin/ClientCarePanel";
 
 // Customer/membership lists change from this same page's own actions
@@ -61,6 +62,8 @@ export default async function AdminPage() {
   const siteById = new Map((siteRows ?? []).map((r) => [r.id, r]));
   const { data: planRows, error: planError } = await admin.from("tenants").select("id, plan");
   const planById = new Map((planRows ?? []).map((r) => [r.id, r.plan as string]));
+  // Growth candidates: Care clients who finished jobs with photos in the last 60 days - the pages they're missing.
+  const jobsWithPhotosByTenant = await recentJobsWithPhotosByTenant(admin);
   // Local Growth (migration 065): posts waiting for each client's approval, and live on their site.
   const { data: postRows } = await admin.from("job_posts").select("tenant_id, status");
   const postsByTenant = new Map<string, { waiting: number; live: number }>();
@@ -79,6 +82,7 @@ export default async function AdminPage() {
       billing_status: billingById.get(t.id) ?? null,
       plan: planById.get(t.id) ?? "care",
       posts: postsByTenant.get(t.id) ?? null,
+      recentJobsWithPhotos: jobsWithPhotosByTenant.get(t.id) ?? 0,
       website_url: siteById.get(t.id)?.website_url ?? null,
       site_status: siteById.get(t.id)?.site_status ?? null,
     }));

@@ -8,7 +8,7 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { DEMO_SLUG } from "@/lib/demo";
 import { tapCounts } from "@/lib/contactTaps";
 import { searchStats, type SearchStats } from "@/lib/searchConsole";
-import { jobPageCounts, type GrowthStats } from "@/lib/jobPosts";
+import { finishedJobsWithPhotos, growthPitch, jobPageCounts, type GrowthStats } from "@/lib/jobPosts";
 import { planIncludes } from "@/lib/plans";
 
 // On the 1st of each month, each of Scalar Digital's launched clients gets
@@ -32,6 +32,8 @@ export type MonthStats = {
   search?: SearchStats | null;
   /** Growth and Pro clients: what Local Growth did this month (job posts, migration 065). */
   growth?: GrowthStats | null;
+  /** Care clients: finished jobs with photos last month - the case for Growth. */
+  jobsWithPhotos?: number;
 };
 
 /** "2026-10-01" -> the month before it, as [first day, first day of the next month, "September 2026"]. */
@@ -96,7 +98,7 @@ export function monthlyReportEmail(businessName: string, monthLabel: string, s: 
     }`,
     html: `<div style="font-family:Helvetica,Arial,sans-serif;color:#17140f;max-width:520px;">
       <p>Here's how ${escapeHtml(businessName)}'s website and dashboard did in ${escapeHtml(monthLabel)}:</p>
-      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>${google}${growth}
+      <table style="border-collapse:collapse;margin:12px 0;">${rows}</table>${google}${growth}${gr ? "" : growthPitch(s.jobsWithPhotos ?? 0)}
       <p><a href="${dashboardUrl}">Open your dashboard</a> for the detail.</p>
       <p style="color:#6b6255;font-size:13px;">Anything you'd like changed on the site? Use Website help in your dashboard, or just reply.</p>
       <p>Scalar Digital</p>
@@ -136,7 +138,9 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
         between(admin.from("quotes").select("total_pence").eq("tenant_id", t.id), "accepted_at"),
         between(admin.from("reviews").select("id", count).eq("tenant_id", t.id), "received_at"),
       ]);
-      const growth = planIncludes(t.plan, "seo_pages") ? await growthStats(admin, t.id, from, to).catch(() => null) : null;
+      const onGrowth = planIncludes(t.plan, "seo_pages");
+      const growth = onGrowth ? await growthStats(admin, t.id, from, to).catch(() => null) : null;
+      const jobsWithPhotos = onGrowth ? 0 : await finishedJobsWithPhotos(admin, t.id, `${from}T00:00:00Z`, `${to}T00:00:00Z`).catch(() => 0);
       const email = monthlyReportEmail(
         t.business_name,
         label,
@@ -151,6 +155,7 @@ export async function sendMonthlyReports(now = new Date()): Promise<{ sent: numb
           reviews: reviews.count ?? 0,
           search: t.domain ? await searchStats(t.domain, from, to).catch(() => null) : null,
           growth,
+          jobsWithPhotos,
         },
         `${tenantOrigin(t)}/dashboard`
       );

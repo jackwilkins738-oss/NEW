@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftReminderEmail, dueForReminder, jobPageCounts, jobsDue, parseDraft, slugify } from "./jobPosts";
+import { growthPitch, draftReminderEmail, dueForReminder, jobPageCounts, jobsDue, parseDraft, slugify } from "./jobPosts";
 import { monthlyReportEmail } from "./monthlyReport";
 
 const HOST = "https://x.supabase.co/storage/v1/object/public/project-photos/";
@@ -78,5 +78,18 @@ describe("job post reminders and the Growth report", () => {
     expect(email.html).toContain("Calls and WhatsApps from job pages");
     expect(email.html).toContain('href="https://x/posts"');
     expect(monthlyReportEmail("Kerr", "September 2026", { ...none, visits: 3 }, "https://x/dashboard")!.html).not.toContain("Growing your local search");
+  });
+});
+
+describe("the Growth pitch for Care clients", () => {
+  const none = { visits: 5, enquiries: 0, quotesSent: 0, quotesWon: 0, wonPence: 0, reviews: 0 };
+  it("points at their own finished jobs, and stays quiet without any", () => {
+    expect(growthPitch(0)).toBe("");
+    expect(growthPitch(1)).toContain("You finished 1 job with photos");
+    expect(monthlyReportEmail("Kerr", "September 2026", { ...none, jobsWithPhotos: 3 }, "https://x/dashboard")!.html).toContain("You finished 3 jobs");
+  });
+  it("never pitches a client already on Growth", () => {
+    const growth = { pagesPublished: 1, pagesLive: 1, pageVisits: 0, pageTaps: 0, waiting: 0 };
+    expect(monthlyReportEmail("Kerr", "September 2026", { ...none, growth, jobsWithPhotos: 3 }, "https://x/dashboard")!.html).not.toContain("Growth plan");
   });
 });
