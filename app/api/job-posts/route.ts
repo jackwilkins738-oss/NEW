@@ -6,6 +6,7 @@ import { planIncludes } from "@/lib/plans";
 import { sendEmail } from "@/lib/email";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { draftReadyEmail, jobsDue, parseDraft } from "@/lib/jobPosts";
+import { postJobToGoogle } from "@/lib/googleSync";
 
 // Job posts (migration 065), for the owner's panel - server-to-server only,
 // behind the service secret.
@@ -111,5 +112,7 @@ export async function PATCH(request: Request) {
     .select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data?.length) return NextResponse.json({ error: "No approved post with that id" }, { status: 404 });
-  return NextResponse.json({ ok: true });
+  // Live on their site - now on their Google profile too, when they're linked (Growth, migration 068).
+  const google = await postJobToGoogle(createAdminClient(), input!.tenant_id!, input!.id!);
+  return NextResponse.json({ ok: true, google });
 }

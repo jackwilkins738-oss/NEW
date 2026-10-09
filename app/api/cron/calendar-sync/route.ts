@@ -14,6 +14,7 @@ import { sendMonthlyReports } from "@/lib/monthlyReport";
 import { resetDemoIfPresent } from "@/lib/demo";
 import { sendAftercareReminders } from "@/lib/aftercare";
 import { sendJobPostReminders } from "@/lib/jobPosts";
+import { syncGoogleReviews } from "@/lib/googleSync";
 import { hasCronSecret } from "@/lib/serviceAuth";
 
 // The other direction of the sync described on CalendarPanel: dashboard ->
@@ -162,6 +163,13 @@ export async function GET(request: Request) {
     return { sent: 0 };
   });
 
+  // Growth clients linked to their Google profile: reviews in, with an email for new ones needing a reply.
+  const googleReviews = await syncGoogleReviews().catch((err) => {
+    console.error("Google reviews sync failed:", err);
+    Sentry.captureException(err);
+    return { clients: 0, reviews: 0, alerts: 0 };
+  });
+
   // Last of the emails, so it reflects anything the steps above changed.
   const briefs = await sendMorningBriefs().catch((err) => {
     console.error("Morning briefs failed:", err);
@@ -176,5 +184,5 @@ export async function GET(request: Request) {
     return false;
   });
 
-  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, onboarding, reviews, visits, services, monthly, jobPosts, briefs, demo });
+  return NextResponse.json({ ok: true, checked, updated, reminders, aftercare, chasers, onboarding, reviews, visits, services, monthly, jobPosts, googleReviews, briefs, demo });
 }

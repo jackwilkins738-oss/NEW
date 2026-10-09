@@ -7,6 +7,8 @@ import { getCurrentUserRole } from "@/lib/membershipRole";
 import { planIncludes } from "@/lib/plans";
 import { askClaude, AIUnavailable } from "@/lib/ai";
 import { cleanReply, parseReview, replyPrompt, REPLIES_PER_DAY } from "@/lib/reviewReplies";
+import { accessToken, replyToReview } from "@/lib/googleBusiness";
+import { revalidatePath } from "next/cache";
 
 // A drafted reply to a Google review the owner pasted in (Growth plan and
 // up). Members only, capped per client per day (migration 067) - the
@@ -44,4 +46,29 @@ export async function draftReviewReply(input: { reviewer: string; rating: number
     console.error("Review reply draft failed:", err);
     return { error: err instanceof AIUnavailable ? "Not switched on yet - Scalar Digital needs to finish setting it up." : "That didn't work - try again." };
   }
+}
+
+// Posts the owner's approved reply to one of their Google reviews (migration 068).
+export async function postGoogleReply(reviewId: string, text: string): Promise<{ ok: true } | { error: string }> {
+  const reply = text.trim().slice(0, 4000);
+  if (!reply) return { error: "The reply is empty." };
+  const tenant = await getCurrentTenant();
+  if (!tenant) return { error: "Sign in again." };
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !(await getCurrentUserRole(supabase, tenant.id, userData.user.id))) return { error: "Sign in again." };
+  const admin = createAdminClient();
+  const { data: review } = await admin.from("google_reviews").select("id, review_name").eq("id", reviewId).eq("tenant_id", tenant.id).maybeSingle();
+  if (!review) return { error: "That review isn't here any more - refresh." };
+  try {
+    const token = await accessToken();
+    if (!token) return { error: "Google isn't connected - copy the reply and post it on Google instead." };
+    await replyToReview(token, review.review_name, reply);
+  } catch (err) {
+    console.error("Posting Google reply failed:", err);
+    return { error: "Google didn't take it - copy the reply and post it on Google instead." };
+  }
+  await admin.from("google_reviews").update({ reply, replied_at: new Date().toISOString() }).eq("id", review.id);
+  revalidatePath("/reviews");
+  return { ok: true };
 }

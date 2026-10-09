@@ -6,6 +6,8 @@ import { AdminPanel } from "@/components/AdminPanel";
 import { signOut } from "@/app/login/actions";
 import { DemoResetButton } from "@/app/admin/DemoResetButton";
 import { recentJobsWithPhotosByTenant } from "@/lib/jobPosts";
+import { GoogleBusinessPanel } from "@/app/admin/GoogleBusinessPanel";
+import { googleBusinessConfigured } from "@/lib/googleBusiness";
 import { ClientCarePanel } from "@/app/admin/ClientCarePanel";
 
 // Customer/membership lists change from this same page's own actions
@@ -92,6 +94,11 @@ export default async function AdminPage() {
     .eq("status", "open")
     .order("created_at", { ascending: true });
   const nameById = new Map((tenants ?? []).map((t) => [t.id, t.business_name]));
+  // Google Business Profile (migration 068) - hidden until it's run.
+  const { data: gbpConn, error: gbpError } = await admin.from("google_business_connection").select("email").eq("id", "scalar").maybeSingle();
+  const { data: gbpRows } = await admin.from("tenants").select("id, gbp_location");
+  const gbpById = new Map((gbpRows ?? []).map((r) => [r.id, r.gbp_location as string | null]));
+  const gbpTenants = careTenants.map((t) => ({ id: t.id, business_name: t.business_name, gbp_location: gbpById.get(t.id) ?? null }));
   const changeRequests = (requestRows ?? []).map((r) => ({ id: r.id, tenant: nameById.get(r.tenant_id) ?? "Unknown", message: r.message, created_at: r.created_at }));
 
   return (
@@ -112,6 +119,9 @@ export default async function AdminPage() {
           </div>
         </header>
         <ClientCarePanel tenants={careTenants} requests={changeRequests} billingReady={!billingError} requestsReady={!requestsError} monitorReady={!siteError} plansReady={!planError} />
+        {!gbpError && (
+          <GoogleBusinessPanel configured={googleBusinessConfigured()} email={gbpConn ? (gbpConn.email ?? "Scalar's Google account") : null} tenants={gbpTenants} />
+        )}
         <div className="mt-5">
           <AdminPanel tenants={tenantsWithAftercare} membersByTenant={membersByTenant} />
         </div>

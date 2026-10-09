@@ -16,6 +16,7 @@ import { getCurrentUserRole } from "@/lib/membershipRole";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { planIncludes } from "@/lib/plans";
 import { ReviewReplyDrafter } from "@/components/ReviewReplyDrafter";
+import { GoogleReviewCard, type GoogleReviewView } from "@/components/GoogleReviewCard";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,14 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
   // Review replies are Growth and up; the plan is read on its own (not among the default tenant columns).
   const { data: planRow } = await createAdminClient().from("tenants").select("plan").eq("id", tenant.id).maybeSingle();
   const canReply = planIncludes(planRow?.plan, "review_replies");
+  // Their Google reviews, synced daily once they're linked (migration 068) - unanswered first.
+  const { data: googleRows } = await supabase
+    .from("google_reviews")
+    .select("id, reviewer, star_rating, comment, reviewed_at, reply")
+    .eq("tenant_id", tenant.id)
+    .order("reviewed_at", { ascending: false })
+    .limit(40);
+  const googleReviews = [...((googleRows ?? []) as GoogleReviewView[])].sort((a, b) => Number(!!a.reply) - Number(!!b.reply));
 
   const projectById = new Map((projectsRes.data ?? []).map((p) => [p.id, p]));
   const sort: SortKey = (searchParams.sort as SortKey) ?? "newest";
@@ -77,6 +86,18 @@ export default async function ReviewsPage(props: { searchParams: Promise<{ sort?
           </div>
           <ReviewsSortSelect current={sort} />
         </header>
+
+        {googleReviews.length > 0 && (
+          <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-ink">Your Google reviews</h2>
+            <p className="mt-1 text-sm text-muted">From your Google profile, updated daily. Ones still waiting for a reply are at the top.</p>
+            <div className="mt-2">
+              {googleReviews.map((r) => (
+                <GoogleReviewCard key={r.id} review={r} canReply={canReply} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 rounded-2xl border border-black/8 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-bold text-ink">Reply to a Google review</h2>

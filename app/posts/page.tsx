@@ -25,14 +25,13 @@ export default async function PostsPage() {
   // The plan isn't among the tenant columns a page reads by default - read it on its own.
   const { data: planRow } = await createAdminClient().from("tenants").select("plan").eq("id", tenant.id).maybeSingle();
   const included = planIncludes(planRow?.plan, "seo_pages");
-  const { data: rows } = await supabase
-    .from("job_posts")
-    .select("id, status, title, body, google_post, photos, page_url, created_at")
-    .eq("tenant_id", tenant.id)
-    .neq("status", "skipped")
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const posts = (rows ?? []) as (JobPostView & { created_at: string })[];
+  // google_post_name comes with migration 068 - read without it until then.
+  const read = (cols: string) =>
+    supabase.from("job_posts").select(cols).eq("tenant_id", tenant.id).neq("status", "skipped").order("created_at", { ascending: false }).limit(50);
+  const base = "id, status, title, body, google_post, photos, page_url, created_at";
+  const first = await read(`${base}, google_post_name`);
+  const rows = first.error ? (await read(base)).data : first.data;
+  const posts = (rows ?? []) as unknown as (JobPostView & { created_at: string })[];
   const waiting = posts.filter((p) => p.status === "draft");
   const rest = posts.filter((p) => p.status !== "draft");
 

@@ -10,6 +10,7 @@ import { resetDemo } from "@/lib/demo";
 import { tenantOrigin } from "@/lib/tenantOrigin";
 import { billingStart, billingStatusFor, PLANS, planOf, type Plan } from "@/lib/billing";
 import { changeSubscriptionPrice, createSubscriptionCheckout } from "@/lib/stripe";
+import { accessToken, listLocations, LOCATION, type Location } from "@/lib/googleBusiness";
 import { ensureRedirectUrl, redirectUrlFor } from "@/lib/supabaseRedirects";
 
 async function requireAdmin() {
@@ -394,6 +395,29 @@ export async function setWebsiteUrl(tenantId: string, url: string): Promise<{ ok
     .update({ website_url: clean || null, site_status: null, site_fail_count: 0, site_down_since: null })
     .eq("id", tenantId);
   if (error) return { error: error.message };
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+// Google Business Profile (lib/googleBusiness.ts): every profile Scalar's
+// connected Google account manages, to link each client to theirs.
+export async function loadGbpLocations(): Promise<{ locations: Location[] } | { error: string }> {
+  await requireAdmin();
+  try {
+    const token = await accessToken();
+    if (!token) return { error: "Connect Scalar's Google account first." };
+    return { locations: await listLocations(token) };
+  } catch (err) {
+    console.error("Loading Google profiles failed:", err);
+    return { error: "Google refused - is the API access approved, and is this account a manager on the profiles?" };
+  }
+}
+
+export async function setGbpLocation(tenantId: string, location: string): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  if (location && !LOCATION.test(location)) return { error: "That isn't a Google profile." };
+  const { error } = await createAdminClient().from("tenants").update({ gbp_location: location || null }).eq("id", tenantId);
+  if (error) return { error: "Run migration 068 (Google Business) in Supabase first." };
   revalidatePath("/admin");
   return { ok: true };
 }
