@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { loadGbpLocations, setGbpLocation } from "@/app/admin/actions";
+import { loadGbpLocations, setGbpLocation, syncGoogleReviewsNow } from "@/app/admin/actions";
 import type { Location } from "@/lib/googleBusiness";
 
 export type GbpTenant = { id: string; business_name: string; gbp_location: string | null };
@@ -59,7 +59,15 @@ export function GoogleBusinessPanel({
           >
             {locations ? "Reload profiles" : "Load profiles to link clients"}
           </button>
-          {msg && <p className="mt-2 text-xs font-semibold text-critical">{msg}</p>}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => start(async () => setMsg((await syncGoogleReviewsNow()).message))}
+            className="ml-2 mt-3 rounded-lg border border-black/8 bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink-2 disabled:opacity-60"
+          >
+            Sync reviews now
+          </button>
+          {msg && <p className="mt-2 text-xs font-semibold text-ink-2">{msg}</p>}
           <ul className="mt-3 flex flex-col">
             {tenants.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-black/8 py-2 text-sm last:border-none">
