@@ -65,6 +65,17 @@ describe("normaliseProspect", () => {
 });
 
 describe("normaliseTeardown", () => {
+  it("keeps the newer checks and numbers, and drops out-of-range ones", () => {
+    const t = normaliseTeardown({
+      checks: { phoneShown: false, mobileViewport: false, indexable: true, imageAlt: false, businessEmail: false, madeUp: false },
+      serverResponseMs: 2412,
+      layoutShift100: 31,
+    })!;
+    expect(t.checks).toEqual({ phoneShown: false, mobileViewport: false, indexable: true, imageAlt: false, businessEmail: false });
+    expect([t.serverResponseMs, t.layoutShift100]).toEqual([2412, 31]);
+    expect(normaliseTeardown({ checks: { tapToCall: true }, serverResponseMs: -5, layoutShift100: "big" })).toEqual({ v: 1, checks: { tapToCall: true } });
+  });
+
   it("keeps known checks and in-range numbers, drops everything else", () => {
     expect(
       normaliseTeardown({

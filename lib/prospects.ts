@@ -46,6 +46,11 @@ export const TEARDOWN_CHECKS = [
   "https",
   "secureAssets",
   "showsReviews",
+  "phoneShown",
+  "mobileViewport",
+  "indexable",
+  "imageAlt",
+  "businessEmail",
 ] as const;
 export const TEARDOWN_PLATFORMS = ["wordpress", "wix", "squarespace", "godaddy", "webflow", "weebly", "duda", "shopify"] as const;
 
@@ -56,6 +61,10 @@ export type Teardown = {
   accessibilityScore?: number;
   imageSavingsKb?: number;
   pageWeightKb?: number;
+  /** How long their server took to start answering Google's test, in ms. */
+  serverResponseMs?: number;
+  /** How much the page jumps about while loading (Google's layout shift, x100). */
+  layoutShift100?: number;
   copyrightYear?: number;
   platform?: (typeof TEARDOWN_PLATFORMS)[number];
   wpPluginCount?: number;
@@ -167,6 +176,8 @@ export function normaliseTeardown(input: unknown): Teardown | null {
   put("accessibilityScore", intIn(t.accessibilityScore, 0, 100));
   put("imageSavingsKb", intIn(t.imageSavingsKb, 0, 1_000_000));
   put("pageWeightKb", intIn(t.pageWeightKb, 0, 1_000_000));
+  put("serverResponseMs", intIn(t.serverResponseMs, 0, 120_000));
+  put("layoutShift100", intIn(t.layoutShift100, 0, 1_000));
   put("copyrightYear", intIn(t.copyrightYear, 1995, 2100));
   put("wpPluginCount", intIn(t.wpPluginCount, 0, 500));
   if (TEARDOWN_PLATFORMS.includes(t.platform as Teardown["platform"] & string)) {
