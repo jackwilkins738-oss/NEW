@@ -22,3 +22,28 @@ export async function sendEmail(params: { to: string[]; subject: string; html: s
     }),
   });
 }
+
+export type BatchEmail = { to: string; subject: string; html: string; from: string; replyTo?: string; headers?: Record<string, string> };
+
+/** Up to 100 emails in one call (Resend's batch endpoint) - each its own message. Throws when Resend refuses. */
+export async function sendEmailBatch(emails: BatchEmail[]): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set");
+  for (let i = 0; i < emails.length; i += 100) {
+    const res = await fetch("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(
+        emails.slice(i, i + 100).map((e) => ({
+          from: e.from,
+          to: [e.to],
+          subject: e.subject,
+          html: e.html,
+          ...(e.replyTo ? { reply_to: e.replyTo } : {}),
+          ...(e.headers ? { headers: e.headers } : {}),
+        }))
+      ),
+    });
+    if (!res.ok) throw new Error(`Resend refused the batch: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+}
