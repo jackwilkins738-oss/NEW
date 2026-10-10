@@ -2,7 +2,7 @@
 // plan picker can use them in the browser. Billing is in lib/billing.ts.
 
 export type Plan = "care" | "growth" | "pro";
-export type PlanFeature = "dashboard" | "site_care" | "review_requests" | "review_replies" | "google_posts" | "seo_pages" | "missed_calls";
+export type PlanFeature = "dashboard" | "site_care" | "review_requests" | "review_replies" | "google_posts" | "seo_pages" | "missed_calls" | "campaigns";
 
 export const PLANS: Record<Plan, { name: string; pence: number; features: PlanFeature[] }> = {
   care: { name: "Care", pence: 3900, features: ["dashboard", "site_care", "review_requests"] },
@@ -10,7 +10,7 @@ export const PLANS: Record<Plan, { name: string; pence: number; features: PlanFe
   pro: {
     name: "Pro",
     pence: 24900,
-    features: ["dashboard", "site_care", "review_requests", "review_replies", "google_posts", "seo_pages", "missed_calls"],
+    features: ["dashboard", "site_care", "review_requests", "review_replies", "google_posts", "seo_pages", "missed_calls", "campaigns"],
   },
 };
 
