@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { escapeHtml } from "@/lib/contact";
 
-// Campaigns (Pro plan, migration 069): a short seasonal email from a business
+// Campaigns (Growth plan and up, migration 069): a short seasonal email from a business
 // to its past customers, approved by the owner before it goes. The rules that
 // keep it welcome rather than spam - and inside UK marketing rules for
 // existing customers ("soft opt-in"):

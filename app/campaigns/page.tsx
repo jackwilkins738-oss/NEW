@@ -14,7 +14,7 @@ import { CampaignComposer } from "@/app/campaigns/CampaignComposer";
 
 export const dynamic = "force-dynamic";
 
-// Campaigns (Pro plan, migration 069): a seasonal email to past customers.
+// Campaigns (Growth plan and up, migration 069): a seasonal email to past customers.
 export default async function CampaignsPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/login");
@@ -52,7 +52,7 @@ export default async function CampaignsPage() {
 
         {!included ? (
           <div className="mt-5 rounded-2xl border border-dashed border-black/15 bg-surface p-6 text-center">
-            <p className="text-sm font-semibold text-ink">Part of the Pro plan</p>
+            <p className="text-sm font-semibold text-ink">Part of the Growth plan</p>
             <p className="mt-1 text-sm text-muted">Seasonal emails to your past customers, written for you. Use Website help to ask about it.</p>
           </div>
         ) : (

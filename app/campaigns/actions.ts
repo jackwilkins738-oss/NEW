@@ -12,7 +12,7 @@ import { tenantOrigin } from "@/lib/tenantOrigin";
 import { logAudit } from "@/lib/auditLog";
 import { audience, campaignHtml, campaignPrompt, DRAFTS_PER_DAY, parseCampaign, parseDraft } from "@/lib/campaigns";
 
-// Campaigns (Pro plan, migration 069). Every action checks the signed-in
+// Campaigns (Growth plan and up, migration 069). Every action checks the signed-in
 // member and the plan; sending goes through the server so the audience
 // rules (lib/campaigns.ts) can't be skipped.
 
@@ -32,7 +32,7 @@ const from = (businessName: string) => `${businessName.replace(/[<>"]/g, "").sli
 
 export async function draftCampaign(idea: string): Promise<{ subject: string; body: string } | { error: string }> {
   const ctx = await context();
-  if (!ctx) return { error: "Campaigns are part of the Pro plan." };
+  if (!ctx) return { error: "Campaigns are part of the Growth plan." };
   if (idea.trim().length < 4) return { error: "Say what the email is about first." };
   const since = new Date(Date.now() - 86_400_000).toISOString();
   const { count } = await ctx.admin
@@ -63,7 +63,7 @@ export async function audienceCount(): Promise<number | null> {
 
 export async function sendCampaignTest(input: { subject: string; body: string }): Promise<{ ok: true; to: string } | { error: string }> {
   const ctx = await context();
-  if (!ctx) return { error: "Campaigns are part of the Pro plan." };
+  if (!ctx) return { error: "Campaigns are part of the Growth plan." };
   const c = parseCampaign(input);
   if ("error" in c) return c;
   if (!ctx.user.email) return { error: "Your login has no email address to send the test to." };
@@ -85,7 +85,7 @@ export async function sendCampaignTest(input: { subject: string; body: string })
 
 export async function sendCampaign(input: { subject: string; body: string }): Promise<{ ok: true; sent: number } | { error: string }> {
   const ctx = await context();
-  if (!ctx) return { error: "Campaigns are part of the Pro plan." };
+  if (!ctx) return { error: "Campaigns are part of the Growth plan." };
   const c = parseCampaign(input);
   if ("error" in c) return c;
   let people;
