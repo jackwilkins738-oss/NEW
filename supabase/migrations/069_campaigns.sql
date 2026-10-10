@@ -1,4 +1,4 @@
--- Campaigns (Pro plan, lib/campaigns.ts): a short seasonal email from a
+-- Campaigns (Growth plan and up, lib/campaigns.ts): a short seasonal email from a
 -- business to its past customers - "gutters before winter" - written with
 -- AI, approved and sent from /campaigns. Past customers only (a customer with
 -- at least one job), never more than one campaign a month each, and every

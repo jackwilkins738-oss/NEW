@@ -70,6 +70,8 @@ describe("care plans", () => {
     expect(planIncludes("care", "google_posts")).toBe(false);
     expect(planIncludes("growth", "seo_pages")).toBe(true);
     expect(planIncludes("growth", "missed_calls")).toBe(false);
+    expect(planIncludes("growth", "campaigns")).toBe(true);
+    expect(planIncludes("care", "campaigns")).toBe(false);
     expect(planIncludes("pro", "missed_calls")).toBe(true);
   });
 

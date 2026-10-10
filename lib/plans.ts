@@ -6,7 +6,11 @@ export type PlanFeature = "dashboard" | "site_care" | "review_requests" | "revie
 
 export const PLANS: Record<Plan, { name: string; pence: number; features: PlanFeature[] }> = {
   care: { name: "Care", pence: 3900, features: ["dashboard", "site_care", "review_requests"] },
-  growth: { name: "Growth", pence: 14900, features: ["dashboard", "site_care", "review_requests", "review_replies", "google_posts", "seo_pages"] },
+  growth: {
+    name: "Growth",
+    pence: 14900,
+    features: ["dashboard", "site_care", "review_requests", "review_replies", "google_posts", "seo_pages", "campaigns"],
+  },
   pro: {
     name: "Pro",
     pence: 24900,
