@@ -13,11 +13,11 @@
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^10.75.2",
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.45.4",
-    "next": "16.3.6",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
@@ -27,11 +27,11 @@
     "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
-    "postcss": "^8.4.47",
+    "eslint-config-next": "16.4.2",
+    "postcss": "^8.5.30",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.5"
   },
   "overrides": {
     "@types/react": "19.3.0",
